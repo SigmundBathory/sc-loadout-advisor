@@ -98,7 +98,7 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
         const crew = v.crew;
         const crewVal = typeof crew === "object" && crew !== null ? (crew.min || crew.max || 1) : (crew || 1);
         const speed = v.speed || {};
-        const image = (v.images && v.images[0] && v.images[0].source) || "";
+        const image = (v.images && v.images[0] && v.images[0].thumbnail_url || v.images[0].original_url) || "";
         insertShip.run([
           shipId,
           String(v.name || "Unknown"),
@@ -174,7 +174,7 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
             capacity: Number(vw.capacity) || 0,
           };
           const wepId = String(weapon.uuid || weapon.class_name || `weapon_${componentCount}`);
-          const image = (weapon.images && weapon.images[0] && weapon.images[0].source) || "";
+          const image = (weapon.images && weapon.images[0] && weapon.images[0].thumbnail_url || weapon.images[0].original_url) || "";
           insertComponent.run([
             wepId,
             String(weapon.name || "Unknown Weapon"),
@@ -537,7 +537,7 @@ export async function syncDataForVersion(
         const crew = v.crew;
         const crewVal = typeof crew === "object" && crew !== null ? (crew.min || crew.max || 1) : (crew || 1);
         const speed = v.speed || {};
-        const image = (v.images && v.images[0] && v.images[0].source) || "";
+        const image = (v.images && v.images[0] && v.images[0].thumbnail_url || v.images[0].original_url) || "";
         insertShip.run([
           shipId,
           String(v.name || "Unknown"),
@@ -613,7 +613,7 @@ export async function syncDataForVersion(
             capacity: Number(vw.capacity) || 0,
           };
           const wepId = String(weapon.uuid || weapon.class_name || `weapon_${componentCount}`);
-          const image = (weapon.images && weapon.images[0] && weapon.images[0].source) || "";
+          const image = (weapon.images && weapon.images[0] && weapon.images[0].thumbnail_url || weapon.images[0].original_url) || "";
           insertComponent.run([
             wepId,
             String(weapon.name || "Unknown Weapon"),

@@ -115,6 +115,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         const slotType = hp.slot_type.toLowerCase();
         const validTypes: Record<string, string[]> = {
           weapon: ["weapon"],
+          turret: ["weapon"],
           shield: ["shield"],
           powerplant: ["powerplant"],
           cooler: ["cooler"],
@@ -127,13 +128,49 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         const compatible = availableComponents.filter(c => types.includes(c.type.toLowerCase()));
 
         if (compatible.length > 0) {
-          let best = compatible[0];
-          for (const comp of compatible) {
-            const currentScore = (comp.stats.dps || 0) + (comp.stats.hp || 0) / 10 + (comp.stats.output || 0) / 100;
-            const bestScore = (best.stats.dps || 0) + (best.stats.hp || 0) / 10 + (best.stats.output || 0) / 100;
-            if (currentScore > bestScore) best = comp;
-          }
-          bestComponents.set(hp.id, best.id);
+          const scored = compatible.map(comp => {
+            let score = 0;
+            const dps = comp.stats.dps || 0;
+            const hp = comp.stats.hp || 0;
+            const output = comp.stats.output || 0;
+            const range = comp.stats.range || 0;
+            const speed = comp.stats.speed || 0;
+
+            switch (preset) {
+              case "fastest":
+                if (comp.type === "QuantumDrive") score = speed || range;
+                else if (comp.type === "PowerPlant") score = output;
+                else score = output + dps * 0.5;
+                break;
+              case "max_range":
+                if (comp.type === "QuantumDrive") score = range;
+                else if (comp.type === "PowerPlant") score = output;
+                else score = range + hp * 0.5;
+                break;
+              case "best_weapons":
+                if (comp.type === "Weapon") score = dps * 10;
+                else if (comp.type === "Shield") score = hp * 2;
+                else if (comp.type === "PowerPlant") score = output;
+                else score = 1;
+                break;
+              case "best_defense":
+                if (comp.type === "Shield") score = hp * 10;
+                else if (comp.type === "PowerPlant") score = output;
+                else score = hp + output * 0.5;
+                break;
+              case "cheapest":
+                score = 1000000 - (comp.price_auec || 0);
+                break;
+              case "balanced":
+              default:
+                score = dps + hp / 10 + output / 100 + range / 100;
+                break;
+            }
+            return { comp, score };
+          });
+
+          scored.sort((a, b) => b.score - a.score);
+          bestComponents.set(hp.id, scored[0].comp.id);
         }
       });
 
