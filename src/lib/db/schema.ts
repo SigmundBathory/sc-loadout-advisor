@@ -112,12 +112,24 @@ function initSchema(db: InstanceType<typeof Database>) {
       is_favorite INTEGER DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS ship_buy_locations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ship_name TEXT NOT NULL,
+      price_auec REAL DEFAULT 0,
+      location_name TEXT NOT NULL,
+      shop_name TEXT DEFAULT '',
+      location_type TEXT DEFAULT 'sale',
+      source TEXT DEFAULT 'scfocus.org',
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_ships_manufacturer ON ships(manufacturer_code);
     CREATE INDEX IF NOT EXISTS idx_ships_classification ON ships(classification);
     CREATE INDEX IF NOT EXISTS idx_components_type ON components(type);
     CREATE INDEX IF NOT EXISTS idx_components_size ON components(size);
     CREATE INDEX IF NOT EXISTS idx_hardpoints_ship ON hardpoints(ship_id);
     CREATE INDEX IF NOT EXISTS idx_buy_locations_component ON buy_locations(component_id);
+    CREATE INDEX IF NOT EXISTS idx_ship_buy_locations_name ON ship_buy_locations(ship_name);
   `);
 
   // Ensure sync_meta row exists

@@ -10,9 +10,12 @@ export function getAllShips(filters?: {
 }): Ship[] {
   const db = getDb();
   let query = `
-    SELECT s.*, m.name as manufacturer_name, m.code as manufacturer_code
+    SELECT s.*, m.name as manufacturer_name, m.code as manufacturer_code,
+           MIN(CASE WHEN sbl.location_type = 'sale' THEN sbl.price_auec END) as price_auec,
+           MAX(CASE WHEN sbl.ship_name IS NOT NULL THEN 1 ELSE 0 END) as is_buyable
     FROM ships s
     LEFT JOIN manufacturers m ON s.manufacturer_code = m.code
+    LEFT JOIN ship_buy_locations sbl ON sbl.ship_name = s.name
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -30,7 +33,7 @@ export function getAllShips(filters?: {
     params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
   }
 
-  query += " ORDER BY s.name";
+  query += " GROUP BY s.id ORDER BY s.name";
 
   const rows = db.prepare(query).all(params) as any[];
   return rows.map(mapShipRow);
@@ -89,6 +92,8 @@ function mapShipRow(row: any): Ship {
     image_url: row.image_url || undefined,
     hardpoints: [],
     dps: row.dps ? Number(row.dps) : undefined,
+    price_auec: row.price_auec ? Number(row.price_auec) : undefined,
+    is_buyable: row.is_buyable ? true : false,
   };
 }
 
@@ -460,4 +465,73 @@ export function getShipsWithDps(filters?: {
 
   const rows = db.prepare(query).all(params) as any[];
   return rows.map(mapShipRow);
+}
+
+// ==================== SHIP BUY/RENT LOCATIONS ====================
+
+export interface ShipBuyLocation {
+  ship_name: string;
+  price_auec: number;
+  location_name: string;
+  shop_name: string;
+  location_type: "sale" | "rental" | "earn";
+}
+
+export function getShipBuyLocations(shipName: string): ShipBuyLocation[] {
+  const db = getDb();
+  const rows = db
+    .prepare("SELECT * FROM ship_buy_locations WHERE ship_name = ? ORDER BY price_auec ASC")
+    .all(shipName) as any[];
+  return rows.map((r: any) => ({
+    ship_name: r.ship_name,
+    price_auec: r.price_auec,
+    location_name: r.location_name,
+    shop_name: r.shop_name,
+    location_type: r.location_type,
+  }));
+}
+
+export function getShipBuyLocationsFuzzy(shipName: string): ShipBuyLocation[] {
+  const db = getDb();
+  // Try exact match first
+  let rows = db
+    .prepare("SELECT * FROM ship_buy_locations WHERE ship_name = ? ORDER BY price_auec ASC")
+    .all(shipName) as any[];
+
+  if (rows.length === 0) {
+    // Try fuzzy match
+    rows = db
+      .prepare("SELECT * FROM ship_buy_locations WHERE ship_name LIKE ? ORDER BY price_auec ASC")
+      .all(`%${shipName}%`) as any[];
+  }
+
+  if (rows.length === 0 && shipName.includes(" ")) {
+    // Try first word
+    const firstWord = shipName.split(" ")[0];
+    rows = db
+      .prepare("SELECT * FROM ship_buy_locations WHERE ship_name LIKE ? ORDER BY price_auec ASC")
+      .all(`%${firstWord}%`) as any[];
+  }
+
+  return rows.map((r: any) => ({
+    ship_name: r.ship_name,
+    price_auec: r.price_auec,
+    location_name: r.location_name,
+    shop_name: r.shop_name,
+    location_type: r.location_type,
+  }));
+}
+
+export function getAllShipLocations(): ShipBuyLocation[] {
+  const db = getDb();
+  const rows = db
+    .prepare("SELECT * FROM ship_buy_locations ORDER BY ship_name, price_auec ASC")
+    .all() as any[];
+  return rows.map((r: any) => ({
+    ship_name: r.ship_name,
+    price_auec: r.price_auec,
+    location_name: r.location_name,
+    shop_name: r.shop_name,
+    location_type: r.location_type,
+  }));
 }

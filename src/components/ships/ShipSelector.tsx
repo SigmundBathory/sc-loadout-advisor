@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X } from "lucide-react";
+import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign } from "lucide-react";
 import type { Ship } from "@/lib/types";
 import Link from "next/link";
 
@@ -278,6 +278,12 @@ export default function ShipSelector({
                         <Rocket className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
                         <span>Carga: {ship.cargo_capacity} SCU</span>
                       </div>
+                      {ship.price_auec ? (
+                        <div className="flex items-center gap-1.5">
+                          <DollarSign className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                          <span className="text-emerald-400 font-semibold">{ship.price_auec.toLocaleString()} aUEC</span>
+                        </div>
+                      ) : null}
                     </div>
                   </CardContent>
                 </div>
@@ -313,6 +319,11 @@ export default function ShipSelector({
                   <div><span className="font-mono text-foreground font-semibold">{ship.scm_speed}</span> m/s SCM</div>
                   <div><span className="font-mono text-foreground font-semibold">{ship.hull_hp?.toLocaleString()}</span> HP</div>
                   <div><span className="font-mono text-foreground font-semibold">{ship.cargo_capacity}</span> SCU</div>
+                  {ship.price_auec ? (
+                    <div><span className="font-mono text-emerald-400 font-semibold">{ship.price_auec.toLocaleString()}</span> aUEC</div>
+                  ) : ship.is_buyable ? (
+                    <div><span className="text-amber-400 text-[10px]">Disponible</span></div>
+                  ) : null}
                 </div>
 
                 <div className="shrink-0 flex items-center gap-3">

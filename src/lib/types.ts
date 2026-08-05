@@ -14,6 +14,8 @@ export interface Ship {
   image_url?: string;
   hardpoints: Hardpoint[];
   dps?: number;
+  price_auec?: number;
+  is_buyable?: boolean;
 }
 
 export interface Manufacturer {
