@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: sc-loadout-advisor
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm rebuild better-sqlite3 && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
