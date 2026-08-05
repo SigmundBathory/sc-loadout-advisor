@@ -12,6 +12,8 @@ import { Rocket, Wrench, Factory, Calendar, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   // Auto-sync if DB is empty (Render cold start)
   const shipCount = getShipCount();
