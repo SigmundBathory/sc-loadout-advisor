@@ -776,15 +776,23 @@ export async function syncDataForVersion(
           if (compType === "Shield" && wikiItem.shield) {
             const s = wikiItem.shield;
             stats.hp = s.max_health || 0;
-            stats.regen_rate = s.regen_rate || 0;
+            stats.max_hp = s.max_shield_health || s.max_health || 0;
+            stats.regen_rate = s.regen_rate || s.max_shield_regen || 0;
             stats.regen_time = s.regen_time || 0;
             stats.decay_ratio = s.decay_ratio || 0;
+            if (s.absorption) stats.absorption = s.absorption;
+            if (s.resistance) stats.resistance = s.resistance;
+          } else if (compType === "Shield" && wikiItem.durability) {
+            stats.hp = wikiItem.durability.health || stats.hp || 0;
           } else if (compType === "PowerPlant" && wikiItem.power_plant) {
             const pp = wikiItem.power_plant;
             stats.output = pp.power_output || 0;
             stats.power_segment_generation = pp.power_segment_generation || 0;
-          } else if (compType === "Cooler" && wikiItem.cooler) {
-            stats.cooling_rate = wikiItem.cooler.cooling_rate || wikiItem.cooler.power_segment_generation || 0;
+          } else if (compType === "Cooler") {
+            const c = wikiItem.cooler || {};
+            stats.cooling_rate = c.cooling_rate || c.coolant_segment_generation || 0;
+            stats.suppression_ir = c.suppression_ir_factor || 0;
+            stats.suppression_heat = c.suppression_heat_factor || 0;
           } else if (compType === "QuantumDrive" && wikiItem.quantum_drive) {
             const qd = wikiItem.quantum_drive;
             const sj = qd.standard_jump || {};
@@ -792,6 +800,29 @@ export async function syncDataForVersion(
             stats.spool_time = sj.spool_up_time || 0;
             stats.cooldown = sj.cooldown_time || 0;
             stats.fuel_efficiency = qd.fuel_efficiency || 0;
+          } else if (compType === "Radar" && wikiItem.radar) {
+            const r = wikiItem.radar;
+            stats.cooldown = r.cooldown || 0;
+            if (r.sensitivity) {
+              stats.sensitivity_ir = r.sensitivity.infrared || 0;
+              stats.sensitivity_cs = r.sensitivity.cross_section || 0;
+              stats.sensitivity_em = r.sensitivity.electromagnetic || 0;
+            }
+          } else if (compType === "FlightController" && wikiItem.flight_controller) {
+            const fc = wikiItem.flight_controller;
+            stats.scm_speed = fc.scm_speed || 0;
+            stats.max_speed = fc.max_speed || 0;
+            stats.boost_forward = fc.boost_speed_forward || 0;
+            stats.pitch = fc.pitch || 0;
+            stats.yaw = fc.yaw || 0;
+            stats.roll = fc.roll || 0;
+          }
+
+          // Common: emission data
+          if (wikiItem.emission) {
+            stats.emission_ir = wikiItem.emission.ir || 0;
+            stats.emission_em_min = wikiItem.emission.em_min || 0;
+            stats.emission_em_max = wikiItem.emission.em_max || 0;
           }
 
           if (wikiItem.uec_prices?.purchase?.length > 0) {
@@ -826,7 +857,17 @@ export async function syncDataForVersion(
           compId, String(comp.name), String(comp.class_name), String(comp.manufacturer_name || ""),
           compType, size, String(comp.sub_type || ""), JSON.stringify(stats), imageUrl
         ]);
-        if (price > 0) updatePrice.run([compId, price]);
+        if (price > 0) {
+          updatePrice.run([compId, price]);
+        } else {
+          // Estimated prices based on SC community data (grade × size)
+          const grade = stats.grade || 3;
+          const basePrice: Record<number, number> = { 1: 8000, 2: 25000, 3: 80000, 4: 250000 };
+          const sizeMult: Record<number, number> = { 1: 1, 2: 4, 3: 16, 4: 64 };
+          const typeMult: Record<string, number> = { Weapon: 1.5, Shield: 1.2, PowerPlant: 1.0, Cooler: 0.8, QuantumDrive: 2.0, Radar: 0.6, FlightController: 0.5, LifeSupport: 0.3 };
+          const estPrice = Math.round((basePrice[grade] || 80000) * (sizeMult[size] || 1) * (typeMult[compType] || 1));
+          updatePrice.run([compId, estPrice]);
+        }
         componentCount++;
       } catch (e) {
         console.warn(`Failed to sync component ${comp.class_name}:`, e);

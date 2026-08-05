@@ -37,20 +37,28 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
   const stats = useMemo(() => {
     let totalDps = 0;
     let shieldHp = 0;
+    let shieldRegen = 0;
     let powerOutput = 0;
+    let coolingRate = 0;
+    let quantumSpeed = 0;
     let totalCost = 0;
+    let emissionEm = 0;
 
     Object.values(slotAssignments).forEach((compId) => {
       const comp = componentMap.get(compId);
       if (comp) {
         totalDps += comp.stats.dps || 0;
         shieldHp += comp.stats.hp || 0;
-        powerOutput += comp.stats.output || 0;
+        shieldRegen += comp.stats.regen_rate || 0;
+        powerOutput += comp.stats.output || comp.stats.power_segment_generation || 0;
+        coolingRate += comp.stats.cooling_rate || 0;
+        quantumSpeed = Math.max(quantumSpeed, comp.stats.travel_speed || 0);
         totalCost += comp.price_auec || 0;
+        emissionEm += comp.stats.emission_em_max || 0;
       }
     });
 
-    return { totalDps, shieldHp, powerOutput, totalCost };
+    return { totalDps, shieldHp, shieldRegen, powerOutput, coolingRate, quantumSpeed, totalCost, emissionEm };
   }, [slotAssignments, componentMap]);
 
   const equippedComponentList = useMemo(() => {
@@ -159,11 +167,11 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
                 else score = hp + output * 0.5;
                 break;
               case "cheapest":
-                score = 1000000 - (comp.price_auec || 0);
+                score = 500000 - (comp.price_auec || 0);
                 break;
               case "balanced":
               default:
-                score = dps + hp / 10 + output / 100 + range / 100;
+                score = dps * 2 + hp / 5 + output / 50 + speed / 50000 + (comp.stats.regen_rate || 0) / 10;
                 break;
             }
             return { comp, score };
@@ -310,7 +318,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
                   shieldHp: stats.shieldHp,
                   hullHp: ship.hull_hp || 0,
                   powerOutput: stats.powerOutput,
-                  coolingRate: 0,
+                  coolingRate: stats.coolingRate,
                 }}
                 shipStats={{
                   hull_hp: ship.hull_hp || 0,
