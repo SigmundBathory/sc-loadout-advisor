@@ -99,7 +99,7 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
         const crew = v.crew;
         const crewVal = typeof crew === "object" && crew !== null ? (crew.min || crew.max || 1) : (crew || 1);
         const speed = v.speed || {};
-        const image = (v.images && v.images[0] && v.images[0].thumbnail_url || v.images[0].original_url) || "";
+        const image = (v.images?.[0]?.thumbnail_url || v.images?.[0]?.original_url) || "";
         insertShip.run([
           shipId,
           String(v.name || "Unknown"),
@@ -175,7 +175,7 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
             capacity: Number(vw.capacity) || 0,
           };
           const wepId = String(weapon.uuid || weapon.class_name || `weapon_${componentCount}`);
-          const image = (weapon.images && weapon.images[0] && weapon.images[0].thumbnail_url || weapon.images[0].original_url) || "";
+          const image = (weapon.images?.[0]?.thumbnail_url || weapon.images?.[0]?.original_url) || "";
           insertComponent.run([
             wepId,
             String(weapon.name || "Unknown Weapon"),
@@ -309,7 +309,7 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
 
           // Extract image
           if (wikiItem.images?.[0]) {
-            imageUrl = wikiItem.images[0].thumbnail_url || wikiItem.images[0].original_url || "";
+            imageUrl = wikiItem.images?.[0]?.thumbnail_url || wikiItem.images?.[0]?.original_url || "";
           }
 
           // Use Wiki API name if available
@@ -606,7 +606,7 @@ export async function syncDataForVersion(
         const crew = v.crew;
         const crewVal = typeof crew === "object" && crew !== null ? (crew.min || crew.max || 1) : (crew || 1);
         const speed = v.speed || {};
-        const image = (v.images && v.images[0] && v.images[0].thumbnail_url || v.images[0].original_url) || "";
+        const image = (v.images?.[0]?.thumbnail_url || v.images?.[0]?.original_url) || "";
         insertShip.run([
           shipId,
           String(v.name || "Unknown"),
@@ -682,7 +682,7 @@ export async function syncDataForVersion(
             capacity: Number(vw.capacity) || 0,
           };
           const wepId = String(weapon.uuid || weapon.class_name || `weapon_${componentCount}`);
-          const image = (weapon.images && weapon.images[0] && weapon.images[0].thumbnail_url || weapon.images[0].original_url) || "";
+          const image = (weapon.images?.[0]?.thumbnail_url || weapon.images?.[0]?.original_url) || "";
           insertComponent.run([
             wepId,
             String(weapon.name || "Unknown Weapon"),
@@ -801,7 +801,7 @@ export async function syncDataForVersion(
             if (cheapest) price = cheapest.price_buy;
           }
           if (wikiItem.images?.[0]) {
-            imageUrl = wikiItem.images[0].thumbnail_url || wikiItem.images[0].original_url || "";
+            imageUrl = wikiItem.images?.[0]?.thumbnail_url || wikiItem.images?.[0]?.original_url || "";
           }
           if (wikiItem.name) comp.name = wikiItem.name;
           if (wikiItem.grade) stats.grade = wikiItem.grade;
