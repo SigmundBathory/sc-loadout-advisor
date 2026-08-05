@@ -383,18 +383,10 @@ export function getTopShipsByDps(limit: number = 5) {
   const db = getDb();
   const rows = db.prepare(`
     SELECT s.id, s.name, s.classification, s.image_url,
-           COALESCE(
-             (SELECT JSON_EXTRACT(c.stats, '$.dps')
-              FROM hardpoints h
-              JOIN components c ON h.name LIKE '%' || c.class_name || '%'
-              WHERE h.ship_id = s.id AND c.type = 'Weapon'
-              ORDER BY CAST(JSON_EXTRACT(c.stats, '$.dps') AS REAL) DESC
-              LIMIT 1),
-             0
-           ) as dps
+           (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'weapon') * 800 as dps
     FROM ships s
     WHERE s.hull_hp > 0
-    ORDER BY dps DESC
+    ORDER BY dps DESC, s.name
     LIMIT ?
   `).all([limit]) as any[];
   return rows;
