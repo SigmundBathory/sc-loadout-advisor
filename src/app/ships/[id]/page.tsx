@@ -1,4 +1,4 @@
-import { getShipById, getShipBuyLocationsFuzzy } from "@/lib/db/queries";
+import { getShipById, getShipBuyLocationsFuzzy, getWikeloShipFuzzy } from "@/lib/db/queries";
 import LoadoutBuilder from "@/components/loadout/LoadoutBuilder";
 import ShipBuyLocations from "@/components/ships/ShipBuyLocations";
 import ClientHeader from "@/components/layout/ClientHeader";
@@ -18,6 +18,7 @@ export default async function ShipPage({ params }: ShipPageProps) {
   }
 
   const locations = getShipBuyLocationsFuzzy(ship.name);
+  const wikelo = getWikeloShipFuzzy(ship.name);
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,9 +31,7 @@ export default async function ShipPage({ params }: ShipPageProps) {
       <main className="container mx-auto px-4 py-8 space-y-6">
         <Breadcrumb items={[{ label: "Naves", href: "/ships" }, { label: ship.name }]} />
         
-        {locations.length > 0 && (
-          <ShipBuyLocations locations={locations} />
-        )}
+        <ShipBuyLocations locations={locations} wikelo={wikelo} />
         
         <LoadoutBuilder ship={ship} />
       </main>

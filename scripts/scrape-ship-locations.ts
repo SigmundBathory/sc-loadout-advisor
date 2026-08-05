@@ -21,7 +21,10 @@ async function fetchPage(): Promise<string> {
 }
 
 function parsePrice(text: string): number {
-  const cleaned = text.replace(/[^0-9]/g, "");
+  // Handle formats like "2,203 (561)" - take only first number
+  const firstNum = text.match(/[\d,.]+/);
+  if (!firstNum) return 0;
+  const cleaned = firstNum[0].replace(/[^0-9]/g, "");
   return parseInt(cleaned) || 0;
 }
 

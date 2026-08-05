@@ -14,7 +14,10 @@ interface ShipLocation {
 }
 
 function parsePrice(text: string): number {
-  return parseInt(text.replace(/[^0-9]/g, "")) || 0;
+  const firstNum = text.match(/[\d,.]+/);
+  if (!firstNum) return 0;
+  const cleaned = firstNum[0].replace(/[^0-9]/g, "");
+  return parseInt(cleaned) || 0;
 }
 
 function parseShipsFromPage(html: string): ShipLocation[] {
@@ -115,6 +118,11 @@ async function main() {
   // 2. Ship buy/rent/earn locations
   console.log("\n--- Step 2: Ship Locations (scfocus.org) ---");
   await syncShipLocations();
+
+  // 3. Wikelo ship requirements
+  console.log("\n--- Step 3: Wikelo Ships (Google Sheets) ---");
+  const { execSync } = await import("child_process");
+  execSync("npx tsx scripts/sync-wikelo.ts", { stdio: "inherit", cwd: process.cwd() });
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log(`\n=== FULL SYNC COMPLETE in ${elapsed}s ===`);

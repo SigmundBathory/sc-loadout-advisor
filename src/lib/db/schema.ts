@@ -123,6 +123,16 @@ function initSchema(db: InstanceType<typeof Database>) {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS wikelo_ships (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ship_name TEXT NOT NULL,
+      mission_name TEXT DEFAULT '',
+      cost_description TEXT DEFAULT '',
+      reputation_required TEXT DEFAULT '',
+      components_description TEXT DEFAULT '',
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_ships_manufacturer ON ships(manufacturer_code);
     CREATE INDEX IF NOT EXISTS idx_ships_classification ON ships(classification);
     CREATE INDEX IF NOT EXISTS idx_components_type ON components(type);
@@ -130,6 +140,7 @@ function initSchema(db: InstanceType<typeof Database>) {
     CREATE INDEX IF NOT EXISTS idx_hardpoints_ship ON hardpoints(ship_id);
     CREATE INDEX IF NOT EXISTS idx_buy_locations_component ON buy_locations(component_id);
     CREATE INDEX IF NOT EXISTS idx_ship_buy_locations_name ON ship_buy_locations(ship_name);
+    CREATE INDEX IF NOT EXISTS idx_wikelo_ships_name ON wikelo_ships(ship_name);
   `);
 
   // Ensure sync_meta row exists

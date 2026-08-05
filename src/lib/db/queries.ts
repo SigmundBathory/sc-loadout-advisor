@@ -535,3 +535,57 @@ export function getAllShipLocations(): ShipBuyLocation[] {
     location_type: r.location_type,
   }));
 }
+
+// ==================== WEKELO SHIPS ====================
+
+export interface WikeloShip {
+  ship_name: string;
+  mission_name: string;
+  cost_description: string;
+  reputation_required: string;
+  components_description: string;
+}
+
+export function getWikeloShip(shipName: string): WikeloShip | null {
+  const db = getDb();
+  const row = db
+    .prepare("SELECT * FROM wikelo_ships WHERE ship_name = ?")
+    .get(shipName) as any;
+  if (!row) return null;
+  return {
+    ship_name: row.ship_name,
+    mission_name: row.mission_name,
+    cost_description: row.cost_description,
+    reputation_required: row.reputation_required,
+    components_description: row.components_description,
+  };
+}
+
+export function getWikeloShipFuzzy(shipName: string): WikeloShip | null {
+  const db = getDb();
+  let row = db
+    .prepare("SELECT * FROM wikelo_ships WHERE ship_name = ?")
+    .get(shipName) as any;
+
+  if (!row) {
+    row = db
+      .prepare("SELECT * FROM wikelo_ships WHERE ship_name LIKE ?")
+      .get(`%${shipName}%`) as any;
+  }
+
+  if (!row && shipName.includes(" ")) {
+    const firstWord = shipName.split(" ")[0];
+    row = db
+      .prepare("SELECT * FROM wikelo_ships WHERE ship_name LIKE ?")
+      .get(`%${firstWord}%`) as any;
+  }
+
+  if (!row) return null;
+  return {
+    ship_name: row.ship_name,
+    mission_name: row.mission_name,
+    cost_description: row.cost_description,
+    reputation_required: row.reputation_required,
+    components_description: row.components_description,
+  };
+}

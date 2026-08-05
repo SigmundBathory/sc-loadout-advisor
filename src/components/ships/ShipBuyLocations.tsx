@@ -1,15 +1,15 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { MapPin, ShoppingCart, Key, Trophy } from "lucide-react";
-import type { ShipBuyLocation } from "@/lib/db/queries";
+import { MapPin, ShoppingCart, Key, Trophy, Sparkles } from "lucide-react";
+import type { ShipBuyLocation, WikeloShip } from "@/lib/db/queries";
 
 interface ShipBuyLocationsProps {
   locations: ShipBuyLocation[];
+  wikelo?: WikeloShip | null;
 }
 
-export default function ShipBuyLocations({ locations }: ShipBuyLocationsProps) {
-  if (locations.length === 0) return null;
+export default function ShipBuyLocations({ locations, wikelo }: ShipBuyLocationsProps) {
+  if (locations.length === 0 && !wikelo) return null;
 
   const sales = locations.filter(l => l.location_type === "sale");
   const rentals = locations.filter(l => l.location_type === "rental");
@@ -48,7 +48,7 @@ export default function ShipBuyLocations({ locations }: ShipBuyLocationsProps) {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Key className="h-3.5 w-3.5 text-blue-400" />
-            <span className="text-xs font-semibold text-blue-400">Alquiler (1 día)</span>
+            <span className="text-xs font-semibold text-blue-400">Alquiler (1 dia)</span>
           </div>
           <div className="space-y-1.5">
             {rentals.map((loc, i) => (
@@ -79,6 +79,41 @@ export default function ShipBuyLocations({ locations }: ShipBuyLocationsProps) {
                 <span className="text-muted-foreground ml-2">— {loc.location_name}</span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {wikelo && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+            <span className="text-xs font-semibold text-purple-400">Wikelo Emporium</span>
+          </div>
+          <div className="bg-purple-500/5 border border-purple-500/10 rounded-lg px-3 py-2 space-y-1.5">
+            {wikelo.mission_name && (
+              <div className="text-xs">
+                <span className="text-muted-foreground">Mision: </span>
+                <span className="font-medium text-foreground">{wikelo.mission_name}</span>
+              </div>
+            )}
+            {wikelo.cost_description && (
+              <div className="text-xs">
+                <span className="text-muted-foreground">Requisitos: </span>
+                <span className="text-foreground">{wikelo.cost_description}</span>
+              </div>
+            )}
+            {wikelo.reputation_required && (
+              <div className="text-xs">
+                <span className="text-muted-foreground">Reputacion: </span>
+                <span className="text-amber-400">{wikelo.reputation_required}</span>
+              </div>
+            )}
+            {wikelo.components_description && (
+              <div className="text-xs mt-2 pt-2 border-t border-purple-500/10">
+                <span className="text-muted-foreground">Componentes incluidos: </span>
+                <span className="text-foreground text-[11px]">{wikelo.components_description}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
