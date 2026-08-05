@@ -1,0 +1,328 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X } from "lucide-react";
+import type { Ship } from "@/lib/types";
+import Link from "next/link";
+
+interface ShipSelectorProps {
+  initialShips?: Ship[];
+  manufacturers?: { code: string; name: string }[];
+  classifications?: string[];
+}
+
+export default function ShipSelector({
+  initialShips = [],
+  manufacturers = [],
+  classifications = [],
+}: ShipSelectorProps) {
+  const [ships, setShips] = useState<Ship[]>(initialShips);
+  const [search, setSearch] = useState("");
+  const [selectedManufacturer, setSelectedManufacturer] = useState("");
+  const [selectedClassification, setSelectedClassification] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [loading, setLoading] = useState(initialShips.length === 0);
+  const allShipsRef = useRef<Ship[]>(initialShips);
+
+  useEffect(() => {
+    if (initialShips.length > 0) {
+      allShipsRef.current = initialShips;
+      return;
+    }
+    fetchShips();
+  }, []);
+
+  const filterShips = useCallback(() => {
+    let filtered = allShipsRef.current;
+    if (search) {
+      const q = search.toLowerCase();
+      filtered = filtered.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          s.class_name.toLowerCase().includes(q) ||
+          (s.manufacturer?.name || "").toLowerCase().includes(q)
+      );
+    }
+    if (selectedManufacturer) {
+      filtered = filtered.filter(
+        (s) => s.manufacturer?.code === selectedManufacturer
+      );
+    }
+    if (selectedClassification) {
+      filtered = filtered.filter(
+        (s) => s.classification === selectedClassification
+      );
+    }
+    setShips(filtered);
+  }, [search, selectedManufacturer, selectedClassification]);
+
+  useEffect(() => {
+    filterShips();
+  }, [filterShips]);
+
+  async function fetchShips() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/ships");
+      const data = await res.json();
+      allShipsRef.current = data.ships || [];
+      filterShips();
+    } catch (e) {
+      console.error("Failed to fetch ships:", e);
+    }
+    setLoading(false);
+  }
+
+  const uniqueManufacturers =
+    manufacturers.length > 0
+      ? manufacturers
+      : Array.from(
+          new Map(
+            allShipsRef.current.map((s) => [s.manufacturer?.code, s.manufacturer])
+          ).values()
+        ).filter((m): m is { code: string; name: string } => Boolean(m && m.code));
+
+  const uniqueClassifications =
+    classifications.length > 0
+      ? classifications
+      : Array.from(
+          new Set(allShipsRef.current.map((s) => s.classification).filter(Boolean))
+        ).sort();
+
+  function getClassificationBadge(classification: string) {
+    const cls = (classification || "").toLowerCase();
+    if (cls.includes("fighter") || cls.includes("combat") || cls.includes("interceptor")) {
+      return <Badge className="bg-red-500/20 text-red-300 border-red-500/30">{classification}</Badge>;
+    }
+    if (cls.includes("freight") || cls.includes("cargo") || cls.includes("transport")) {
+      return <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30">{classification}</Badge>;
+    }
+    if (cls.includes("exploration") || cls.includes("expedition") || cls.includes("pathfinder")) {
+      return <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30">{classification}</Badge>;
+    }
+    if (cls.includes("stealth") || cls.includes("recon")) {
+      return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">{classification}</Badge>;
+    }
+    if (cls.includes("mining") || cls.includes("salvage") || cls.includes("industrial")) {
+      return <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">{classification}</Badge>;
+    }
+    return <Badge variant="secondary">{classification || "General"}</Badge>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Top Filter Bar */}
+      <div className="glass-panel p-4 rounded-2xl border-border/40 space-y-4">
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar nave por nombre, modelo o fabricante..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 pr-9 rounded-xl bg-muted/40 border-border/40"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <select
+              value={selectedManufacturer}
+              onChange={(e) => setSelectedManufacturer(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary flex-1 md:w-48"
+            >
+              <option value="" className="bg-card">Todos los Fabricantes</option>
+              {uniqueManufacturers.map((m) => (
+                <option key={m.code} value={m.code} className="bg-card">
+                  {m.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={selectedClassification}
+              onChange={(e) => setSelectedClassification(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary flex-1 md:w-48"
+            >
+              <option value="" className="bg-card">Todas las Clasificaciones</option>
+              {uniqueClassifications.map((c) => (
+                <option key={c} value={c} className="bg-card">
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex items-center border border-border/40 rounded-xl overflow-hidden p-0.5 bg-muted/30 shrink-0">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 w-7 p-0 rounded-lg"
+                onClick={() => setViewMode("grid")}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 w-7 p-0 rounded-lg"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter Badges indicator */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+          <span className="font-medium">
+            Mostrando <span className="text-primary font-mono font-bold">{ships.length}</span> naves
+          </span>
+          {(search || selectedManufacturer || selectedClassification) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch("");
+                setSelectedManufacturer("");
+                setSelectedClassification("");
+              }}
+              className="h-6 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Limpiar Filtros
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Grid or List Display */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="glass-panel border-border/40 animate-pulse">
+              <CardContent className="p-6 h-56 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="h-6 bg-muted/60 rounded-md w-3/4" />
+                  <div className="h-4 bg-muted/40 rounded-md w-1/2" />
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-4">
+                  <div className="h-3 bg-muted/40 rounded w-full" />
+                  <div className="h-3 bg-muted/40 rounded w-full" />
+                  <div className="h-3 bg-muted/40 rounded w-full" />
+                  <div className="h-3 bg-muted/40 rounded w-full" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : ships.length === 0 ? (
+        <div className="glass-panel rounded-2xl p-12 text-center text-muted-foreground space-y-3">
+          <Rocket className="h-10 w-10 mx-auto opacity-40 text-primary" />
+          <p className="text-base font-medium">No se encontraron naves con los filtros seleccionados.</p>
+          <p className="text-xs">Prueba borrando la búsqueda o ejecuta una sincronización si la base de datos está vacía.</p>
+        </div>
+      ) : viewMode === "grid" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {ships.map((ship) => (
+            <Link key={ship.id} href={`/ships/${ship.id}`}>
+              <Card className="glass-panel glass-panel-hover border-border/40 cursor-pointer h-full group flex flex-col justify-between overflow-hidden">
+                <div>
+                  {ship.image_url ? (
+                    <div className="h-36 w-full relative overflow-hidden bg-muted/20 border-b border-border/30">
+                      <img
+                        src={ship.image_url}
+                        alt={ship.name}
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : null}
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
+                          {ship.name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground font-medium">
+                          {ship.manufacturer?.name || "Unknown Manufacturer"}
+                        </p>
+                      </div>
+                      {getClassificationBadge(ship.classification)}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                        <span>Tripulación: {ship.crew}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                        <span>SCM: {ship.scm_speed} m/s</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Shield className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                        <span>Casco: {ship.hull_hp ? ship.hull_hp.toLocaleString() : "0"} HP</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Rocket className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                        <span>Carga: {ship.cargo_capacity} SCU</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        /* List View */
+        <div className="glass-panel rounded-2xl border-border/40 overflow-hidden divide-y divide-border/30">
+          {ships.map((ship) => (
+            <Link key={ship.id} href={`/ships/${ship.id}`} className="block hover:bg-muted/30 transition-colors">
+              <div className="p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  {ship.image_url ? (
+                    <img
+                      src={ship.image_url}
+                      alt={ship.name}
+                      className="w-12 h-12 rounded-lg object-cover bg-muted shrink-0 border border-border/40"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-muted/50 border border-border/40 flex items-center justify-center text-primary shrink-0">
+                      <Rocket className="h-5 w-5" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-base text-foreground truncate">{ship.name}</h3>
+                    <p className="text-xs text-muted-foreground">{ship.manufacturer?.name}</p>
+                  </div>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-6 text-xs text-muted-foreground">
+                  <div><span className="font-mono text-foreground font-semibold">{ship.scm_speed}</span> m/s SCM</div>
+                  <div><span className="font-mono text-foreground font-semibold">{ship.hull_hp?.toLocaleString()}</span> HP</div>
+                  <div><span className="font-mono text-foreground font-semibold">{ship.cargo_capacity}</span> SCU</div>
+                </div>
+
+                <div className="shrink-0 flex items-center gap-3">
+                  {getClassificationBadge(ship.classification)}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

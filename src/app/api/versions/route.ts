@@ -1,0 +1,53 @@
+import { NextResponse } from "next/server";
+import { getGameVersionsFromDb, getSelectedVersion, setSelectedVersion, syncGameVersions } from "@/lib/db/sync";
+
+export async function GET() {
+  try {
+    const existing = getGameVersionsFromDb();
+    
+    // Fetch from Wiki API if we don't have versions yet
+    if (!existing || existing.length === 0) {
+      await syncGameVersions();
+    }
+    
+    const versions = getGameVersionsFromDb();
+    const selected = getSelectedVersion();
+    
+    return NextResponse.json({
+      versions,
+      selectedVersion: selected,
+    });
+  } catch (error) {
+    console.error("Error fetching versions:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch versions" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const { version } = await request.json();
+    
+    if (!version) {
+      return NextResponse.json(
+        { error: "Version is required" },
+        { status: 400 }
+      );
+    }
+    
+    setSelectedVersion(version);
+    
+    return NextResponse.json({
+      message: "Version selected",
+      selectedVersion: version,
+    });
+  } catch (error) {
+    console.error("Error setting version:", error);
+    return NextResponse.json(
+      { error: "Failed to set version" },
+      { status: 500 }
+    );
+  }
+}
