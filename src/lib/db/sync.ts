@@ -276,55 +276,57 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
     console.log(`Synced ${componentCount} total components (${componentMap.size} from vehicle ports)`);
 
     // --- UEX prices and locations ---
-    onProgress?.("Sincronizando precios UEX...", 75);
-    const insertLocation = db.prepare(`
-      INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const updatePrice = db.prepare(`
-      INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at)
-      VALUES (?, ?, datetime('now'))
-    `);
-
-    try {
-      const terminalsRes = await getUexTerminals();
-      const terminals = terminalsRes.data || [];
-      const terminalMap = new Map<number, any>();
-      terminals.forEach((t: any) => terminalMap.set(t.id, t));
-
-      const pricesRes = await getUexItemsPrices();
-      const prices = pricesRes.data || [];
-
-      let priceCount = 0;
-      for (const priceEntry of prices) {
-        const terminal = terminalMap.get(priceEntry.id_terminal);
-        if (terminal) {
-          const compName = priceEntry.item_name || priceEntry.code;
-          const component = db
-            .prepare("SELECT id FROM components WHERE name LIKE ? OR class_name LIKE ?")
-            .get([`%${compName}%`, `%${compName}%`]) as any;
-
-          if (component) {
-            insertLocation.run([
-              component.id,
-              String(terminal.location || ""),
-              String(terminal.system || ""),
-              String(terminal.planet_moon || ""),
-              String(terminal.name || ""),
-              String(terminal.terminal_type || ""),
-              Number(priceEntry.price) || 0
-            ]);
-            if (priceEntry.price > 0) {
-              updatePrice.run([component.id, Number(priceEntry.price)]);
+    // UEX API requires paid key. Without it, prices are unavailable.
+    const uexKey = process.env.NEXT_PUBLIC_UEX_API_KEY || "";
+    if (uexKey) {
+      onProgress?.("Sincronizando precios UEX...", 75);
+      const insertLocation = db.prepare(`
+        INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      const updatePrice = db.prepare(`
+        INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at)
+        VALUES (?, ?, datetime('now'))
+      `);
+      try {
+        const terminalsRes = await getUexTerminals();
+        const terminals = terminalsRes.data || [];
+        const terminalMap = new Map<number, any>();
+        terminals.forEach((t: any) => terminalMap.set(t.id, t));
+        const pricesRes = await getUexItemsPrices();
+        const prices = pricesRes.data || [];
+        let priceCount = 0;
+        for (const priceEntry of prices) {
+          const terminal = terminalMap.get(priceEntry.id_terminal);
+          if (terminal) {
+            const compName = priceEntry.item_name || priceEntry.code;
+            const component = db
+              .prepare("SELECT id FROM components WHERE name LIKE ? OR class_name LIKE ?")
+              .get([`%${compName}%`, `%${compName}%`]) as any;
+            if (component) {
+              insertLocation.run([
+                component.id,
+                String(terminal.location || ""),
+                String(terminal.system || ""),
+                String(terminal.planet_moon || ""),
+                String(terminal.name || ""),
+                String(terminal.terminal_type || ""),
+                Number(priceEntry.price) || 0
+              ]);
+              if (priceEntry.price > 0) {
+                updatePrice.run([component.id, Number(priceEntry.price)]);
+              }
+              priceCount++;
             }
-            priceCount++;
           }
         }
+        console.log(`Synced ${priceCount} UEX price entries`);
+      } catch (e) {
+        console.warn("UEX prices unavailable (API key may be required):", e);
       }
-      console.log(`Synced ${priceCount} UEX price entries`);
-    } catch (e) {
-      console.warn("Failed to sync UEX prices:", e);
+    } else {
+      onProgress?.("UEX: sin API key, precios no disponibles", 75);
+      console.warn("UEX API key not configured. Set NEXT_PUBLIC_UEX_API_KEY to enable prices.");
     }
 
     // --- Sync metadata ---
@@ -714,55 +716,57 @@ export async function syncDataForVersion(
     console.log(`Synced ${componentCount} total components (${componentMap.size} from vehicle ports)`);
 
     // --- UEX prices and locations ---
-    onProgress?.("Sincronizando precios UEX...", 75);
-    const insertLocation = db.prepare(`
-      INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const updatePrice = db.prepare(`
-      INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at)
-      VALUES (?, ?, datetime('now'))
-    `);
-
-    try {
-      const terminalsRes = await getUexTerminals();
-      const terminals = terminalsRes.data || [];
-      const terminalMap = new Map<number, any>();
-      terminals.forEach((t: any) => terminalMap.set(t.id, t));
-
-      const pricesRes = await getUexItemsPrices();
-      const prices = pricesRes.data || [];
-
-      let priceCount = 0;
-      for (const priceEntry of prices) {
-        const terminal = terminalMap.get(priceEntry.id_terminal);
-        if (terminal) {
-          const compName = priceEntry.item_name || priceEntry.code;
-          const component = db
-            .prepare("SELECT id FROM components WHERE name LIKE ? OR class_name LIKE ?")
-            .get([`%${compName}%`, `%${compName}%`]) as any;
-
-          if (component) {
-            insertLocation.run([
-              component.id,
-              String(terminal.location || ""),
-              String(terminal.system || ""),
-              String(terminal.planet_moon || ""),
-              String(terminal.name || ""),
-              String(terminal.terminal_type || ""),
-              Number(priceEntry.price) || 0
-            ]);
-            if (priceEntry.price > 0) {
-              updatePrice.run([component.id, Number(priceEntry.price)]);
+    // UEX API requires paid key. Without it, prices are unavailable.
+    const uexKey = process.env.NEXT_PUBLIC_UEX_API_KEY || "";
+    if (uexKey) {
+      onProgress?.("Sincronizando precios UEX...", 75);
+      const insertLocation = db.prepare(`
+        INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      const updatePrice = db.prepare(`
+        INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at)
+        VALUES (?, ?, datetime('now'))
+      `);
+      try {
+        const terminalsRes = await getUexTerminals();
+        const terminals = terminalsRes.data || [];
+        const terminalMap = new Map<number, any>();
+        terminals.forEach((t: any) => terminalMap.set(t.id, t));
+        const pricesRes = await getUexItemsPrices();
+        const prices = pricesRes.data || [];
+        let priceCount = 0;
+        for (const priceEntry of prices) {
+          const terminal = terminalMap.get(priceEntry.id_terminal);
+          if (terminal) {
+            const compName = priceEntry.item_name || priceEntry.code;
+            const component = db
+              .prepare("SELECT id FROM components WHERE name LIKE ? OR class_name LIKE ?")
+              .get([`%${compName}%`, `%${compName}%`]) as any;
+            if (component) {
+              insertLocation.run([
+                component.id,
+                String(terminal.location || ""),
+                String(terminal.system || ""),
+                String(terminal.planet_moon || ""),
+                String(terminal.name || ""),
+                String(terminal.terminal_type || ""),
+                Number(priceEntry.price) || 0
+              ]);
+              if (priceEntry.price > 0) {
+                updatePrice.run([component.id, Number(priceEntry.price)]);
+              }
+              priceCount++;
             }
-            priceCount++;
           }
         }
+        console.log(`Synced ${priceCount} UEX price entries`);
+      } catch (e) {
+        console.warn("UEX prices unavailable (API key may be required):", e);
       }
-      console.log(`Synced ${priceCount} UEX price entries`);
-    } catch (e) {
-      console.warn("Failed to sync UEX prices:", e);
+    } else {
+      onProgress?.("UEX: sin API key, precios no disponibles", 75);
+      console.warn("UEX API key not configured. Set NEXT_PUBLIC_UEX_API_KEY to enable prices.");
     }
 
     // --- Sync metadata ---
