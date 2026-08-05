@@ -17,20 +17,30 @@ async function wikiFetch<T>(endpoint: string, params?: Record<string, string>): 
   let lastError: Error | null = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) {
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      const delay = 2000 * attempt;
+      console.log(`Retrying ${endpoint} in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
 
-    const res = await fetch(url.toString(), {
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    });
+    try {
+      const res = await fetch(url.toString(), {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "SC-Loadout-Advisor/1.0",
+        },
+        cache: "no-store",
+      });
 
-    if (res.ok) {
-      return res.json();
+      if (res.ok) {
+        return res.json();
+      }
+
+      lastError = new Error(`Wiki API error: ${res.status} ${res.statusText}`);
+      console.warn(`Wiki API attempt ${attempt + 1} failed: ${res.status} ${res.statusText} for ${endpoint}`);
+    } catch (e) {
+      lastError = e as Error;
+      console.warn(`Wiki API attempt ${attempt + 1} network error for ${endpoint}:`, e);
     }
-
-    lastError = new Error(`Wiki API error: ${res.status} ${res.statusText}`);
-    console.warn(`Wiki API attempt ${attempt + 1} failed: ${res.status} ${res.statusText} for ${endpoint}`);
   }
 
   throw lastError;
@@ -62,7 +72,7 @@ async function wikiFetchAllPages(
     page++;
     // Delay between pages to avoid rate limiting
     if (page <= lastPage) {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
@@ -82,7 +92,7 @@ export async function getDefaultVersion() {
 export async function getVehicles(version?: string) {
   const params: Record<string, string> = {};
   if (version) params.version = version;
-  const data = await wikiFetchAllPages("/vehicles", params);
+  const data = await wikiFetchAllPages("/vehicles", params, 50);
   return { data };
 }
 
@@ -126,7 +136,7 @@ export async function getAllVehicleItems(version?: string) {
 export async function getVehicleWeapons(version?: string) {
   const params: Record<string, string> = {};
   if (version) params.version = version;
-  const data = await wikiFetchAllPages("/vehicle-weapons", params);
+  const data = await wikiFetchAllPages("/vehicle-weapons", params, 50);
   return { data };
 }
 

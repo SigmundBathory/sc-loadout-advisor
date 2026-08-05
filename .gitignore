@@ -43,8 +43,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# database (local only - Turso will be used in production)
-/data/*.db
+# database (WAL/SHM are temporary, .db is the persistent file)
 /data/*.db-wal
 /data/*.db-shm
 

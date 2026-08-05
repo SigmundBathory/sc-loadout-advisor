@@ -1,6 +1,5 @@
 import { getDashboardStats, getTopShipsByDps, getManufacturerDistribution, getRecentLoadouts } from "@/lib/db/queries";
 import { getGameVersionsFromDb, getSelectedVersion, getSyncMeta, getShipCount } from "@/lib/db/sync";
-import { syncDataForVersion, syncGameVersions, checkVersionAndSync } from "@/lib/db/sync";
 import StatCard from "@/components/dashboard/StatCard";
 import PieChartFabricants from "@/components/dashboard/PieChartFabricants";
 import TopDpsTable from "@/components/dashboard/TopDpsTable";
@@ -8,30 +7,15 @@ import VersionChanges from "@/components/dashboard/VersionChanges";
 import RecentLoadouts from "@/components/dashboard/RecentLoadouts";
 import QuickActions from "@/components/dashboard/QuickActions";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
-import { Rocket, Wrench, Factory, Calendar, RefreshCw } from "lucide-react";
+import SyncPanel from "@/components/dashboard/SyncPanel";
+import { Rocket, Wrench, Factory, Calendar } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // Auto-sync if DB is empty (Render cold start)
   const shipCount = getShipCount();
-  if (shipCount === 0) {
-    try {
-      console.log("Dashboard: DB empty, triggering auto-sync...");
-      await syncGameVersions();
-      const versionCheck = await checkVersionAndSync();
-      const version = versionCheck.currentVersion;
-      if (version) {
-        await syncDataForVersion(version);
-        console.log("Dashboard: Auto-sync completed");
-      }
-    } catch (e) {
-      console.error("Dashboard: Auto-sync failed:", e);
-    }
-  }
-
   const stats = getDashboardStats();
   const topDps = getTopShipsByDps(5);
   const manufacturers = getManufacturerDistribution();
@@ -47,9 +31,30 @@ export default async function DashboardPage() {
     count: m.count,
   }));
 
+  if (shipCount === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <span className="text-primary">⬡</span> SC Loadout Advisor
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Dashboard de Star Citizen Loadouts
+              </p>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-12">
+          <SyncPanel />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div>
@@ -75,7 +80,6 @@ export default async function DashboardPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             icon={<Rocket className="h-5 w-5" />}
@@ -101,13 +105,11 @@ export default async function DashboardPage() {
           />
         </div>
 
-        {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <PieChartFabricants data={pieData} />
           <TopDpsTable ships={topDps} />
         </div>
 
-        {/* Version Changes */}
         {previousVersion && currentVersion && (
           <VersionChanges
             fromVersion={previousVersion.code}
@@ -118,13 +120,11 @@ export default async function DashboardPage() {
           />
         )}
 
-        {/* Loadouts + Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RecentLoadouts loadouts={recentLoadouts} />
           <ActivityFeed entries={[]} />
         </div>
 
-        {/* Quick Actions */}
         <QuickActions />
       </main>
     </div>
