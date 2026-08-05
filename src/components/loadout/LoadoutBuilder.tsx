@@ -134,7 +134,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
             const hp = comp.stats.hp || 0;
             const output = comp.stats.output || 0;
             const range = comp.stats.range || 0;
-            const speed = comp.stats.speed || 0;
+            const speed = comp.stats.travel_speed || 0;
 
             switch (preset) {
               case "fastest":
