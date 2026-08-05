@@ -14,16 +14,26 @@ async function wikiFetch<T>(endpoint: string, params?: Record<string, string>): 
     });
   }
 
-  const res = await fetch(url.toString(), {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
 
-  if (!res.ok) {
-    throw new Error(`Wiki API error: ${res.status} ${res.statusText}`);
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      return res.json();
+    }
+
+    lastError = new Error(`Wiki API error: ${res.status} ${res.statusText}`);
+    console.warn(`Wiki API attempt ${attempt + 1} failed: ${res.status} ${res.statusText} for ${endpoint}`);
   }
 
-  return res.json();
+  throw lastError;
 }
 
 async function wikiFetchAllPages(
@@ -50,6 +60,10 @@ async function wikiFetchAllPages(
     }
     if (allData.length > 0 && !res.meta) break;
     page++;
+    // Delay between pages to avoid rate limiting
+    if (page <= lastPage) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
   }
 
   return allData;
@@ -95,8 +109,15 @@ export async function getAllVehicleItems(version?: string) {
     try {
       const res = await getItems(type, version);
       allItems.push(...res.data.map((item: any) => ({ ...item, _wikiType: type })));
+      console.log(`Fetched ${res.data.length} ${type} items`);
+      // Delay between types to avoid rate limiting
+      if (types.indexOf(type) < types.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     } catch (e) {
       console.warn(`Failed to fetch ${type} items:`, e);
+      // Wait longer on error before retrying next type
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   }
   return { data: allItems };
