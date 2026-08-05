@@ -1,5 +1,6 @@
 import { getDashboardStats, getTopShipsByDps, getManufacturerDistribution, getRecentLoadouts } from "@/lib/db/queries";
-import { getGameVersionsFromDb, getSelectedVersion } from "@/lib/db/sync";
+import { getGameVersionsFromDb, getSelectedVersion, getSyncMeta, getShipCount } from "@/lib/db/sync";
+import { syncDataForVersion, syncGameVersions, checkVersionAndSync } from "@/lib/db/sync";
 import StatCard from "@/components/dashboard/StatCard";
 import PieChartFabricants from "@/components/dashboard/PieChartFabricants";
 import TopDpsTable from "@/components/dashboard/TopDpsTable";
@@ -11,7 +12,24 @@ import { Rocket, Wrench, Factory, Calendar, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  // Auto-sync if DB is empty (Render cold start)
+  const shipCount = getShipCount();
+  if (shipCount === 0) {
+    try {
+      console.log("Dashboard: DB empty, triggering auto-sync...");
+      await syncGameVersions();
+      const versionCheck = await checkVersionAndSync();
+      const version = versionCheck.currentVersion;
+      if (version) {
+        await syncDataForVersion(version);
+        console.log("Dashboard: Auto-sync completed");
+      }
+    } catch (e) {
+      console.error("Dashboard: Auto-sync failed:", e);
+    }
+  }
+
   const stats = getDashboardStats();
   const topDps = getTopShipsByDps(5);
   const manufacturers = getManufacturerDistribution();
