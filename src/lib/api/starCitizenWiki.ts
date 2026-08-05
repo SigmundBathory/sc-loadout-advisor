@@ -77,10 +77,24 @@ export async function getItems(
   type: string,
   version?: string
 ) {
-  const params: Record<string, string> = { type };
+  const params: Record<string, string> = { "filter[type]": type };
   if (version) params.version = version;
   const data = await wikiFetchAllPages("/items", params);
   return { data };
+}
+
+export async function getAllVehicleItems(version?: string) {
+  const types = ["Shield", "PowerPlant", "Cooler", "QuantumDrive", "Radar", "FlightController", "LifeSupportGenerator"];
+  const allItems: any[] = [];
+  for (const type of types) {
+    try {
+      const res = await getItems(type, version);
+      allItems.push(...res.data.map((item: any) => ({ ...item, _wikiType: type })));
+    } catch (e) {
+      console.warn(`Failed to fetch ${type} items:`, e);
+    }
+  }
+  return { data: allItems };
 }
 
 export async function getVehicleWeapons(version?: string) {
