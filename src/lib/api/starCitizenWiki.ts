@@ -28,14 +28,19 @@ async function wikiFetch<T>(endpoint: string, params?: Record<string, string>): 
 
 async function wikiFetchAllPages(
   endpoint: string,
-  baseParams?: Record<string, string>
+  baseParams?: Record<string, string>,
+  pageSize: number = 200
 ): Promise<any[]> {
   const allData: any[] = [];
   let page = 1;
   let lastPage = 1;
 
   while (page <= lastPage) {
-    const params: Record<string, string> = { ...baseParams, "page[number]": String(page) };
+    const params: Record<string, string> = {
+      ...baseParams,
+      "page[number]": String(page),
+      "page[size]": String(pageSize),
+    };
     const res = await wikiFetch<WikiPage<any[]>>(endpoint, params);
     allData.push(...(res.data || []));
     if (res.meta) {
