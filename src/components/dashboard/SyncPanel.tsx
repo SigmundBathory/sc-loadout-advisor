@@ -2,33 +2,71 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Rocket, Upload, Download, ArrowRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { Rocket, Download, Upload, ArrowRight, CheckCircle2, Loader2, AlertCircle, Globe, MapPin, ClipboardList } from "lucide-react";
 import Link from "next/link";
 
 type SyncState = "idle" | "syncing" | "done" | "error";
 
+interface SyncStep {
+  name: string;
+  status: "pending" | "syncing" | "done" | "error";
+  icon: any;
+  message?: string;
+}
+
+const steps: SyncStep[] = [
+  { name: "Wiki API + UEX", status: "pending", icon: Globe },
+  { name: "Ubicaciones naves (scfocus.org)", status: "pending", icon: MapPin },
+  { name: "Wikelo (Google Sheets)", status: "pending", icon: ClipboardList },
+];
+
 export default function SyncPanel() {
   const [state, setState] = useState<SyncState>("idle");
   const [message, setMessage] = useState("");
+  const [stepStates, setStepStates] = useState<SyncStep[]>(steps.map(s => ({ ...s })));
 
   async function handleSync() {
     setState("syncing");
-    setMessage("Sincronizando datos del Wiki API...");
+    setMessage("Iniciando sincronización completa...");
+    setStepStates(steps.map(s => ({ ...s, status: "pending" })));
+
     try {
-      const res = await fetch("/api/sync", { method: "POST" });
+      const res = await fetch("/api/full-sync", { method: "POST" });
       const data = await res.json();
+      
       if (res.ok) {
         setState("done");
-        setMessage(data.message || "Sincronización completada. Recargando...");
+        setMessage(data.message || "Sincronización completa. Recargando...");
+        
+        // Update step states based on response
+        if (data.steps) {
+          setStepStates(prev => prev.map((s, i) => ({
+            ...s,
+            status: data.steps[i]?.status === "completed" ? "done" : data.steps[i]?.status === "error" ? "error" : s.status,
+            message: data.steps[i]?.output ? data.steps[i].output.slice(0, 100) : undefined
+          })));
+        }
+        
         setTimeout(() => window.location.reload(), 2000);
       } else {
         setState("error");
         setMessage(data.error || "Error en la sincronización");
+        setStepStates(prev => prev.map((s, i) => ({
+          ...s,
+          status: data.steps?.[i]?.status === "error" ? "error" : s.status
+        })));
       }
     } catch (e) {
       setState("error");
       setMessage("Error de red. Verifica tu conexión.");
     }
+  }
+
+  function getStepIcon(step: SyncStep) {
+    if (step.status === "syncing") return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
+    if (step.status === "done") return <CheckCircle2 className="h-5 w-5 text-green-400" />;
+    if (step.status === "error") return <AlertCircle className="h-5 w-5 text-red-400" />;
+    return <step.icon className="h-5 w-5 text-muted-foreground" />;
   }
 
   return (
@@ -44,50 +82,60 @@ export default function SyncPanel() {
         </p>
       </div>
 
-      {/* Sync options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Option 1: Sync from API */}
-        <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <Download className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Sincronizar desde Wiki API</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Descarga naves, componentes y precios desde la API oficial de Star Citizen Wiki.
-          </p>
-          <Button
-            onClick={handleSync}
-            disabled={state === "syncing"}
-            className="w-full"
-          >
-            {state === "syncing" && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {state === "done" && <CheckCircle2 className="h-4 w-4 mr-2" />}
-            {state === "error" && <AlertCircle className="h-4 w-4 mr-2" />}
-            {state === "syncing" ? "Sincronizando..." : state === "done" ? "Completado" : "Sincronizar Ahora"}
-          </Button>
-          {message && (
-            <p className={`text-xs ${state === "error" ? "text-red-400" : "text-green-400"}`}>
-              {message}
-            </p>
-          )}
+      {/* Sync progress steps */}
+      <div className="space-y-3">
+        <h3 className="font-semibold flex items-center gap-2">
+          <Download className="h-5 w-5 text-primary" />
+          Sincronización completa (3 pasos)
+        </h3>
+        <div className="space-y-2">
+          {stepStates.map((step, i) => (
+            <div key={step.name} className="flex items-center gap-3 p-3 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl transition-all">
+              <div className="flex-shrink-0">{getStepIcon(step)}</div>
+              <div className="flex-1">
+                <div className="font-medium">{step.name}</div>
+                {step.message && <div className="text-xs text-muted-foreground/70">{step.message}</div>}
+              </div>
+              {step.status === "syncing" && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+              {step.status === "done" && <CheckCircle2 className="h-4 w-4 text-green-400" />}
+              {step.status === "error" && <AlertCircle className="h-4 w-4 text-red-400" />}
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* Option 2: Import file */}
-        <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <Upload className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Importar archivo JSON</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Importa datos exportados desde erkul.games o archivos JSON de la comunidad.
-          </p>
-          <Link href="/import">
-            <Button variant="outline" className="w-full gap-2">
-              Ir a Importar
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+      {/* Sync button */}
+      <Button
+        onClick={handleSync}
+        disabled={state === "syncing"}
+        className="w-full py-3 text-lg"
+      >
+        {state === "syncing" && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
+        {state === "done" && <CheckCircle2 className="h-5 w-5 mr-2" />}
+        {state === "error" && <AlertCircle className="h-5 w-5 mr-2" />}
+        {state === "syncing" ? "Sincronizando todo..." : state === "done" ? "Completado" : "Sincronizar Todo (Wiki + UEX + Ubicaciones + Wikelo)"}
+      </Button>
+      {message && (
+        <p className={`text-xs text-center ${state === "error" ? "text-red-400" : "text-green-400"}`}>
+          {message}
+        </p>
+      )}
+
+      {/* Import file option */}
+      <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <Upload className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold">Importar archivo JSON</h3>
         </div>
+        <p className="text-sm text-muted-foreground">
+          Importa datos exportados desde erkul.games o archivos JSON de la comunidad.
+        </p>
+        <Link href="/import">
+          <Button variant="outline" className="w-full gap-2">
+            Ir a Importar
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
       </div>
 
       {/* Help text */}

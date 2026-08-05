@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DollarSign, ArrowRight } from "lucide-react";
+import { DollarSign, ArrowRight, ShoppingBag } from "lucide-react";
 import { translateSlotTypeEs } from "@/lib/utils";
 import type { Ship, Component, Hardpoint } from "@/lib/types";
 
@@ -46,9 +46,18 @@ export default function SlotList({ ship, slotAssignments, componentMap, onSlotCl
                   <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1 flex-wrap">
                     <span className="text-primary font-semibold">{comp.name}</span>
                     {comp.price_auec ? (
-                      <span className="text-amber-400 font-mono">
+                      <span className="text-amber-400 font-mono flex items-center gap-1">
                         <DollarSign className="inline h-3 w-3" />
                         {comp.price_auec.toLocaleString()} aUEC
+                        {comp.buy_locations && comp.buy_locations.length > 0 && (
+                          <>
+                            <ShoppingBag className="inline h-3 w-3 opacity-60" />
+                            <span className="text-muted-foreground/80">
+                              {comp.buy_locations[0].shop_name}
+                              {comp.buy_locations[0].planet_moon && ` (${comp.buy_locations[0].planet_moon})`}
+                            </span>
+                          </>
+                        )}
                       </span>
                     ) : null}
                     {comp.stats.dps ? (

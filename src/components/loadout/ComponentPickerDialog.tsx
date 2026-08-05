@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Wand2, Info } from "lucide-react";
+import { Search, Wand2, Info, ShoppingBag } from "lucide-react";
 import type { Component, Hardpoint } from "@/lib/types";
 
 interface ComponentPickerDialogProps {
@@ -70,19 +70,39 @@ export default function ComponentPickerDialog({ slot, components, loading, onSel
                     </div>
                   </div>
 
-                  <div className="text-right text-xs font-mono space-y-1">
-                    {comp.stats.dps ? (
-                      <div className="text-red-400 font-bold">{comp.stats.dps.toFixed(0)} DPS</div>
-                    ) : null}
-                    {comp.stats.hp ? (
-                      <div className="text-emerald-400 font-bold">{comp.stats.hp.toLocaleString()} HP</div>
-                    ) : null}
-                    {comp.stats.output ? (
-                      <div className="text-amber-400 font-bold">{comp.stats.output.toLocaleString()} W Output</div>
-                    ) : null}
-                    {comp.price_auec ? (
-                      <div className="text-amber-300 font-semibold">{comp.price_auec.toLocaleString()} aUEC</div>
-                    ) : null}
+<div className="text-right text-xs font-mono space-y-1">
+                      {comp.stats.dps ? (
+                        <div className="text-red-400 font-bold">{comp.stats.dps.toFixed(0)} DPS</div>
+                      ) : null}
+                      {comp.stats.hp ? (
+                        <div className="text-emerald-400 font-bold">{comp.stats.hp.toLocaleString()} HP</div>
+                      ) : null}
+                      {comp.stats.output ? (
+                        <div className="text-amber-400 font-bold">{comp.stats.output.toLocaleString()} W Output</div>
+                      ) : null}
+                      {comp.price_auec ? (
+                        <div className="space-y-1">
+                          <div className="text-amber-300 font-semibold flex items-center gap-1">
+                            {comp.price_auec.toLocaleString()} aUEC
+                            {comp.buy_locations && comp.buy_locations.length > 0 && (
+                              <ShoppingBag className="h-3 w-3 opacity-50" />
+                            )}
+                          </div>
+                          {comp.buy_locations && comp.buy_locations.length > 0 && (
+                            <div className="text-muted-foreground/70 text-[10px] space-y-0.5">
+                              {comp.buy_locations.slice(0, 3).map((loc, i) => (
+                                <div key={i} className="flex items-center gap-1">
+                                  <span>{loc.shop_name}</span>
+                                  {loc.planet_moon && <span className="opacity-60">({loc.planet_moon})</span>}
+                                </div>
+                              ))}
+                              {comp.buy_locations.length > 3 && (
+                                <div className="text-muted-foreground/50">+{comp.buy_locations.length - 3} más...</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
                   </div>
                 </div>
               ))}
