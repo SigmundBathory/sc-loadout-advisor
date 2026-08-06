@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import SyncIndicator from "@/components/sync/SyncIndicator";
 import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -18,16 +17,52 @@ import {
   Legend,
   Tooltip,
 } from "recharts";
-import type { Ship, Loadout } from "@/lib/types";
-import { GitCompare, Plus, X } from "lucide-react";
+import type { Ship, Loadout, LoadoutStats } from "@/lib/types";
+import { GitCompare, Plus, X, Wand2 } from "lucide-react";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
 
+interface ConfigEntry {
+  id: string;
+  ship: Ship;
+  loadout: Loadout | null;
+}
+
+function configLabel(entry: ConfigEntry): string {
+  if (entry.loadout) return entry.loadout.name;
+  return "Estándar";
+}
+
+function statsFor(entry: ConfigEntry): LoadoutStats & { dps: number } {
+  if (entry.loadout?.stats) {
+    return entry.loadout.stats as LoadoutStats & { dps: number };
+  }
+  // Standard config: use ship base stats (dps is estimated by the server)
+  return {
+    total_dps: (entry.ship as any).dps || 0,
+    sustained_dps: 0,
+    burst_dps: 0,
+    missile_dps: 0,
+    shield_hp: entry.ship.shield_hp,
+    shield_regen: 0,
+    hull_hp: entry.ship.hull_hp,
+    scm_speed: entry.ship.scm_speed,
+    max_speed: entry.ship.max_speed,
+    qt_range: 0,
+    qt_fuel: 0,
+    total_cost: 0,
+    power_output: 0,
+    power_demand: 0,
+    cooling_rate: 0,
+    dps: (entry.ship as any).dps || 0,
+  };
+}
+
 export default function ComparePage() {
   const [ships, setShips] = useState<Ship[]>([]);
-  const [selectedShips, setSelectedShips] = useState<Ship[]>([]);
+  const [configs, setConfigs] = useState<ConfigEntry[]>([]);
   const [search, setSearch] = useState("");
-  const [loadoutsByShip, setLoadoutsByShip] = useState<Record<string, Loadout>>({});
+  const [loadoutsByShip, setLoadoutsByShip] = useState<Record<string, Loadout[]>>({});
 
   useEffect(() => {
     fetch("/api/ships?withDps=true")
@@ -39,112 +74,192 @@ export default function ComparePage() {
     fetch("/api/loadouts")
       .then((r) => r.json())
       .then((d) => {
-        const map: Record<string, Loadout> = {};
+        const map: Record<string, Loadout[]> = {};
         (d.loadouts || []).forEach((l: Loadout) => {
-          if (!map[l.ship_id] || l.updated_at > map[l.ship_id].updated_at) {
-            map[l.ship_id] = l;
-          }
+          if (!map[l.ship_id]) map[l.ship_id] = [];
+          map[l.ship_id].push(l);
         });
+        Object.values(map).forEach((list) =>
+          list.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))
+        );
         setLoadoutsByShip(map);
       })
       .catch(() => {});
   }, []);
 
-  function loadoutFor(ship: Ship): Loadout | undefined {
-    return loadoutsByShip[ship.id];
-  }
-
-  function statsFor(ship: Ship) {
-    const l = loadoutFor(ship);
-    if (l?.stats) {
-      return l.stats;
-    }
-    return {
-      total_dps: (ship as any).dps || 0,
-      shield_hp: ship.shield_hp,
-      shield_regen: 0,
-      power_output: 0,
-      cooling_rate: 0,
-      qt_range: 0,
-      total_cost: 0,
-    };
-  }
-
   const filteredShips = ships.filter(
     (s) =>
-      !selectedShips.find((ss) => ss.id === s.id) &&
-      (s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.manufacturer.name.toLowerCase().includes(search.toLowerCase()))
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.manufacturer.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  function addShip(ship: Ship) {
-    if (selectedShips.length < 4) {
-      setSelectedShips([...selectedShips, ship]);
-      setSearch("");
-    }
+  function addConfig(ship: Ship) {
+    if (configs.length >= 4) return;
+    const loadouts = loadoutsByShip[ship.id] || [];
+    const entry: ConfigEntry = {
+      id: `cfg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      ship,
+      loadout: loadouts.length > 0 ? loadouts[0] : null,
+    };
+    setConfigs([...configs, entry]);
+    setSearch("");
   }
 
-  function removeShip(shipId: string) {
-    setSelectedShips(selectedShips.filter((s) => s.id !== shipId));
+  function removeConfig(id: string) {
+    setConfigs(configs.filter((c) => c.id !== id));
+  }
+
+  function changeLoadout(id: string, loadoutId: string) {
+    setConfigs(
+      configs.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              loadout: loadoutId
+                ? (loadoutsByShip[c.ship.id] || []).find((l) => l.id === loadoutId) || null
+                : null,
+            }
+          : c
+      )
+    );
   }
 
   const radarData = [
     {
       stat: "DPS",
       ...Object.fromEntries(
-        selectedShips.map((s, i) => [`ship${i}`, (statsFor(s).total_dps || 0) / 10])
+        configs.map((c, i) => [`ship${i}`, (statsFor(c).total_dps || statsFor(c).dps || 0) / 10])
       ),
     },
     {
       stat: "Escudos",
       ...Object.fromEntries(
-        selectedShips.map((s, i) => [`ship${i}`, (statsFor(s).shield_hp || s.shield_hp) / 100])
+        configs.map((c, i) => [`ship${i}`, statsFor(c).shield_hp / 100])
       ),
     },
     {
       stat: "Casco",
       ...Object.fromEntries(
-        selectedShips.map((s, i) => [`ship${i}`, s.hull_hp / 1000])
+        configs.map((c, i) => [`ship${i}`, (statsFor(c).hull_hp || c.ship.hull_hp) / 1000])
       ),
     },
     {
       stat: "Velocidad",
       ...Object.fromEntries(
-        selectedShips.map((s, i) => [`ship${i}`, s.scm_speed / 10])
+        configs.map((c, i) => [`ship${i}`, (statsFor(c).scm_speed || c.ship.scm_speed) / 10])
       ),
     },
     {
       stat: "Tripulacion",
       ...Object.fromEntries(
-        selectedShips.map((s, i) => [`ship${i}`, s.crew * 10])
+        configs.map((c, i) => [`ship${i}`, c.ship.crew * 10])
       ),
     },
   ];
+
+  const tableRows = useMemo(
+    () => [
+      { label: "Nave", get: (c: ConfigEntry) => c.ship.name, bold: true },
+      { label: "Configuración", get: (c: ConfigEntry) => configLabel(c) },
+      { label: "Fabricante", get: (c: ConfigEntry) => c.ship.manufacturer.name },
+      { label: "Clasificacion", get: (c: ConfigEntry) => c.ship.classification },
+      { label: "Crew", get: (c: ConfigEntry) => c.ship.crew.toString() },
+      { label: "Masa (kg)", get: (c: ConfigEntry) => c.ship.mass?.toLocaleString() },
+      { label: "SCM Speed", get: (c: ConfigEntry) => `${c.ship.scm_speed} m/s` },
+      { label: "Max Speed", get: (c: ConfigEntry) => `${c.ship.max_speed} m/s` },
+      { label: "Hull HP", get: (c: ConfigEntry) => (statsFor(c).hull_hp || c.ship.hull_hp)?.toLocaleString() },
+      { label: "Shield HP", get: (c: ConfigEntry) => statsFor(c).shield_hp?.toLocaleString() },
+      { label: "Cargo (SCU)", get: (c: ConfigEntry) => c.ship.cargo_capacity.toString() },
+      { label: "Slots", get: (c: ConfigEntry) => c.ship.hardpoints?.length?.toString() || "0" },
+      {
+        label: "DPS (loadout)",
+        get: (c: ConfigEntry) =>
+          c.loadout?.stats ? c.loadout.stats.total_dps?.toLocaleString() : "—",
+      },
+      {
+        label: "Regen escudo (loadout)",
+        get: (c: ConfigEntry) =>
+          c.loadout?.stats ? c.loadout.stats.shield_regen?.toLocaleString() : "—",
+      },
+      {
+        label: "Potencia (loadout)",
+        get: (c: ConfigEntry) =>
+          c.loadout?.stats ? c.loadout.stats.power_output?.toLocaleString() : "—",
+      },
+      {
+        label: "Refrigeracion (loadout)",
+        get: (c: ConfigEntry) =>
+          c.loadout?.stats ? c.loadout.stats.cooling_rate?.toLocaleString() : "—",
+      },
+      {
+        label: "Alcance QT (loadout)",
+        get: (c: ConfigEntry) =>
+          c.loadout?.stats ? c.loadout.stats.qt_range?.toLocaleString() : "—",
+      },
+      {
+        label: "Costo (loadout)",
+        get: (c: ConfigEntry) =>
+          c.loadout?.stats
+            ? `${c.loadout.stats.total_cost.toLocaleString()} aUEC`
+            : "—",
+      },
+      {
+        label: "Tipo",
+        get: (c: ConfigEntry) =>
+          c.loadout?.is_optimized ? "Optimizada" : c.loadout ? "Manual" : "Estándar",
+      },
+    ],
+    []
+  );
 
   return (
     <div className="flex-1 flex flex-col">
       <main className="container mx-auto px-4 py-6 flex-1 space-y-6">
         <Breadcrumb items={[{ label: "Comparar Naves" }]} />
 
-        {/* Ship Selection */}
+        {/* Config Selection */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Selecciona 2-4 naves para comparar</CardTitle>
+            <CardTitle>Comparar configuraciones (nave + loadout)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Añade una nave varias veces para comparar su configuración Estándar contra sus
+              loadouts guardados (por ejemplo, una optimizada).
+            </p>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2 mb-4">
-              {selectedShips.map((ship) => (
-                <Badge key={ship.id} variant="default" className="gap-1 pr-1">
-                  {ship.name}
+              {configs.map((cfg, idx) => (
+                <div
+                  key={cfg.id}
+                  className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/30 px-3 py-2"
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[idx] }} />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">{cfg.ship.name}</span>
+                    <select
+                      value={cfg.loadout?.id || ""}
+                      onChange={(e) => changeLoadout(cfg.id, e.target.value)}
+                      className="text-xs bg-transparent border-none p-0 m-0 focus:outline-none text-muted-foreground cursor-pointer"
+                      title="Elegir configuración"
+                    >
+                      <option value="">Estándar (stock)</option>
+                      {(loadoutsByShip[cfg.ship.id] || []).map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.is_optimized ? "⚡ " : ""}
+                          {l.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <button
-                    onClick={() => removeShip(ship.id)}
-                    className="ml-1 hover:bg-primary-foreground/20 rounded p-0.5"
+                    onClick={() => removeConfig(cfg.id)}
+                    className="ml-1 hover:bg-muted rounded p-0.5 text-muted-foreground"
                   >
                     <X className="h-3 w-3" />
                   </button>
-                </Badge>
+                </div>
               ))}
-              {selectedShips.length < 4 && (
+              {configs.length < 4 && (
                 <Input
                   placeholder="Agregar nave..."
                   value={search}
@@ -159,13 +274,20 @@ export default function ComparePage() {
                   <div
                     key={ship.id}
                     className="p-2 hover:bg-muted cursor-pointer text-sm flex items-center gap-2"
-                    onClick={() => addShip(ship)}
+                    onClick={() => addConfig(ship)}
                   >
                     <Plus className="h-3 w-3" />
                     <span>{ship.name}</span>
                     <span className="text-muted-foreground text-xs">
                       {ship.manufacturer.name}
                     </span>
+                    {loadoutsByShip[ship.id]?.length ? (
+                      <Badge variant="secondary" className="text-[10px] gap-1">
+                        <Wand2 className="h-2.5 w-2.5" />
+                        {loadoutsByShip[ship.id].length} loadout
+                        {loadoutsByShip[ship.id].length > 1 ? "s" : ""}
+                      </Badge>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -173,7 +295,7 @@ export default function ComparePage() {
           </CardContent>
         </Card>
 
-        {selectedShips.length >= 2 ? (
+        {configs.length >= 2 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Radar Chart */}
             <Card>
@@ -185,10 +307,10 @@ export default function ComparePage() {
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#334155" />
                     <PolarAngleAxis dataKey="stat" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                    {selectedShips.map((_, i) => (
+                    {configs.map((cfg, i) => (
                       <Radar
-                        key={i}
-                        name={selectedShips[i].name}
+                        key={cfg.id}
+                        name={`${cfg.ship.name} · ${configLabel(cfg)}`}
                         dataKey={`ship${i}`}
                         stroke={COLORS[i]}
                         fill={COLORS[i]}
@@ -220,36 +342,32 @@ export default function ComparePage() {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left p-2 text-muted-foreground">Stat</th>
-                        {selectedShips.map((s) => (
-                          <th key={s.id} className="text-right p-2">
-                            {s.name}
+                        {configs.map((cfg, i) => (
+                          <th key={cfg.id} className="text-right p-2">
+                            <span className="inline-flex items-center gap-1.5 justify-end">
+                              <span
+                                className="h-2 w-2 rounded-full inline-block"
+                                style={{ backgroundColor: COLORS[i] }}
+                              />
+                              {cfg.ship.name}
+                            </span>
+                            <span className="block text-[10px] font-normal text-muted-foreground">
+                              {configLabel(cfg)}
+                            </span>
                           </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {[
-                        { label: "Fabricante", get: (s: Ship) => s.manufacturer.name },
-                        { label: "Clasificacion", get: (s: Ship) => s.classification },
-                        { label: "Crew", get: (s: Ship) => s.crew.toString() },
-                        { label: "Masa (kg)", get: (s: Ship) => s.mass?.toLocaleString() },
-                        { label: "SCM Speed", get: (s: Ship) => `${s.scm_speed} m/s` },
-                        { label: "Max Speed", get: (s: Ship) => `${s.max_speed} m/s` },
-                        { label: "Hull HP", get: (s: Ship) => s.hull_hp?.toLocaleString() },
-                        { label: "Shield HP", get: (s: Ship) => s.shield_hp?.toLocaleString() },
-                        { label: "Cargo (SCU)", get: (s: Ship) => s.cargo_capacity.toString() },
-                        { label: "Slots", get: (s: Ship) => s.hardpoints?.length?.toString() || "0" },
-                        { label: "DPS (loadout)", get: (s: Ship) => statsFor(s).total_dps?.toLocaleString() || "—" },
-                        { label: "Potencia (loadout)", get: (s: Ship) => statsFor(s).power_output?.toLocaleString() || "—" },
-                        { label: "Refrigeracion (loadout)", get: (s: Ship) => statsFor(s).cooling_rate?.toLocaleString() || "—" },
-                        { label: "Costo (loadout)", get: (s: Ship) => statsFor(s).total_cost ? `${statsFor(s).total_cost.toLocaleString()} aUEC` : "—" },
-                        { label: "Optimizada", get: (s: Ship) => loadoutFor(s)?.is_optimized ? "Si" : "No" },
-                      ].map(({ label, get }) => (
+                      {tableRows.map(({ label, get, bold }) => (
                         <tr key={label} className="border-b border-border/50">
                           <td className="p-2 text-muted-foreground">{label}</td>
-                          {selectedShips.map((s) => (
-                            <td key={s.id} className="p-2 text-right font-mono">
-                              {get(s)}
+                          {configs.map((cfg) => (
+                            <td
+                              key={cfg.id}
+                              className={`p-2 text-right font-mono ${bold ? "font-bold" : ""}`}
+                            >
+                              {get(cfg)}
                             </td>
                           ))}
                         </tr>
@@ -264,7 +382,7 @@ export default function ComparePage() {
           <Card className="min-h-[300px] flex items-center justify-center">
             <CardContent className="text-center text-muted-foreground">
               <GitCompare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Selecciona al menos 2 naves para comparar</p>
+              <p>Selecciona al menos 2 configuraciones para comparar</p>
             </CardContent>
           </Card>
         )}
