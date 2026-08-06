@@ -1,4 +1,4 @@
-import { getDb } from "./schema";
+import { getDb, seedMissingPricesAndLocations } from "./schema";
 import {
   getDefaultVersion,
   getGameVersions,
@@ -371,30 +371,13 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
     try {
       const terminalsRes = await getUexTerminals();
       const terminals = terminalsRes.data || [];
-      const terminalMap = new Map<number, any>();
-      terminals.forEach((t: any) => terminalMap.set(t.id, t));
-
-      const insertLocation = db.prepare(`
-        INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      for (const terminal of terminals) {
-        if (!terminal) continue;
-        const locName = String(terminal.location || terminal.name || "");
-        const system = String(terminal.star_system || "");
-        const planetMoon = String(terminal.planet_name || terminal.moon_name || "");
-        const shopName = String(terminal.name || "");
-        const shopType = String(terminal.terminal_type || "");
-
-        if (locName || shopName) {
-          insertLocation.run(["", locName, system, planetMoon, shopName, shopType, 0]);
-        }
-      }
-      console.log(`Synced ${terminals.length} UEX terminal locations`);
+      console.log(`Fetched ${terminals.length} UEX terminal locations`);
     } catch (e) {
       console.warn("UEX terminals unavailable:", e);
     }
+
+    // Seed in-game shops + prices for components missing them
+    seedMissingPricesAndLocations(db);
 
     // --- Sync metadata ---
     onProgress?.("Finalizando...", 95);
@@ -424,6 +407,19 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
 function detectSlotType(name: string, port: any): string {
   const lower = name.toLowerCase();
   const subtype = String(port.type || port.sub_type || "").toLowerCase();
+
+  // Non-equippable / cosmetic slots that should not be treated as weapons
+  if (lower.includes("armor") || lower.includes("armour")) return "utility";
+  if (lower.includes("paint") || lower.includes("skin")) return "utility";
+  if (lower.includes("countermeasure") || lower.includes("flare") || lower.includes("chaff")) return "utility";
+  if (lower.includes("locker") || lower.includes("stairwell") || lower.includes("hangar") || lower.includes("elevator")) return "utility";
+  if (lower.includes("component") && !lower.includes("weapon")) return "utility";
+
+  // Flight controllers (labeled controller_flight / flight in wiki)
+  if (lower.includes("flight") || lower.includes("controller_flight") || subtype.includes("flight")) return "flight_controller";
+  // Life support
+  if (lower.includes("lifesupport") || lower.includes("life_support") || lower.includes("life support") || subtype.includes("lifesupport")) return "life_support";
+
   if (lower.includes("weapon") || lower.includes("gun") || lower.includes("turret") || subtype.includes("weapon") || subtype.includes("gun"))
     return "weapon";
   if (lower.includes("shield") || subtype.includes("shield")) return "shield";
@@ -434,7 +430,7 @@ function detectSlotType(name: string, port: any): string {
   if (lower.includes("radar") || subtype.includes("radar")) return "radar";
   if (lower.includes("thruster") || lower.includes("engine") || subtype.includes("thruster")) return "thruster";
   if (lower.includes("flir")) return "flir";
-  return "weapon";
+  return "utility";
 }
 
 function extractSize(name: string): number {
@@ -874,7 +870,7 @@ export async function syncDataForVersion(
       }
     }
 
-    console.log(`Synced ${componentCount} components (${portComponentMap.size} from ports, ${wikiItemMap.size} from Wiki API)`);
+      console.log(`Synced ${componentCount} components (${portComponentMap.size} from ports, ${wikiItemMap.size} from Wiki API)`);
 
     // --- UEX terminals (location data) ---
     // Ship component prices come from Wiki API, not UEX.
@@ -882,30 +878,13 @@ export async function syncDataForVersion(
     try {
       const terminalsRes = await getUexTerminals();
       const terminals = terminalsRes.data || [];
-      const terminalMap = new Map<number, any>();
-      terminals.forEach((t: any) => terminalMap.set(t.id, t));
-
-      const insertLocation = db.prepare(`
-        INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      for (const terminal of terminals) {
-        if (!terminal) continue;
-        const locName = String(terminal.location || terminal.name || "");
-        const system = String(terminal.star_system || "");
-        const planetMoon = String(terminal.planet_name || terminal.moon_name || "");
-        const shopName = String(terminal.name || "");
-        const shopType = String(terminal.terminal_type || "");
-
-        if (locName || shopName) {
-          insertLocation.run(["", locName, system, planetMoon, shopName, shopType, 0]);
-        }
-      }
-      console.log(`Synced ${terminals.length} UEX terminal locations`);
+      console.log(`Fetched ${terminals.length} UEX terminal locations`);
     } catch (e) {
       console.warn("UEX terminals unavailable:", e);
     }
+
+    // Seed in-game shops + prices for components missing them
+    seedMissingPricesAndLocations(db);
 
     // --- Sync metadata ---
     onProgress?.("Finalizando...", 95);

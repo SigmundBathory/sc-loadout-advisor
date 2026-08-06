@@ -153,10 +153,17 @@ function initSchema(db: InstanceType<typeof Database>) {
 }
 
 export function seedMissingPricesAndLocations(db: InstanceType<typeof Database>) {
-  const count = (db.prepare("SELECT COUNT(*) as c FROM buy_locations").get() as any)?.c || 0;
-  if (count > 0) return;
+  // Remove orphan rows from UEX terminals that have no component_id
+  db.exec("DELETE FROM buy_locations WHERE component_id = '' OR component_id IS NULL");
 
-  const components = db.prepare("SELECT id, name, class_name, type, size FROM components").all() as any[];
+  // Only seed components that don't already have buy locations
+  const components = db.prepare(`
+    SELECT c.id, c.name, c.class_name, c.type, c.size
+    FROM components c
+    LEFT JOIN buy_locations b ON b.component_id = c.id
+    WHERE b.id IS NULL
+    GROUP BY c.id
+  `).all() as any[];
   if (components.length === 0) return;
 
   console.log(`Seeding in-game shop locations and prices for ${components.length} components...`);
@@ -167,7 +174,7 @@ export function seedMissingPricesAndLocations(db: InstanceType<typeof Database>)
   `);
 
   const insertPrice = db.prepare(`
-    INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at)
+    INSERT OR IGNORE INTO component_prices (component_id, price_auec, updated_at)
     VALUES (?, ?, datetime('now'))
   `);
 

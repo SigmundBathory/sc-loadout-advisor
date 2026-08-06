@@ -74,9 +74,10 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         // Get unique slot type+size combinations to fetch all compatible components
         const slotSpecs = new Map<string, { slotType: string; slotSize: number }>();
         ship.hardpoints.forEach(hp => {
-          const key = `${hp.slot_type}_${hp.size}`;
+          const maxSize = hp.max_size || hp.size;
+          const key = `${hp.slot_type}_${maxSize}`;
           if (!slotSpecs.has(key)) {
-            slotSpecs.set(key, { slotType: hp.slot_type, slotSize: hp.size });
+            slotSpecs.set(key, { slotType: hp.slot_type, slotSize: maxSize });
           }
         });
 
@@ -114,14 +115,19 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         weapon: ["Weapon"],
         turret: ["Weapon"],
         shield: ["Shield"],
+        power_plant: ["PowerPlant"],
         powerplant: ["PowerPlant"],
         cooler: ["Cooler"],
+        quantum_drive: ["QuantumDrive"],
         quantumdrive: ["QuantumDrive"],
         radar: ["Radar"],
+        thruster: ["FlightController"],
         flight_controller: ["FlightController"],
+        life_support: ["LifeSupport"],
         lifesupport: ["LifeSupport"],
       };
-      const validTypes = slotTypeMap[selectedSlot.slot_type] || [selectedSlot.slot_type];
+      const slotKey = selectedSlot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+      const validTypes = slotTypeMap[slotKey] || [selectedSlot.slot_type];
       return validTypes.some(t => t.toLowerCase() === c.type.toLowerCase());
     });
 
@@ -140,14 +146,19 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
           weapon: ["weapon"],
           turret: ["weapon"],
           shield: ["shield"],
+          power_plant: ["powerplant"],
           powerplant: ["powerplant"],
           cooler: ["cooler"],
+          quantum_drive: ["quantumdrive"],
           quantumdrive: ["quantumdrive"],
           radar: ["radar"],
+          thruster: ["flightcontroller"],
           flight_controller: ["flightcontroller"],
+          life_support: ["lifesupport"],
           lifesupport: ["lifesupport"],
         };
-        const types = validTypes[slotType] || [slotType];
+        const slotKey = slotType.replace(/[-\s]/g, "_");
+        const types = validTypes[slotKey] || [slotType];
         const compatible = availableComponents.filter(c => types.includes(c.type.toLowerCase()));
 
         if (compatible.length > 0) {
@@ -174,10 +185,13 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
             const emissionEm = comp.stats.emission_em_max || 0;
             const emissionIr = comp.stats.emission_ir || 0;
             const price = comp.price_auec || 0;
-            const grade = comp.stats.grade || 3;
+            const rawGrade = comp.stats.grade as any;
+            const grade = typeof rawGrade === "string"
+              ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[rawGrade.toUpperCase()] || 3
+              : Number(rawGrade) || 3;
 
             // Normalize grade (lower is better)
-            const gradeBonus = (4 - grade) * 0.15;
+            const gradeBonus = Math.max(0, (4 - grade) * 0.15);
 
             switch (preset) {
               case "fastest":

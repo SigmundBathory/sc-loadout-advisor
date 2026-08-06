@@ -186,17 +186,25 @@ export function getCompatibleComponents(
 
   const slotTypeMap: Record<string, string> = {
     weapon: "Weapon",
+    turret: "Weapon",
     shield: "Shield",
     power_plant: "PowerPlant",
+    powerplant: "PowerPlant",
     cooler: "Cooler",
     quantum_drive: "QuantumDrive",
+    quantumdrive: "QuantumDrive",
     missile: "Weapon",
     radar: "Radar",
     thruster: "FlightController",
+    flight_controller: "FlightController",
     life_support: "LifeSupport",
+    lifesupport: "LifeSupport",
   };
 
   const componentType = slotTypeMap[slotType.toLowerCase()] || slotType;
+  // Utility / cosmetic slots have no compatible components
+  if (componentType === "utility") return [];
+
   const rows = db
     .prepare(
       `SELECT c.*, m.name as manufacturer_name, m.code as manufacturer_code,
