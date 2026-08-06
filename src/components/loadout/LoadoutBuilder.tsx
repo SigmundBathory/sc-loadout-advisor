@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger, TabsIndicator } from "@/compo
 import { ShoppingCart, Settings, Crosshair, Zap } from "lucide-react";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
 import ShoppingList from "@/components/budget/ShoppingList";
-import ShipInfoCard from "./ShipInfoCard";
 import StatsPanel from "./StatsPanel";
 import SlotList from "./SlotList";
 import HardpointSchematic from "./HardpointSchematic";
@@ -279,7 +278,6 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-3 space-y-6">
-          <ShipInfoCard ship={ship} />
           <StatsPanel stats={stats} assignedCount={assignedCount} totalSlots={totalSlots} baseline={baselineStats} />
         </div>
 

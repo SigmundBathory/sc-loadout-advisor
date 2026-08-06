@@ -6,11 +6,9 @@ import type { Ship } from "@/lib/types";
 interface HologramImageProps {
   ship: Ship;
   className?: string;
-  size?: number;
 }
 
-export default function HologramImage({ ship, className = "", size = 420 }: HologramImageProps) {
-
+export default function HologramImage({ ship, className = "" }: HologramImageProps) {
   return (
     <div
       className={`
@@ -28,9 +26,7 @@ export default function HologramImage({ ship, className = "", size = 420 }: Holo
         ${className}
       `}
       style={{
-        width: size,
-        height: size,
-        maxWidth: "100%",
+        aspectRatio: "4/3",
         filter: "drop-shadow(0 0 12px rgba(0,212,255,0.25))",
       }}
     >
@@ -44,26 +40,27 @@ export default function HologramImage({ ship, className = "", size = 420 }: Holo
         alt={ship.name}
         fill
         priority
+        className="object-contain"
       />
 
       {/* Scanline overlay */}
       <div
         className="absolute inset-0 pointer-events-none rounded-2xl"
         style={{
-          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.015) 2px, rgba(0,212,255,0.015) 4px)",
+          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.02) 2px, rgba(0,212,255,0.02) 4px)",
           mixBlendMode: "overlay",
         }}
       />
 
       {/* Corner brackets */}
-      <div className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-cyan-400/50 rounded-tl-md" />
-      <div className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-cyan-400/50 rounded-tr-md" />
-      <div className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-cyan-400/50 rounded-bl-md" />
-      <div className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-cyan-400/50 rounded-br-md" />
+      <div className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-cyan-400/60 rounded-tl-md" />
+      <div className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-cyan-400/60 rounded-tr-md" />
+      <div className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-cyan-400/60 rounded-bl-md" />
+      <div className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-cyan-400/60 rounded-br-md" />
 
-      {/* Ship name watermark */}
+      {/* Ship classification watermark */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none">
-        <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-cyan-300/40">
+        <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-cyan-300/50">
           {ship.classification}
         </span>
       </div>
