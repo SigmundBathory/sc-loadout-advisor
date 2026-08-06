@@ -6,12 +6,13 @@ import { useLoadoutStore } from "@/stores/loadoutStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger, TabsIndicator } from "@/components/ui/tabs";
-import { ArrowLeft, Save, Upload, Wand2, ShoppingCart, Zap, Settings } from "lucide-react";
+import { ArrowLeft, Save, Upload, Wand2, ShoppingCart, Zap, Settings, Crosshair } from "lucide-react";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
 import ShoppingList from "@/components/budget/ShoppingList";
 import ShipInfoCard from "./ShipInfoCard";
 import StatsPanel from "./StatsPanel";
 import SlotList from "./SlotList";
+import HardpointSchematic from "./HardpointSchematic";
 import ComponentPickerDialog from "./ComponentPickerDialog";
 import SaveLoadoutDialog from "./SaveLoadoutDialog";
 import LoadLoadoutDialog from "./LoadLoadoutDialog";
@@ -324,7 +325,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
           <StatsPanel stats={stats} assignedCount={assignedCount} totalSlots={totalSlots} baseline={baselineStats} />
         </div>
 
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-5 space-y-6">
           <Card className="glass-panel border-border/40">
             <CardHeader className="p-4 border-b border-border/30 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -334,6 +335,24 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
             </CardHeader>
             <CardContent className="p-4">
               <SlotList
+                ship={ship}
+                slotAssignments={slotAssignments}
+                componentMap={componentMap}
+                onSlotClick={setSelectedSlot}
+                onClearSlot={clearSlotAssignment}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="glass-panel border-border/40">
+            <CardHeader className="p-4 border-b border-border/30">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <Crosshair className="h-4 w-4 text-primary" />
+                Vista Esquemática
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <HardpointSchematic
                 ship={ship}
                 slotAssignments={slotAssignments}
                 componentMap={componentMap}

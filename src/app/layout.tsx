@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import StarBackground from "@/components/layout/StarBackground";
 import QueryProvider from "@/components/QueryProvider";
+import ThemeInitializer from "@/components/ThemeInitializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,15 +33,18 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col relative bg-background text-foreground overflow-x-hidden">
         <TooltipProvider>
           <QueryProvider>
-            <StarBackground />
-            <Navbar />
-            <div className="flex-1 flex flex-col">{children}</div>
-            <Footer />
+            <ThemeProvider>
+              <StarBackground />
+              <Navbar />
+              <ThemeInitializer />
+              <div className="flex-1 flex flex-col">{children}</div>
+              <Footer />
+            </ThemeProvider>
           </QueryProvider>
         </TooltipProvider>
       </body>

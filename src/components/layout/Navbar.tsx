@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { motion } from "motion/react";
+import { useTheme } from "@/components/providers/ThemeProvider";
 import { Button } from "@/components/ui/button";
 import VersionSelector from "@/components/VersionSelector";
 import SyncIndicator from "@/components/sync/SyncIndicator";
@@ -17,10 +18,13 @@ import {
   X,
   Compass,
   ArrowUpCircle,
+  Moon,
+  Sun,
 } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { isDark, setTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
 
@@ -86,7 +90,7 @@ export default function Navbar() {
             })}
           </nav>
 
-          {/* Right Section: Sync & Versions & Updates */}
+          {/* Right Section: Sync & Versions & Updates & Theme Toggle */}
           <div className="hidden lg:flex items-center gap-3">
             <Button
               variant="outline"
@@ -101,6 +105,18 @@ export default function Navbar() {
             <VersionSelector />
             <div className="h-4 w-[1px] bg-border/60" />
             <SyncIndicator />
+            <div className="h-4 w-[1px] bg-border/60" />
+            <Button
+              variant="outline"
+              size="sm"
+               onClick={() => {
+                 setTheme(!isDark);
+               }}
+              className="gap-1.5 text-xs rounded-full border-primary/30 text-primary hover:bg-primary/10"
+            >
+               {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+               <span className="ml-1">{isDark ? "Modo Claro" : "Modo Oscuro"}</span>
+            </Button>
           </div>
 
           {/* Mobile Hamburger Toggle */}
@@ -114,6 +130,17 @@ export default function Navbar() {
               <ArrowUpCircle className="h-4 w-4" />
             </Button>
             <SyncIndicator />
+            <div className="h-4 w-[1px] bg-border/60" />
+             <Button
+               variant="outline"
+               size="icon"
+               onClick={() => {
+                 setTheme(!isDark);
+               }}
+               className="rounded-lg h-8 w-8 text-primary border-primary/30"
+             >
+               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+             </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -153,6 +180,21 @@ export default function Navbar() {
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Versión activa:</span>
                 <VersionSelector />
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Tema:</span>
+                <span className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+               onClick={() => {
+                 setTheme(!isDark);
+               }}
+                    className="text-primary border-primary/40"
+                   >
+                     {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                   </Button>
+                </span>
               </div>
               <Button
                 variant="outline"

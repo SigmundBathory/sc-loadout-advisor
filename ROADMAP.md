@@ -45,6 +45,8 @@
 | Sync incremental + registro de sync | ✅ | `sync.ts`, `sync_log` |
 | Sync por versión con progreso | ✅ | `full-sync/route.ts`, `SyncPanel.tsx` |
 | Tests de lógica pura (31) | ✅ | `src/lib/**/*.test.ts` |
+| HardpointSchematic | ✅ | `src/components/loadout/HardpointSchematic.tsx` |
+| TacticalDisplay | ✅ | `src/components/compare/TacticalDisplay.tsx` |
 
 ### Problemas Resueltos en la Auditoría de Calidad (commit 796a550, 2c01575)
 - Lint 240 problemas → 0 (181 errores de React 19 compiler + warnings de imports muertos).
@@ -143,6 +145,82 @@ Tendencias aplicables: Glassmorphism 2.0 (frosted + layering + soft shadows), da
 
 ---
 
+## 🚀 NUEVA FASE: Phase 2 - Design System 'Verse Theme' + Ship Hologram Card ✅ (COMPLETADA 06/08/2026)
+
+### Phase 2.1: Design System 'Verse Theme' Tokens ✅
+- **Archivo**: `src/lib/design/theme.ts`
+- **Tokens completos**:
+  - Colores: quantum (azul), engine (naranja), shield (verde), hull (rojo), caution (ámbar), space (fondo), cockpit (superficies) + semánticos (bg, surface, border, text, status, brand)
+  - Tipografía: Orbitron/Rajdhani (display), JetBrains Mono (mono), Inter/IBM Plex Sans (UI/body)
+  - Spacing (base 4px): 0-32 scale
+  - BorderRadius: sm a 3xl + custom (panel, card, button, pill, hex)
+  - Shadows: estándar + quantum glow + engine glow + inner
+  - Transitions: durations + easings custom (quantum, engine, shield, hull)
+  - Z-index scale, breakpoints, keyframes (quantumPulse, engineThrust, shieldRecharge, hullDamage, scanLine, float, spin, fadeIn/Out, slideUp/Down, scaleIn/Out)
+
+### Phase 2.2: ThemeProvider & CSS Variables ✅
+- **Archivo**: `src/components/providers/ThemeProvider.tsx`
+- Funcionalidades:
+  - Dark/light mode con persistencia localStorage
+  - Detección sistema `prefers-color-scheme`
+  - Inyección CSS variables (`--sc-bg-primary`, `--sc-surface-primary`, `--sc-border-primary`, `--sc-text-primary`, `--sc-status-success`, etc.)
+  - `useTheme()`, `useThemeTokens()`, `useSemanticColors()`, `useColorScheme()` hooks
+  - `cssVars()` e `injectThemeCSS()` helpers
+  - `useLayoutEffect` para mounted state (evita warning de setState en effect)
+
+### Phase 2.3: ThemeInitializer & Layout Integration ✅
+- **Archivo**: `src/components/ThemeInitializer.tsx`
+- Inyecta CSS variables al montar
+- Integrado en `src/app/layout.tsx` dentro de `ThemeProvider`
+
+### Phase 2.4: Navbar Theme Toggle ✅
+- **Archivo**: `src/components/layout/Navbar.tsx`
+- Toggle dark/light en 3 ubicaciones:
+  1. Desktop header (con label "Modo Claro/Oscuro")
+  2. Mobile hamburger (icono sun/moon)
+  3. Mobile drawer (con label "Tema")
+- Usa `useTheme()` hook, actualiza `setTheme(!isDark)`
+
+### Phase 2.5: Ship Hologram Card (Three.js) ✅
+- **Archivo**: `src/components/ships/ShipHologram.tsx`
+- **Características**:
+  - Three.js con geometrías por clasificación:
+    - Fighter/Combat/Interceptor → TetrahedronGeometry (angular)
+    - Freight/Cargo/Transport → BoxGeometry (boxy)
+    - Exploration/Expedition → CylinderGeometry (elongado)
+    - Stealth/Recon → OctahedronGeometry (facetado)
+    - Mining/Salvage → IcosahedronGeometry (rugoso)
+    - Default → SphereGeometry + RingGeometry (genérico)
+  - Efectos visuales:
+    - Rotación suave (Y continuo + X oscilante)
+    - Pulso emissive (quantum/engine/shield/hull colors)
+    - Outline holográfico con pulso de opacidad
+    - Luces temáticas: quantum blue (0x00d4ff) + engine orange (0xff6b00)
+  - Responsive: resize handler, pixelRatio limitado a 2
+  - Cleanup completo: dispose geometries/materials/renderer
+  - TypeScript estricto (sin `any`)
+
+### Phase 2.6: ShipHologramWrapper + ShipPage Integration ✅
+- **Archivo**: `src/components/ships/ShipHologramWrapper.tsx`
+  - Cliente wrapper para uso en server components
+- **Archivo**: `src/app/ships/[id]/page.tsx`
+  - Integra `ShipHologramWrapper` en tarjeta "Visualización 3D" sobre ShipBuyLocations y LoadoutBuilder
+
+### Verificación ✅
+- `npm run build` → ✅ OK
+- `npm run lint` → ✅ 0 errores, 0 warnings
+- `npm run test` → ✅ 31/31 pasando
+
+---
+
+## Próximas Fases (Pendientes)
+
+### Phase 4: Loadout Builder & Comparator ✅ (completada)
+1. **Loadout Builder** - Esquemático visual de hardpoints ✅
+2. **Comparator Tactical Display** - Vista táctica, puntuación, winner badge, export CSV ✅
+
+---
+
 ## Resumen de Prioridades
 
 | Prioridad | Descripción | Estado | Impacto |
@@ -154,7 +232,10 @@ Tendencias aplicables: Glassmorphism 2.0 (frosted + layering + soft shadows), da
 | 🟡 Media | Sync incremental + registro | ✅ | Mantenibilidad |
 | 🟡 Media | Tests (31) | ✅ | Calidad |
 | 🟢 Baja | Pulido UX/UI básico | ✅ | Acabado |
-| 🟢 Baja | **UI 2026: motion + micro-interacciones** | ⏳ UI-A→D | **Dinamismo premium** |
+| 🟢 Baja | **UI 2026: motion + micro-interacciones** | ✅ UI-A→D | **Dinamismo premium** |
+| 🔵 Nueva | **Design System 'Verse Theme' + Ship Hologram** | ✅ Phase 2 | **Identidad visual + 3D** |
+| 🔵 Nueva | **Visualizaciones Avanzadas (Power Triangle, TTK, etc.)** | ✅ Phase 3 | **Decisión táctica** |
+| 🔵 Nueva | **Loadout Builder Esquemático + Comparator Tactical** | ✅ Phase 4 | **Core UX** |
 
 ---
 
@@ -167,4 +248,4 @@ Tendencias aplicables: Glassmorphism 2.0 (frosted + layering + soft shadows), da
 | Tiempo de sync full | ~90s | <45s |
 | Tests coverage (lógica pura) | 31 tests | >40% |
 | Lint/typecheck/build | ✅ 0/0 | mantener |
-| Fases de roadmap completadas | F1–F6 + auditoría | + UI-A→D |
+| Fases de roadmap completadas | F1–F6 + auditoría + UI-A→D + Phase 2 + Phase 3 + Phase 4 | - |
