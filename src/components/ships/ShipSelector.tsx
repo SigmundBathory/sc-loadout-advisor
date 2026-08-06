@@ -10,6 +10,7 @@ import type { Ship } from "@/lib/types";
 import Link from "next/link";
 import { useShips, useOptimizedShipIds } from "@/lib/api/client";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import { ShipImage } from "@/components/ui/ProgressiveImage";
 
 interface ShipSelectorProps {
   initialShips?: Ship[];
@@ -231,63 +232,54 @@ export default function ShipSelector({
             <StaggerItem key={ship.id}>
               <Link href={`/ships/${ship.id}`} className="block h-full">
                 <Card className="glass-panel glass-panel-hover border-border/40 cursor-pointer h-full group flex flex-col justify-between overflow-hidden hover:shadow-xl hover:shadow-primary/10 hover:border-primary/40 transition-all duration-300">
-                <div>
-                  {ship.image_url ? (
-                    <div className="h-36 w-full relative overflow-hidden bg-muted/20 border-b border-border/30">
-                      <img
-                        src={ship.image_url}
-                        alt={ship.name}
-                        className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-transparent to-transparent opacity-60" />
-                    </div>
-                  ) : null}
-                  <CardContent className="p-5 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
-                          {ship.name}
-                        </h3>
-                        <p className="text-xs text-muted-foreground font-medium">
-                          {ship.manufacturer?.name || "Unknown Manufacturer"}
-                        </p>
-                      </div>
-                      {getClassificationBadge(ship.classification)}
-                      {optimizedShipIds.has(ship.id) && (
-                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
-                          <Wand2 className="h-3 w-3" />
-                          Optimizada
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                        <span>Tripulación: {ship.crew}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                        <span>SCM: {ship.scm_speed} m/s</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Shield className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                        <span>Casco: {ship.hull_hp ? ship.hull_hp.toLocaleString() : "0"} HP</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Rocket className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-                        <span>Carga: {ship.cargo_capacity} SCU</span>
-                      </div>
-                      {ship.price_auec ? (
-                        <div className="flex items-center gap-1.5">
-                          <DollarSign className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                          <span className="text-emerald-400 font-semibold">{ship.price_auec.toLocaleString()} aUEC</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  </CardContent>
+                <div className="relative h-36 w-full bg-muted/20 border-b border-border/30">
+                  <ShipImage ship={ship} fill priority={false} alt={ship.name} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
                 </div>
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
+                        {ship.name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {ship.manufacturer?.name || "Unknown Manufacturer"}
+                      </p>
+                    </div>
+                    {getClassificationBadge(ship.classification)}
+                    {optimizedShipIds.has(ship.id) && (
+                      <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
+                        <Wand2 className="h-3 w-3" />
+                        Optimizada
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                      <span>Tripulación: {ship.crew}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <span>SCM: {ship.scm_speed} m/s</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <span>Casco: {ship.hull_hp ? ship.hull_hp.toLocaleString() : "0"} HP</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Rocket className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                      <span>Carga: {ship.cargo_capacity} SCU</span>
+                    </div>
+                    {ship.price_auec ? (
+                      <div className="flex items-center gap-1.5">
+                        <DollarSign className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                        <span className="text-emerald-400 font-semibold">{ship.price_auec.toLocaleString()} aUEC</span>
+                      </div>
+                    ) : null}
+                  </div>
+                </CardContent>
               </Card>
               </Link>
             </StaggerItem>
@@ -300,17 +292,7 @@ export default function ShipSelector({
             <Link key={ship.id} href={`/ships/${ship.id}`} className="block hover:bg-muted/30 transition-colors">
               <div className="p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  {ship.image_url ? (
-                    <img
-                      src={ship.image_url}
-                      alt={ship.name}
-                      className="w-12 h-12 rounded-lg object-cover bg-muted shrink-0 border border-border/40"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-muted/50 border border-border/40 flex items-center justify-center text-primary shrink-0">
-                      <Rocket className="h-5 w-5" />
-                    </div>
-                  )}
+                  <ShipImage ship={ship} className="w-12 h-12 rounded-lg" alt={ship.name} />
                   <div className="min-w-0">
                     <h3 className="font-bold text-base text-foreground truncate">{ship.name}</h3>
                     <p className="text-xs text-muted-foreground">{ship.manufacturer?.name}</p>

@@ -113,7 +113,7 @@ export async function getItems(
 }
 
 export async function getAllVehicleItems(version?: string) {
-  const types = ["Shield", "PowerPlant", "Cooler", "QuantumDrive", "Radar", "FlightController", "LifeSupportGenerator"];
+  const types = ["Shield", "PowerPlant", "Cooler", "QuantumDrive", "Radar", "FlightController", "LifeSupportGenerator", "Missile", "EMP", "QED"];
   const allItems: any[] = [];
   for (const type of types) {
     try {

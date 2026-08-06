@@ -272,6 +272,25 @@ export function seedMissingPricesAndLocations(db: InstanceType<typeof Database>)
       { shop_name: "Centermass", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
       { shop_name: "Tammany & Sons", location_name: "Lorville", system: "Stanton", planet_moon: "Hurston" },
     ],
+    EMP: [
+      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
+      { shop_name: "Cousin Crow's Custom Craft", location_name: "Orison", system: "Stanton", planet_moon: "Crusader" },
+    ],
+    QED: [
+      { shop_name: "Platinum Bay", location_name: "HUR-L1 Green Glade", system: "Stanton", planet_moon: "Hurston L1" },
+      { shop_name: "Omega Pro", location_name: "New Babbage", system: "Stanton", planet_moon: "microTech" },
+    ],
+    LifeSupport: [
+      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
+    ],
+    FlightController: [
+      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
+      { shop_name: "Cousin Crow's Custom Craft", location_name: "Orison", system: "Stanton", planet_moon: "Crusader" },
+    ],
+    Radar: [
+      { shop_name: "Platinum Bay", location_name: "HUR-L1 Green Glade", system: "Stanton", planet_moon: "Hurston L1" },
+      { shop_name: "Omega Pro", location_name: "New Babbage", system: "Stanton", planet_moon: "microTech" },
+    ],
   };
 
   const defaultShops = [
@@ -297,6 +316,16 @@ export function seedMissingPricesAndLocations(db: InstanceType<typeof Database>)
         basePrice = size === 1 ? 28500 : size === 2 ? 94000 : size === 3 ? 460000 : 1250000;
       } else if (type === "Missile") {
         basePrice = size === 1 ? 850 : size === 2 ? 2400 : size === 3 ? 6500 : size === 4 ? 18000 : 45000;
+      } else if (type === "EMP") {
+        basePrice = size === 1 ? 15000 : size === 2 ? 45000 : size === 3 ? 180000 : 500000;
+      } else if (type === "QED") {
+        basePrice = size === 1 ? 25000 : size === 2 ? 85000 : size === 3 ? 350000 : 1000000;
+      } else if (type === "LifeSupport") {
+        basePrice = size === 1 ? 8000 : size === 2 ? 25000 : size === 3 ? 100000 : 300000;
+      } else if (type === "FlightController") {
+        basePrice = size === 1 ? 12000 : size === 2 ? 40000 : size === 3 ? 180000 : 500000;
+      } else if (type === "Radar") {
+        basePrice = size === 1 ? 10000 : size === 2 ? 35000 : size === 3 ? 150000 : 400000;
       }
 
       insertPrice.run([comp.id, basePrice]);

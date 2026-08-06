@@ -9,6 +9,8 @@ import {
 import {
   getUexGameVersions,
   getUexTerminals,
+  getUexCommodities,
+  getUexPrices,
 } from "../api/uexCorp";
 import {
   startSyncLog,
@@ -323,6 +325,14 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
             }
           } else if (compType === "Radar" && wikiItem.radar) {
             stats.detection_range = wikiItem.radar.detection_range || 0;
+          } else if (compType === "FlightController" && wikiItem.flight_controller) {
+            const fc = wikiItem.flight_controller;
+            stats.scm_speed = fc.scm_speed || 0;
+            stats.max_speed = fc.max_speed || 0;
+            stats.boost_forward = fc.boost_speed_forward || 0;
+            stats.pitch = fc.pitch || 0;
+            stats.yaw = fc.yaw || 0;
+            stats.roll = fc.roll || 0;
           } else if (compType === "Missile" && wikiItem.missile) {
             const m = wikiItem.missile;
             stats.alpha = m.damage || 0;
@@ -395,6 +405,14 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
         if (!wikiItem || (stats.output === undefined && compType === "LifeSupport")) {
           stats.output = size === 1 ? 500 : size === 2 ? 1500 : size === 3 ? 5000 : 15000;
         }
+        if (!wikiItem || (stats.scm_speed === undefined && compType === "FlightController")) {
+          stats.scm_speed = size === 1 ? 50 : size === 2 ? 45 : size === 3 ? 40 : 35;
+          stats.max_speed = stats.scm_speed * 1.3;
+          stats.boost_forward = stats.scm_speed * 1.8;
+          stats.pitch = size === 1 ? 45 : size === 2 ? 40 : size === 3 ? 35 : 30;
+          stats.yaw = stats.pitch;
+          stats.roll = stats.pitch * 1.2;
+        }
 
         insertComponent.run([
           compId,
@@ -411,6 +429,26 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
         // Save price if available
         if (price > 0) {
           updatePrice.run([compId, price]);
+        } else {
+          // Estimated prices based on SC community data (grade × size)
+          const grade = stats.grade || 3;
+          const basePrice: Record<number, number> = { 1: 8000, 2: 25000, 3: 80000, 4: 250000 };
+          const sizeMult: Record<number, number> = { 1: 1, 2: 4, 3: 16, 4: 64 };
+          const typeMult: Record<string, number> = { 
+            Weapon: 1.5, 
+            Shield: 1.2, 
+            PowerPlant: 1.0, 
+            Cooler: 0.8, 
+            QuantumDrive: 2.0, 
+            Radar: 0.6, 
+            FlightController: 0.5, 
+            LifeSupport: 0.3,
+            Missile: 0.4,
+            EMP: 0.3,
+            QED: 0.7
+          };
+          const estPrice = Math.round((basePrice[grade] || 80000) * (sizeMult[size] || 1) * (typeMult[compType] || 1));
+          updatePrice.run([compId, estPrice]);
         }
 
         componentCount++;
@@ -986,6 +1024,14 @@ export async function syncDataForVersion(
         if (!wikiItem || (stats.output === undefined && compType === "LifeSupport")) {
           stats.output = size === 1 ? 500 : size === 2 ? 1500 : size === 3 ? 5000 : 15000;
         }
+        if (!wikiItem || (stats.scm_speed === undefined && compType === "FlightController")) {
+          stats.scm_speed = size === 1 ? 50 : size === 2 ? 45 : size === 3 ? 40 : 35;
+          stats.max_speed = stats.scm_speed * 1.3;
+          stats.boost_forward = stats.scm_speed * 1.8;
+          stats.pitch = size === 1 ? 45 : size === 2 ? 40 : size === 3 ? 35 : 30;
+          stats.yaw = stats.pitch;
+          stats.roll = stats.pitch * 1.2;
+        }
 
         insertComponent.run([
           compId, String(comp.name), String(comp.class_name), String(comp.manufacturer_name || ""),
@@ -998,7 +1044,19 @@ export async function syncDataForVersion(
           const grade = stats.grade || 3;
           const basePrice: Record<number, number> = { 1: 8000, 2: 25000, 3: 80000, 4: 250000 };
           const sizeMult: Record<number, number> = { 1: 1, 2: 4, 3: 16, 4: 64 };
-          const typeMult: Record<string, number> = { Weapon: 1.5, Shield: 1.2, PowerPlant: 1.0, Cooler: 0.8, QuantumDrive: 2.0, Radar: 0.6, FlightController: 0.5, LifeSupport: 0.3 };
+          const typeMult: Record<string, number> = { 
+            Weapon: 1.5, 
+            Shield: 1.2, 
+            PowerPlant: 1.0, 
+            Cooler: 0.8, 
+            QuantumDrive: 2.0, 
+            Radar: 0.6, 
+            FlightController: 0.5, 
+            LifeSupport: 0.3,
+            Missile: 0.4,
+            EMP: 0.3,
+            QED: 0.7
+          };
           const estPrice = Math.round((basePrice[grade] || 80000) * (sizeMult[size] || 1) * (typeMult[compType] || 1));
           updatePrice.run([compId, estPrice]);
         }
@@ -1008,7 +1066,7 @@ export async function syncDataForVersion(
       }
     }
 
-      console.log(`Synced ${componentCount} components (${portComponentMap.size} from ports, ${wikiItemMap.size} from Wiki API)`);
+console.log(`Synced ${componentCount} components (${portComponentMap.size} from ports, ${wikiItemMap.size} from Wiki API)`);
 
     // --- UEX terminals (location data) ---
     // Ship component prices come from Wiki API, not UEX.
@@ -1019,6 +1077,72 @@ export async function syncDataForVersion(
       console.log(`Fetched ${terminals.length} UEX terminal locations`);
     } catch (e) {
       console.warn("UEX terminals unavailable:", e);
+    }
+
+    // --- UEX Commodities & Prices (real market data) ---
+    onProgress?.("Sincronizando precios UEX...", 80);
+    try {
+      const [commoditiesRes, pricesRes] = await Promise.all([
+        getUexCommodities(),
+        getUexPrices(),
+      ]);
+      const commodities = commoditiesRes.data || [];
+      const prices = pricesRes.data || [];
+      console.log(`Fetched ${commodities.length} UEX commodities, ${prices.length} price entries`);
+
+      // Build commodity lookup by name/code
+      const commodityMap = new Map<string, any>();
+      for (const c of commodities) {
+        if (c.id) commodityMap.set(c.id.toLowerCase(), c);
+        if (c.name) commodityMap.set(c.name.toLowerCase(), c);
+      }
+
+      // Update component prices with UEX data
+      const updatePrice = db.prepare(`
+        INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at)
+        VALUES (?, ?, datetime('now'))
+      `);
+
+      const insertLocation = db.prepare(`
+        INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      let uexPriceCount = 0;
+      for (const priceEntry of prices) {
+        if (!priceEntry.commodity_id || !priceEntry.price) continue;
+        
+        const commodity = commodityMap.get(priceEntry.commodity_id.toLowerCase());
+        if (!commodity) continue;
+
+        // Try to match with our components by name
+        const compName = (commodity.name || commodity.id || "").toLowerCase();
+        const ourComponents = db.prepare(`
+          SELECT id, name FROM components 
+          WHERE LOWER(name) LIKE ? OR LOWER(class_name) LIKE ?
+        `).all(`%${compName}%`, `%${compName}%`) as any[];
+
+        for (const comp of ourComponents) {
+          updatePrice.run([comp.id, priceEntry.price]);
+          uexPriceCount++;
+          
+          // Also add location if shop info available
+          if (priceEntry.shop_id || priceEntry.location_id) {
+            insertLocation.run([
+              comp.id,
+              priceEntry.location_name || priceEntry.shop_name || "UEX Terminal",
+              priceEntry.system_name || "Stanton",
+              priceEntry.planet_name || "",
+              priceEntry.shop_name || "UEX",
+              "Terminal",
+              priceEntry.price
+            ]);
+          }
+        }
+      }
+      console.log(`Updated ${uexPriceCount} component prices from UEX`);
+    } catch (e) {
+      console.warn("UEX commodities/prices unavailable:", e);
     }
 
     // Seed in-game shops + prices for components missing them
