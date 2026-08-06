@@ -14,16 +14,12 @@ interface RevealProps {
   as?: "div" | "section" | "li";
 }
 
-/**
- * Fades + slides content in when it enters the viewport (or on mount).
- * Honors prefers-reduced-motion and only runs once by default.
- */
 export function Reveal({
   children,
   className,
   delay = 0,
   y = 16,
-  once = true,
+  once = false,
   as = "div",
 }: RevealProps) {
   const reduce = useReducedMotion();
@@ -33,8 +29,9 @@ export function Reveal({
     <Tag
       className={className}
       initial={reduce ? { opacity: 0 } : { opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once, amount: 0.1 }}
+      animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+      viewport={{ once, amount: 0.1, margin: "0px 0px 100px 0px" }}
       transition={{ duration: 0.35, delay, ease: "easeOut" }}
     >
       {children}

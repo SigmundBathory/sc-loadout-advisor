@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node -e \"const fs=require('fs'),path=require('path');const src=path.resolve('data');const dst=path.resolve('.next/standalone/data');if(fs.existsSync(src)){if(!fs.existsSync(dst))fs.mkdirSync(dst,{recursive:true});const db='sc-loadout.db';const sf=path.join(src,db),df=path.join(dst,db);if(fs.existsSync(sf)){fs.copyFileSync(sf,df);console.log('Copied',db,'to standalone/data');}else console.log('No source DB found');}else console.log('No data/ dir');\"",
     "start": "next start -p $PORT",
     "postinstall": "npm rebuild better-sqlite3",
     "update": "git pull && npm install && npm run build",

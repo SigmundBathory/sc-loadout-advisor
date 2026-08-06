@@ -2,7 +2,23 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "data", "sc-loadout.db");
+function resolveDbPath(): string {
+  if (process.env.DATABASE_PATH) return process.env.DATABASE_PATH;
+
+  const projectRoot = path.resolve(process.cwd());
+  const candidates = [
+    path.join(projectRoot, "data", "sc-loadout.db"),
+    path.join(projectRoot, ".next", "standalone", "data", "sc-loadout.db"),
+  ];
+
+  for (const p of candidates) {
+    if (fs.existsSync(/*turbopackIgnore: true*/ p)) return p;
+  }
+
+  return candidates[0];
+}
+
+const DB_PATH = resolveDbPath();
 
 let db: InstanceType<typeof Database> | null = null;
 

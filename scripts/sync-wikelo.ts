@@ -43,7 +43,7 @@ function parseCsv(csv: string): WikeloShip[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
-    if (line.includes("Pictures") || line.includes("Mission Turn-In") || line.includes("Where to Source") || line.includes("Notes") || line.includes("Further Reading")) break;
+    if (line.includes("Pictures") || line.includes("Mission Turn-In") || line.includes("Where to Source") || line.includes("Notes") || line.includes("Further Reading")) continue;
 
     const parts = line.split(",");
     const left = parts.slice(0, 10);
@@ -81,7 +81,9 @@ function parseCsv(csv: string): WikeloShip[] {
 
     // Check for mission/cost lines
     if (leftComp.includes("Mission:") || leftComp.includes("Cost:")) {
-      const shipName = matchKnownShip(currentShipLeft) || matchKnownShipFromMission(leftComp);
+      // Prefer mission-based detection when the line explicitly names a ship
+      const missionMatch = matchKnownShipFromMission(leftComp);
+      const shipName = missionMatch || matchKnownShip(currentShipLeft);
       if (shipName && !shipSet.has(shipName + "_left")) {
         shipSet.add(shipName + "_left");
         const mission = extractMissionFromLine(leftComp);
@@ -96,7 +98,7 @@ function parseCsv(csv: string): WikeloShip[] {
     }
 
     if (rightComp.includes("Mission:") || rightComp.includes("Cost:")) {
-      const shipName = matchKnownShip(currentShipRight) || matchKnownShipFromMission(rightComp);
+      const shipName = matchKnownShipFromMission(rightComp) || matchKnownShip(currentShipRight);
       if (shipName && !shipSet.has(shipName + "_right")) {
         shipSet.add(shipName + "_right");
         const mission = extractMissionFromLine(rightComp);
@@ -160,9 +162,17 @@ function matchKnownShip(name: string): string | null {
 function matchKnownShipFromMission(line: string): string | null {
   if (!line) return null;
   const lower = line.toLowerCase();
+  // Only match when the line explicitly says "make <ship>" or "build <ship>"
   for (const ship of WIKELO_SHIPS) {
-    const words = ship.toLowerCase().split(" ");
-    if (words.every(w => w.length > 1 && lower.includes(w))) {
+    const shipLower = ship.toLowerCase();
+    if (lower.includes(`make ${shipLower}`) || lower.includes(`build ${shipLower}`) || lower.includes(`make a ${shipLower}`) || lower.endsWith(shipLower) || lower.includes(`"${shipLower}"`) || lower.match(new RegExp(`\\b${shipLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.?`))) {
+      // Ensure it's the mission subject, not just a component mention
+      // Check that it's not preceded by a quantity like "20x" or "50x"
+      const idx = lower.indexOf(shipLower);
+      if (idx > 0) {
+        const before = lower.slice(Math.max(0, idx - 5), idx).trim();
+        if (before.endsWith("x") || before.endsWith("x ")) return null; // It's a component quantity, not mission subject
+      }
       return ship;
     }
   }
