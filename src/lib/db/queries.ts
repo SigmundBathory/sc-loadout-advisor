@@ -308,22 +308,53 @@ export function getLoadoutById(id: string): Loadout | null {
 export function createLoadout(
   name: string,
   shipId: string,
-  components: Record<string, string> = {}
+  components: Record<string, string> = {},
+  options?: { is_optimized?: boolean; optimized_preset?: string; stats?: any }
 ): Loadout {
   const db = getDb();
   const id = `loadout_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const now = new Date().toISOString();
 
   db.prepare(
-    "INSERT INTO loadouts (id, name, ship_id, components, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
-  ).run([id, name, shipId, JSON.stringify(components), now, now]);
+    `INSERT INTO loadouts (id, name, ship_id, components, created_at, updated_at, is_optimized, optimized_preset, stats)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run([
+    id,
+    name,
+    shipId,
+    JSON.stringify(components),
+    now,
+    now,
+    options?.is_optimized ? 1 : 0,
+    options?.optimized_preset || "",
+    JSON.stringify(options?.stats || {}),
+  ]);
 
-  return { id, name, ship_id: shipId, components, created_at: now, updated_at: now, is_favorite: false };
+  return {
+    id,
+    name,
+    ship_id: shipId,
+    components,
+    created_at: now,
+    updated_at: now,
+    is_favorite: false,
+    is_optimized: options?.is_optimized,
+    optimized_preset: options?.optimized_preset,
+    stats: options?.stats,
+  };
+}
+
+export function getLoadoutsByShip(shipId: string): Loadout[] {
+  const db = getDb();
+  const rows = db
+    .prepare("SELECT * FROM loadouts WHERE ship_id = ? ORDER BY updated_at DESC")
+    .all(shipId) as any[];
+  return rows.map(mapLoadoutRow);
 }
 
 export function updateLoadout(
   id: string,
-  updates: Partial<Pick<Loadout, "name" | "components" | "is_favorite">>
+  updates: Partial<Pick<Loadout, "name" | "components" | "is_favorite" | "is_optimized" | "optimized_preset" | "stats">>
 ): Loadout | null {
   const db = getDb();
   const existing = getLoadoutById(id);
@@ -334,11 +365,16 @@ export function updateLoadout(
     ? JSON.stringify(updates.components)
     : JSON.stringify(existing.components);
   const isFavorite = updates.is_favorite ?? existing.is_favorite;
+  const isOptimized = updates.is_optimized ?? existing.is_optimized ?? false;
+  const preset = updates.optimized_preset ?? existing.optimized_preset ?? "";
+  const stats = updates.stats !== undefined
+    ? JSON.stringify(updates.stats)
+    : JSON.stringify(existing.stats || {});
   const now = new Date().toISOString();
 
   db.prepare(
-    "UPDATE loadouts SET name = ?, components = ?, is_favorite = ?, updated_at = ? WHERE id = ?"
-  ).run([name, components, isFavorite ? 1 : 0, now, id]);
+    `UPDATE loadouts SET name = ?, components = ?, is_favorite = ?, is_optimized = ?, optimized_preset = ?, stats = ?, updated_at = ? WHERE id = ?`
+  ).run([name, components, isFavorite ? 1 : 0, isOptimized ? 1 : 0, preset, stats, now, id]);
 
   return getLoadoutById(id)!;
 }
@@ -354,6 +390,10 @@ function mapLoadoutRow(row: any): Loadout {
   try {
     components = JSON.parse(row.components || "{}");
   } catch {}
+  let stats: any = {};
+  try {
+    stats = JSON.parse(row.stats || "{}");
+  } catch {}
   return {
     id: row.id,
     name: row.name,
@@ -362,6 +402,9 @@ function mapLoadoutRow(row: any): Loadout {
     created_at: row.created_at,
     updated_at: row.updated_at,
     is_favorite: !!row.is_favorite,
+    is_optimized: !!row.is_optimized,
+    optimized_preset: row.optimized_preset || "",
+    stats,
   };
 }
 

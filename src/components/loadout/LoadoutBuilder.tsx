@@ -18,6 +18,7 @@ import SaveLoadoutDialog from "./SaveLoadoutDialog";
 import LoadLoadoutDialog from "./LoadLoadoutDialog";
 import OptimizerDialog from "./OptimizerDialog";
 import type { Ship, Component, Loadout, Hardpoint } from "@/lib/types";
+import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
 
 export default function LoadoutBuilder({ ship }: { ship: Ship }) {
   const router = useRouter();
@@ -30,6 +31,8 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
+  const [lastOptimizedPreset, setLastOptimizedPreset] = useState<string>("");
+  const [loadedLoadout, setLoadedLoadout] = useState<Loadout | null>(null);
 
   const assignedCount = Object.keys(slotAssignments).length;
   const totalSlots = ship.hardpoints.length;
@@ -107,6 +110,30 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     fetchComponents();
   }, [ship.hardpoints, ship.id]);
 
+  // Auto-load the most recent saved loadout for this ship
+  useEffect(() => {
+    if (!ship.id) return;
+    let cancelled = false;
+    fetch(`/api/loadouts?ship_id=${encodeURIComponent(ship.id)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const loadouts: Loadout[] = data.loadouts || [];
+        if (loadouts.length > 0) {
+          const latest = loadouts[0];
+          setLoadedLoadout(latest);
+          setLastOptimizedPreset(latest.optimized_preset || "");
+          if (latest.components) {
+            Object.entries(latest.components).forEach(([slotId, compId]) => {
+              setSlotAssignment(slotId, compId);
+            });
+          }
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [ship.id]);
+
   const loadComponentPicker = useCallback(() => {
     if (!selectedSlot) return null;
 
@@ -138,6 +165,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
 
   const handleOptimize = (preset: string) => {
     setOptimizing(true);
+    setLastOptimizedPreset(preset);
     setTimeout(() => {
       const bestComponents = new Map<string, string>();
       ship.hardpoints.forEach((hp) => {
@@ -288,6 +316,8 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
   };
 
   const handleSaveLoadout = async (name: string) => {
+    const isOptimized = !!lastOptimizedPreset || !!loadedLoadout?.is_optimized;
+    const loadoutStats = calculateLoadoutStats(ship, slotAssignments, componentMap);
     const newLoadout: Loadout = {
       id: `loadout_${Date.now()}`,
       name,
@@ -296,6 +326,9 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       is_favorite: false,
+      is_optimized: isOptimized,
+      optimized_preset: lastOptimizedPreset || loadedLoadout?.optimized_preset || "",
+      stats: loadoutStats,
     };
 
     addSavedLoadout(newLoadout);
@@ -308,7 +341,9 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
           name,
           ship_id: ship.id,
           components: slotAssignments,
-          is_template: false,
+          is_optimized: isOptimized,
+          optimized_preset: lastOptimizedPreset || loadedLoadout?.optimized_preset || "",
+          stats: loadoutStats,
         }),
       });
 
@@ -328,6 +363,8 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         setSlotAssignment(slotId, compId);
       });
     }
+    setLoadedLoadout(loadout);
+    setLastOptimizedPreset(loadout.optimized_preset || "");
   };
 
   return (
@@ -341,6 +378,24 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver a Naves
         </Button>
+
+        {(loadedLoadout || lastOptimizedPreset) && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground max-w-[240px] truncate">
+              {loadedLoadout?.name || ship.name}
+            </span>
+            {lastOptimizedPreset || loadedLoadout?.is_optimized ? (
+              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 ring-1 ring-emerald-500/30">
+                <Wand2 className="h-3 w-3 mr-1" />
+                Optimizada
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-semibold text-slate-400 ring-1 ring-slate-500/30">
+                Estándar
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center gap-3">
           <Button

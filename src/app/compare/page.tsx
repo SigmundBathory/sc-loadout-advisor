@@ -18,7 +18,7 @@ import {
   Legend,
   Tooltip,
 } from "recharts";
-import type { Ship } from "@/lib/types";
+import type { Ship, Loadout } from "@/lib/types";
 import { GitCompare, Plus, X } from "lucide-react";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
@@ -27,12 +27,48 @@ export default function ComparePage() {
   const [ships, setShips] = useState<Ship[]>([]);
   const [selectedShips, setSelectedShips] = useState<Ship[]>([]);
   const [search, setSearch] = useState("");
+  const [loadoutsByShip, setLoadoutsByShip] = useState<Record<string, Loadout>>({});
 
   useEffect(() => {
     fetch("/api/ships?withDps=true")
       .then((r) => r.json())
       .then((d) => setShips(d.ships || []));
   }, []);
+
+  useEffect(() => {
+    fetch("/api/loadouts")
+      .then((r) => r.json())
+      .then((d) => {
+        const map: Record<string, Loadout> = {};
+        (d.loadouts || []).forEach((l: Loadout) => {
+          if (!map[l.ship_id] || l.updated_at > map[l.ship_id].updated_at) {
+            map[l.ship_id] = l;
+          }
+        });
+        setLoadoutsByShip(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  function loadoutFor(ship: Ship): Loadout | undefined {
+    return loadoutsByShip[ship.id];
+  }
+
+  function statsFor(ship: Ship) {
+    const l = loadoutFor(ship);
+    if (l?.stats) {
+      return l.stats;
+    }
+    return {
+      total_dps: (ship as any).dps || 0,
+      shield_hp: ship.shield_hp,
+      shield_regen: 0,
+      power_output: 0,
+      cooling_rate: 0,
+      qt_range: 0,
+      total_cost: 0,
+    };
+  }
 
   const filteredShips = ships.filter(
     (s) =>
@@ -56,13 +92,13 @@ export default function ComparePage() {
     {
       stat: "DPS",
       ...Object.fromEntries(
-        selectedShips.map((s, i) => [`ship${i}`, ((s as any).dps || 0) / 10])
+        selectedShips.map((s, i) => [`ship${i}`, (statsFor(s).total_dps || 0) / 10])
       ),
     },
     {
       stat: "Escudos",
       ...Object.fromEntries(
-        selectedShips.map((s, i) => [`ship${i}`, s.shield_hp / 100])
+        selectedShips.map((s, i) => [`ship${i}`, (statsFor(s).shield_hp || s.shield_hp) / 100])
       ),
     },
     {
@@ -203,6 +239,11 @@ export default function ComparePage() {
                         { label: "Shield HP", get: (s: Ship) => s.shield_hp?.toLocaleString() },
                         { label: "Cargo (SCU)", get: (s: Ship) => s.cargo_capacity.toString() },
                         { label: "Slots", get: (s: Ship) => s.hardpoints?.length?.toString() || "0" },
+                        { label: "DPS (loadout)", get: (s: Ship) => statsFor(s).total_dps?.toLocaleString() || "—" },
+                        { label: "Potencia (loadout)", get: (s: Ship) => statsFor(s).power_output?.toLocaleString() || "—" },
+                        { label: "Refrigeracion (loadout)", get: (s: Ship) => statsFor(s).cooling_rate?.toLocaleString() || "—" },
+                        { label: "Costo (loadout)", get: (s: Ship) => statsFor(s).total_cost ? `${statsFor(s).total_cost.toLocaleString()} aUEC` : "—" },
+                        { label: "Optimizada", get: (s: Ship) => loadoutFor(s)?.is_optimized ? "Si" : "No" },
                       ].map(({ label, get }) => (
                         <tr key={label} className="border-b border-border/50">
                           <td className="p-2 text-muted-foreground">{label}</td>

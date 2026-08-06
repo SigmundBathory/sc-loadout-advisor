@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   getAllLoadouts,
   getLoadoutById,
+  getLoadoutsByShip,
   createLoadout,
   updateLoadout,
   deleteLoadout,
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const shipId = searchParams.get("ship_id");
 
     if (id) {
       const loadout = getLoadoutById(id);
@@ -18,6 +20,11 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Loadout not found" }, { status: 404 });
       }
       return NextResponse.json({ loadout });
+    }
+
+    if (shipId) {
+      const loadouts = getLoadoutsByShip(shipId);
+      return NextResponse.json({ loadouts });
     }
 
     const loadouts = getAllLoadouts();
@@ -31,7 +38,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, ship_id, components } = body;
+    const { name, ship_id, components, is_optimized, optimized_preset, stats } = body;
 
     if (!name || !ship_id) {
       return NextResponse.json(
@@ -40,7 +47,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const loadout = createLoadout(name, ship_id, components || {});
+    const loadout = createLoadout(name, ship_id, components || {}, {
+      is_optimized: !!is_optimized,
+      optimized_preset: optimized_preset || "",
+      stats: stats || {},
+    });
     return NextResponse.json({ loadout, message: "Loadout guardado con éxito" });
   } catch (error: any) {
     console.error("POST /api/loadouts error:", error);
@@ -51,13 +62,20 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, components, is_favorite } = body;
+    const { id, name, components, is_favorite, is_optimized, optimized_preset, stats } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const updated = updateLoadout(id, { name, components, is_favorite });
+    const updated = updateLoadout(id, {
+      name,
+      components,
+      is_favorite,
+      is_optimized,
+      optimized_preset,
+      stats,
+    });
     if (!updated) {
       return NextResponse.json({ error: "Loadout not found" }, { status: 404 });
     }

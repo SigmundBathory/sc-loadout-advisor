@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign } from "lucide-react";
+import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign, Wand2 } from "lucide-react";
 import type { Ship } from "@/lib/types";
 import Link from "next/link";
 
@@ -26,7 +26,21 @@ export default function ShipSelector({
   const [selectedClassification, setSelectedClassification] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [loading, setLoading] = useState(initialShips.length === 0);
+  const [optimizedShipIds, setOptimizedShipIds] = useState<Set<string>>(new Set());
   const allShipsRef = useRef<Ship[]>(initialShips);
+
+  useEffect(() => {
+    fetch("/api/loadouts")
+      .then((r) => r.json())
+      .then((d) => {
+        const ids = new Set<string>();
+        (d.loadouts || []).forEach((l: any) => {
+          if (l.is_optimized) ids.add(l.ship_id);
+        });
+        setOptimizedShipIds(ids);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (initialShips.length > 0) {
@@ -259,6 +273,12 @@ export default function ShipSelector({
                         </p>
                       </div>
                       {getClassificationBadge(ship.classification)}
+                      {optimizedShipIds.has(ship.id) && (
+                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
+                          <Wand2 className="h-3 w-3" />
+                          Optimizada
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
@@ -328,6 +348,12 @@ export default function ShipSelector({
 
                 <div className="shrink-0 flex items-center gap-3">
                   {getClassificationBadge(ship.classification)}
+                  {optimizedShipIds.has(ship.id) && (
+                    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
+                      <Wand2 className="h-3 w-3" />
+                      Optimizada
+                    </Badge>
+                  )}
                 </div>
               </div>
             </Link>

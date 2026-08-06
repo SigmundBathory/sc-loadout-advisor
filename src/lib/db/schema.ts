@@ -109,8 +109,13 @@ function initSchema(db: InstanceType<typeof Database>) {
       components TEXT DEFAULT '{}',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
-      is_favorite INTEGER DEFAULT 0
+      is_favorite INTEGER DEFAULT 0,
+      is_optimized INTEGER DEFAULT 0,
+      optimized_preset TEXT DEFAULT '',
+      stats TEXT DEFAULT '{}'
     );
+
+    CREATE INDEX IF NOT EXISTS idx_loadouts_ship ON loadouts(ship_id);
 
     CREATE TABLE IF NOT EXISTS ship_buy_locations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,6 +152,18 @@ function initSchema(db: InstanceType<typeof Database>) {
   const existing = db.prepare("SELECT id FROM sync_meta WHERE id = 1").get();
   if (!existing) {
     db.prepare("INSERT INTO sync_meta (id) VALUES (1)").run();
+  }
+
+  // --- Migrations for existing tables ---
+  const loadoutCols = (db.prepare("PRAGMA table_info(loadouts)").all() as any[]).map((c) => c.name);
+  if (!loadoutCols.includes("is_optimized")) {
+    db.exec("ALTER TABLE loadouts ADD COLUMN is_optimized INTEGER DEFAULT 0");
+  }
+  if (!loadoutCols.includes("optimized_preset")) {
+    db.exec("ALTER TABLE loadouts ADD COLUMN optimized_preset TEXT DEFAULT ''");
+  }
+  if (!loadoutCols.includes("stats")) {
+    db.exec("ALTER TABLE loadouts ADD COLUMN stats TEXT DEFAULT '{}'");
   }
 
   seedMissingPricesAndLocations(db);
