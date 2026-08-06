@@ -215,9 +215,24 @@ Tendencias aplicables: Glassmorphism 2.0 (frosted + layering + soft shadows), da
 
 ## Próximas Fases (Pendientes)
 
-### Phase 4: Loadout Builder & Comparator ✅ (completada)
-1. **Loadout Builder** - Esquemático visual de hardpoints ✅
-2. **Comparator Tactical Display** - Vista táctica, puntuación, winner badge, export CSV ✅
+### Phase 5: Polish UX/UI + Refactor ✅ (completada)
+- Consolidar variantes de contenedor (`glass-panel` como estándar, tema-respectivo)
+- Eliminar colores hardcodeados en favor de tokens del design system
+- Refactor parcial: extraer `LoadoutHeader` de `LoadoutBuilder.tsx`
+- Drag-and-drop básico en `HardpointSchematic` (mover componentes entre slots)
+- Mejorar empty states y loading states globalmente
+
+### Phase 6: Data Quality + Offline/PWA
+- Eliminar seed fake de precios/ubicaciones
+- Mejorar stats de componentes faltantes
+- Evaluar migración de DB committeada a serverless-friendly
+- PWA básico + offline mode
+
+### Phase 7: Testing + Observabilidad
+- Ampliar tests de lógica pura (>40% coverage)
+- Tests de integración para API routes
+- Logging estructurado en sync
+- Métricas de performance (Core Web Vitals)
 
 ---
 
@@ -236,6 +251,7 @@ Tendencias aplicables: Glassmorphism 2.0 (frosted + layering + soft shadows), da
 | 🔵 Nueva | **Design System 'Verse Theme' + Ship Hologram** | ✅ Phase 2 | **Identidad visual + 3D** |
 | 🔵 Nueva | **Visualizaciones Avanzadas (Power Triangle, TTK, etc.)** | ✅ Phase 3 | **Decisión táctica** |
 | 🔵 Nueva | **Loadout Builder Esquemático + Comparator Tactical** | ✅ Phase 4 | **Core UX** |
+| 🔵 Nueva | **Polish UX/UI + Refactor** | ✅ Phase 5 | **Mantenibilidad + DnD** |
 
 ---
 
@@ -248,4 +264,4 @@ Tendencias aplicables: Glassmorphism 2.0 (frosted + layering + soft shadows), da
 | Tiempo de sync full | ~90s | <45s |
 | Tests coverage (lógica pura) | 31 tests | >40% |
 | Lint/typecheck/build | ✅ 0/0 | mantener |
-| Fases de roadmap completadas | F1–F6 + auditoría + UI-A→D + Phase 2 + Phase 3 + Phase 4 | - |
+| Fases de roadmap completadas | F1–F6 + auditoría + UI-A→D + Phase 2 + Phase 3 + Phase 4 + Phase 5 | - |

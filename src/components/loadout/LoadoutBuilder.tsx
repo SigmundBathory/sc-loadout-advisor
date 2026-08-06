@@ -3,16 +3,16 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLoadoutStore } from "@/stores/loadoutStore";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger, TabsIndicator } from "@/components/ui/tabs";
-import { ArrowLeft, Save, Upload, Wand2, ShoppingCart, Zap, Settings, Crosshair } from "lucide-react";
+import { ShoppingCart, Settings, Crosshair, Zap } from "lucide-react";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
 import ShoppingList from "@/components/budget/ShoppingList";
 import ShipInfoCard from "./ShipInfoCard";
 import StatsPanel from "./StatsPanel";
 import SlotList from "./SlotList";
 import HardpointSchematic from "./HardpointSchematic";
+import LoadoutHeader from "./LoadoutHeader";
 import ComponentPickerDialog from "./ComponentPickerDialog";
 import SaveLoadoutDialog from "./SaveLoadoutDialog";
 import LoadLoadoutDialog from "./LoadLoadoutDialog";
@@ -205,6 +205,13 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     }, 1200);
   };
 
+  const handleMoveComponent = (fromSlotId: string, toSlotId: string) => {
+    const fromComp = slotAssignments[fromSlotId];
+    const toComp = slotAssignments[toSlotId];
+    setSlotAssignment(fromSlotId, toComp || "");
+    setSlotAssignment(toSlotId, fromComp || "");
+  };
+
   const handleSaveLoadout = async (name: string) => {
     const isOptimized = !!lastOptimizedPreset || !!loadedLoadout?.is_optimized;
     const loadoutStats = calculateLoadoutStats(ship, slotAssignments, componentMap);
@@ -259,65 +266,16 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          className="text-muted-foreground hover:text-foreground"
-          onClick={() => router.push("/ships")}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver a Naves
-        </Button>
-
-        {(loadedLoadout || lastOptimizedPreset) && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground max-w-[240px] truncate">
-              {loadedLoadout?.name || ship.name}
-            </span>
-            {lastOptimizedPreset || loadedLoadout?.is_optimized ? (
-              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 ring-1 ring-emerald-500/30">
-                <Wand2 className="h-3 w-3 mr-1" />
-                Optimizada
-              </span>
-            ) : (
-              <span className="inline-flex items-center rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-semibold text-slate-400 ring-1 ring-slate-500/30">
-                Estándar
-              </span>
-            )}
-          </div>
-        )}
-
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-xl gap-2 border-border/40 text-xs font-medium hover:bg-muted/40"
-            onClick={() => setShowLoadDialog(true)}
-          >
-            <Upload className="h-4 w-4" />
-            Cargar
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-xl gap-2 border-border/40 text-xs font-medium hover:bg-muted/40"
-            onClick={() => setShowOptimizer(true)}
-            disabled={optimizing}
-          >
-            <Wand2 className="h-4 w-4" />
-            {optimizing ? "Optimizando..." : "Optimizar"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-xl gap-2 border-border/40 text-xs font-medium hover:bg-muted/40"
-            onClick={() => setShowSaveDialog(true)}
-          >
-            <Save className="h-4 w-4" />
-            Guardar
-          </Button>
-        </div>
-      </div>
+      <LoadoutHeader
+        shipName={ship.name}
+        loadedLoadout={loadedLoadout}
+        lastOptimizedPreset={lastOptimizedPreset}
+        onBack={() => router.push("/ships")}
+        onLoad={() => setShowLoadDialog(true)}
+        onOptimize={() => setShowOptimizer(true)}
+        onSave={() => setShowSaveDialog(true)}
+        optimizing={optimizing}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-3 space-y-6">
@@ -358,6 +316,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
                 componentMap={componentMap}
                 onSlotClick={setSelectedSlot}
                 onClearSlot={clearSlotAssignment}
+                onMoveComponent={handleMoveComponent}
               />
             </CardContent>
           </Card>

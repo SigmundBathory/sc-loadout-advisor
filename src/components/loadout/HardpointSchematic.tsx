@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ interface HardpointSchematicProps {
   componentMap: Map<string, Component>;
   onSlotClick: (hardpoint: Hardpoint) => void;
   onClearSlot: (slotId: string) => void;
+  onMoveComponent?: (fromSlotId: string, toSlotId: string) => void;
 }
 
 const SLOT_ICONS: Record<string, typeof Crosshair> = {
@@ -51,7 +52,10 @@ export default function HardpointSchematic({
   componentMap,
   onSlotClick,
   onClearSlot,
+  onMoveComponent,
 }: HardpointSchematicProps) {
+  const [dragSourceSlotId, setDragSourceSlotId] = useState<string | null>(null);
+
   const grouped = useMemo(() => {
     const groups: Record<string, Hardpoint[]> = {};
     ship.hardpoints.forEach((hp) => {
@@ -63,6 +67,28 @@ export default function HardpointSchematic({
   }, [ship.hardpoints]);
 
   const assignedCount = Object.keys(slotAssignments).filter((k) => slotAssignments[k]).length;
+
+  const handleDragStart = (slotId: string) => {
+    setDragSourceSlotId(slotId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (targetSlotId: string) => {
+    if (!dragSourceSlotId || dragSourceSlotId === targetSlotId) {
+      setDragSourceSlotId(null);
+      return;
+    }
+    onMoveComponent?.(dragSourceSlotId, targetSlotId);
+    setDragSourceSlotId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragSourceSlotId(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -151,8 +177,14 @@ export default function HardpointSchematic({
                             ? "bg-primary/5 border-primary/30 hover:border-primary/50"
                             : "bg-muted/20 border-border/30 hover:border-primary/30 hover:bg-muted/30"
                           }
+                          ${dragSourceSlotId === hp.id ? "opacity-60 border-dashed" : ""}
                         `}
                         onClick={() => onSlotClick(hp)}
+                        draggable={isEquipped}
+                        onDragStart={() => handleDragStart(hp.id)}
+                        onDragOver={handleDragOver}
+                        onDrop={() => handleDrop(hp.id)}
+                        onDragEnd={handleDragEnd}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0 space-y-1">
