@@ -23,7 +23,7 @@ export function Stagger({ children, className, stagger = 0.06 }: StaggerProps) {
       className={className}
       initial={reduce ? undefined : "hidden"}
       whileInView={reduce ? undefined : "show"}
-      viewport={{ once: true, amount: 0.05 }}
+      viewport={{ once: true, amount: 0.01, margin: "0px 0px -10% 0px" }}
       variants={{
         hidden: {},
         show: { transition: { staggerChildren: stagger } },
