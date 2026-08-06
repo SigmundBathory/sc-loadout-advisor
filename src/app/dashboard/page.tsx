@@ -8,6 +8,7 @@ import RecentLoadouts from "@/components/dashboard/RecentLoadouts";
 import QuickActions from "@/components/dashboard/QuickActions";
 import SyncPanel from "@/components/dashboard/SyncPanel";
 import SyncHistory from "@/components/dashboard/SyncHistory";
+import { Reveal } from "@/components/motion/Reveal";
 import { Rocket, Wrench, Factory, Calendar } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,8 @@ export default async function DashboardPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Reveal y={10}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             icon={<Rocket className="h-5 w-5" />}
             label="Naves"
@@ -122,28 +124,39 @@ export default async function DashboardPage() {
             value={stats.meta?.last_sync_at ? new Date(stats.meta.last_sync_at).toLocaleDateString("es-ES") : "—"}
             subtitle={stats.meta?.sync_status === "ok" ? "✓ OK" : "⚠ Pendiente"}
           />
-        </div>
+          </div>
+        </Reveal>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PieChartFabricants data={pieData} />
-          <TopDpsTable ships={topDps} />
-        </div>
+        <Reveal delay={0.08}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PieChartFabricants data={pieData} />
+            <TopDpsTable ships={topDps} />
+          </div>
+        </Reveal>
 
         {previousVersion && currentVersion && (
-          <VersionChanges
-            fromVersion={previousVersion.code}
-            toVersion={currentVersion.code}
-            shipDelta={versionChanges?.shipDelta ?? 0}
-            componentDelta={versionChanges?.componentDelta ?? 0}
-            weaponDelta={versionChanges?.weaponDelta ?? 0}
-          />
+          <Reveal delay={0.12}>
+            <VersionChanges
+              fromVersion={previousVersion.code}
+              toVersion={currentVersion.code}
+              shipDelta={versionChanges?.shipDelta ?? 0}
+              componentDelta={versionChanges?.componentDelta ?? 0}
+              weaponDelta={versionChanges?.weaponDelta ?? 0}
+            />
+          </Reveal>
         )}
 
-        <RecentLoadouts loadouts={recentLoadouts} />
+        <Reveal delay={0.16}>
+          <RecentLoadouts loadouts={recentLoadouts} />
+        </Reveal>
 
-        <SyncHistory />
+        <Reveal delay={0.2}>
+          <SyncHistory />
+        </Reveal>
 
-        <QuickActions />
+        <Reveal delay={0.24}>
+          <QuickActions />
+        </Reveal>
       </main>
     </div>
   );

@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CountUp } from "@/components/motion/CountUp";
 import { Crosshair, Shield, Compass, DollarSign, ArrowRight, Save, Check } from "lucide-react";
 import type { Component, Ship, OptimizeResult } from "@/lib/types";
 
@@ -33,7 +34,7 @@ export default function ResultHeader({ ship, result, qdComponent, onApplyToBuild
 
         <div className="text-right">
           <div className="text-3xl font-extrabold text-primary font-mono">
-            {Math.round(result.optimization?.totalScore || 0)}/100
+            <CountUp value={Math.round(result.optimization?.totalScore || 0)} format={(v) => `${v}/100`} />
           </div>
           <div className="text-[10px] text-muted-foreground font-semibold uppercase">Score de Coincidencia</div>
         </div>

@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import type { Ship, Loadout, LoadoutStats } from "@/lib/types";
 import { GitCompare, Plus, X, Wand2, Link2 } from "lucide-react";
+import { AnimatedIcon } from "@/components/motion/AnimatedIcon";
 import { useShips, useAllLoadouts } from "@/lib/api/client";
 import { encodeCompareShare, decodeCompareShare, copyShareUrl } from "@/lib/loadout/share";
 
@@ -319,7 +320,7 @@ export default function ComparePage() {
                     <select
                       value={cfg.loadout?.id || ""}
                       onChange={(e) => changeLoadout(cfg.id, e.target.value)}
-                      className="text-xs bg-transparent border-none p-0 m-0 focus:outline-none text-muted-foreground cursor-pointer"
+                      className="native-select text-xs bg-transparent p-0 pr-5 text-muted-foreground cursor-pointer"
                       title="Elegir configuración"
                     >
                       <option value="">Estándar (stock)</option>
@@ -485,9 +486,11 @@ export default function ComparePage() {
             </div>
           </>
         ) : (
-          <Card className="min-h-[300px] flex items-center justify-center">
+          <Card className="min-h-[300px] flex items-center justify-center glass-panel border-border/40">
             <CardContent className="text-center text-muted-foreground space-y-3">
-              <GitCompare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <AnimatedIcon className="h-12 w-12 mx-auto mb-4 text-primary/50">
+                <GitCompare className="h-full w-full" />
+              </AnimatedIcon>
               <p className="font-medium text-foreground">Selecciona al menos 2 configuraciones para comparar</p>
               <p className="text-xs max-w-sm mx-auto">
                 Escribe el nombre de una nave en el campo de búsqueda de arriba. Puedes añadir la misma

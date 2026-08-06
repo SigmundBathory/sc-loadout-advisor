@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import VersionSelector from "@/components/VersionSelector";
 import SyncIndicator from "@/components/sync/SyncIndicator";
@@ -60,13 +61,20 @@ export default function Navbar() {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <Link key={item.href} href={item.href}>
+                <Link key={item.href} href={item.href} className="relative">
+                  {active && (
+                    <motion.span
+                      layoutId="nav-pill"
+                      className="absolute inset-0 rounded-full bg-primary shadow-md shadow-primary/30"
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    />
+                  )}
                   <Button
-                    variant={active ? "default" : "ghost"}
+                    variant={active ? "ghost" : "ghost"}
                     size="sm"
-                    className={`gap-2 rounded-full text-xs font-medium transition-all ${
+                    className={`relative gap-2 rounded-full text-xs font-medium transition-colors ${
                       active
-                        ? "shadow-md shadow-primary/20"
+                        ? "text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                     }`}
                   >

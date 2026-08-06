@@ -1,25 +1,13 @@
 "use client";
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { CHART_COLOR } from "@/lib/chartColors";
 
 interface ManufacturerData {
   name: string;
   count: number;
   color?: string;
 }
-
-const COLORS = [
-  "#6366f1",
-  "#f59e0b",
-  "#10b981",
-  "#ef4444",
-  "#8b5cf6",
-  "#06b6d4",
-  "#f97316",
-  "#ec4899",
-  "#14b8a6",
-  "#eab308",
-];
 
 export default function PieChartFabricants({ data }: { data: ManufacturerData[] }) {
   const total = data.reduce((sum, d) => sum + d.count, 0);
@@ -41,7 +29,7 @@ export default function PieChartFabricants({ data }: { data: ManufacturerData[] 
                 dataKey="count"
               >
                 {data.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={CHART_COLOR(index)} />
                 ))}
               </Pie>
               <Tooltip
@@ -67,7 +55,7 @@ export default function PieChartFabricants({ data }: { data: ManufacturerData[] 
               <div className="flex items-center gap-2">
                 <div
                   className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                  style={{ backgroundColor: CHART_COLOR(i) }}
                 />
                 <span className="text-muted-foreground">{item.name}</span>
               </div>

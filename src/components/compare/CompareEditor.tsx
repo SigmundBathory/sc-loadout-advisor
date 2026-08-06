@@ -115,7 +115,7 @@ export default function CompareEditor({ ship, initialLoadout, onChange }: Compar
         <select
           value={preset}
           onChange={(e) => setPreset(e.target.value)}
-          className="px-2 py-1 rounded-lg border border-border/40 bg-muted/40 text-foreground text-xs focus:outline-none"
+          className="native-select px-2 py-1 rounded-lg border border-border/40 bg-muted/40 text-foreground text-xs"
         >
           {PRESETS.map((p) => (
             <option key={p.name} value={p.name} className="bg-card">
@@ -165,7 +165,7 @@ export default function CompareEditor({ ship, initialLoadout, onChange }: Compar
                   value={currentId || ""}
                   onChange={(e) => setSlot(hp.id, e.target.value)}
                   disabled={options.length === 0}
-                  className="flex-1 min-w-0 px-2 py-1 rounded-md border border-border/40 bg-muted/40 text-foreground text-xs focus:outline-none"
+                  className="native-select flex-1 min-w-0 px-2 py-1 rounded-md border border-border/40 bg-muted/40 text-foreground text-xs"
                 >
                   <option value="">Sin asignar</option>
                   {options.map((c) => {

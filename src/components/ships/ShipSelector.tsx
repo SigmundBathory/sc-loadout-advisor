@@ -9,6 +9,7 @@ import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign, Wa
 import type { Ship } from "@/lib/types";
 import Link from "next/link";
 import { useShips, useOptimizedShipIds } from "@/lib/api/client";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 
 interface ShipSelectorProps {
   initialShips?: Ship[];
@@ -123,7 +124,7 @@ export default function ShipSelector({
             <select
               value={selectedManufacturer}
               onChange={(e) => setSelectedManufacturer(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary flex-1 md:w-48"
+              className="native-select px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs flex-1 md:w-48"
             >
               <option value="" className="bg-card">Todos los Fabricantes</option>
               {uniqueManufacturers.map((m) => (
@@ -136,7 +137,7 @@ export default function ShipSelector({
             <select
               value={selectedClassification}
               onChange={(e) => setSelectedClassification(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary flex-1 md:w-48"
+              className="native-select px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs flex-1 md:w-48"
             >
               <option value="" className="bg-card">Todas las Clasificaciones</option>
               {uniqueClassifications.map((c) => (
@@ -202,17 +203,17 @@ export default function ShipSelector({
       ) : loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="glass-panel border-border/40 animate-pulse">
+            <Card key={i} className="glass-panel border-border/40">
               <CardContent className="p-6 h-56 flex flex-col justify-between">
                 <div className="space-y-2">
-                  <div className="h-6 bg-muted/60 rounded-md w-3/4" />
-                  <div className="h-4 bg-muted/40 rounded-md w-1/2" />
+                  <div className="h-6 rounded-md w-3/4 animate-skeleton" />
+                  <div className="h-4 rounded-md w-1/2 animate-skeleton" />
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-4">
-                  <div className="h-3 bg-muted/40 rounded w-full" />
-                  <div className="h-3 bg-muted/40 rounded w-full" />
-                  <div className="h-3 bg-muted/40 rounded w-full" />
-                  <div className="h-3 bg-muted/40 rounded w-full" />
+                  <div className="h-3 rounded w-full animate-skeleton" />
+                  <div className="h-3 rounded w-full animate-skeleton" />
+                  <div className="h-3 rounded w-full animate-skeleton" />
+                  <div className="h-3 rounded w-full animate-skeleton" />
                 </div>
               </CardContent>
             </Card>
@@ -225,19 +226,21 @@ export default function ShipSelector({
           <p className="text-xs">Prueba borrando la búsqueda o ejecuta una sincronización si la base de datos está vacía.</p>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <Stagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {ships.map((ship) => (
-            <Link key={ship.id} href={`/ships/${ship.id}`}>
-              <Card className="glass-panel glass-panel-hover border-border/40 cursor-pointer h-full group flex flex-col justify-between overflow-hidden">
+            <StaggerItem key={ship.id}>
+              <Link href={`/ships/${ship.id}`} className="block h-full">
+                <Card className="glass-panel glass-panel-hover border-border/40 cursor-pointer h-full group flex flex-col justify-between overflow-hidden hover:shadow-xl hover:shadow-primary/10 hover:border-primary/40 transition-all duration-300">
                 <div>
                   {ship.image_url ? (
                     <div className="h-36 w-full relative overflow-hidden bg-muted/20 border-b border-border/30">
                       <img
                         src={ship.image_url}
                         alt={ship.name}
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
                         loading="lazy"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-transparent to-transparent opacity-60" />
                     </div>
                   ) : null}
                   <CardContent className="p-5 space-y-3">
@@ -286,9 +289,10 @@ export default function ShipSelector({
                   </CardContent>
                 </div>
               </Card>
-            </Link>
+              </Link>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       ) : (
         /* List View */
         <div className="glass-panel rounded-2xl border-border/40 overflow-hidden divide-y divide-border/30">

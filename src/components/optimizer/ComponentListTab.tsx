@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatBadge } from "@/components/ui/stat-badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin } from "lucide-react";
 import { translateSlotTypeEs } from "@/lib/utils";
@@ -53,12 +54,12 @@ export default function ComponentListTab({ components }: ComponentListTabProps) 
 
                   {comp?.stats && (
                     <div className="flex flex-wrap gap-2 pt-1 border-t border-border/20">
-                      {comp.stats.dps ? <Badge className="bg-red-500/20 text-red-300 border-red-500/30 text-[11px] font-mono">{comp.stats.dps.toFixed(0)} DPS</Badge> : null}
-                      {comp.stats.alpha ? <Badge className="bg-red-500/10 text-red-200 border-red-500/20 text-[11px] font-mono">Alfa: {comp.stats.alpha}</Badge> : null}
-                      {comp.stats.hp ? <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[11px] font-mono">{comp.stats.hp.toLocaleString()} HP</Badge> : null}
-                      {comp.stats.output ? <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[11px] font-mono">{comp.stats.output.toLocaleString()} W</Badge> : null}
-                      {comp.stats.cooling_rate ? <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[11px] font-mono">{comp.stats.cooling_rate.toLocaleString()} Cooling</Badge> : null}
-                      {comp.stats.travel_speed ? <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-[11px] font-mono">{comp.stats.travel_speed.toLocaleString()} km/s</Badge> : null}
+                      {comp.stats.dps ? <StatBadge tone="red">{comp.stats.dps.toFixed(0)} DPS</StatBadge> : null}
+                      {comp.stats.alpha ? <StatBadge tone="red">Alfa: {comp.stats.alpha}</StatBadge> : null}
+                      {comp.stats.hp ? <StatBadge tone="emerald">{comp.stats.hp.toLocaleString()} HP</StatBadge> : null}
+                      {comp.stats.output ? <StatBadge tone="amber">{comp.stats.output.toLocaleString()} W</StatBadge> : null}
+                      {comp.stats.cooling_rate ? <StatBadge tone="cyan">{comp.stats.cooling_rate.toLocaleString()} Cooling</StatBadge> : null}
+                      {comp.stats.travel_speed ? <StatBadge tone="blue">{comp.stats.travel_speed.toLocaleString()} km/s</StatBadge> : null}
                     </div>
                   )}
 

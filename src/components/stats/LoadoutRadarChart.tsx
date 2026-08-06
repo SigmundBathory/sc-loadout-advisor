@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import { CHART_COLOR } from "@/lib/chartColors";
 
 interface LoadoutRadarChartProps {
   stats: {
@@ -71,6 +72,12 @@ export default function LoadoutRadarChart({ stats, shipStats }: LoadoutRadarChar
       <div className="h-[220px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
+            <defs>
+              <radialGradient id="radarFill" cx="50%" cy="50%" r="65%">
+                <stop offset="0%" stopColor={CHART_COLOR(0)} stopOpacity={0.5} />
+                <stop offset="100%" stopColor={CHART_COLOR(0)} stopOpacity={0.08} />
+              </radialGradient>
+            </defs>
             <PolarGrid stroke="rgba(255, 255, 255, 0.1)" />
             <PolarAngleAxis
               dataKey="stat"
@@ -79,9 +86,10 @@ export default function LoadoutRadarChart({ stats, shipStats }: LoadoutRadarChar
             <Radar
               name="Perfil"
               dataKey="value"
-              stroke="#6366f1"
-              fill="#6366f1"
-              fillOpacity={0.35}
+              stroke={CHART_COLOR(0)}
+              strokeWidth={2}
+              fill="url(#radarFill)"
+              fillOpacity={1}
             />
             <Tooltip
               content={({ active, payload }) => {

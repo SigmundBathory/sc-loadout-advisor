@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { Search, Wand2, Info, ShoppingBag, Check, ArrowUpDown, ChevronDown } from "lucide-react";
 import type { Component, Hardpoint } from "@/lib/types";
 import { sortComponentsForSlot, componentStatSummary } from "@/lib/optimizer/componentSort";
@@ -184,94 +185,98 @@ function PickerBody({
           </div>
         ) : (
           <div className="space-y-2">
-            {sorted.map((comp, idx) => {
-              const summary = componentStatSummary(comp);
-              const isExpanded = expandedId === comp.id;
-              const isActive = idx === safeIndex;
-              return (
-                <div key={comp.id} className="space-y-1.5">
-                  <div
-                    ref={isActive ? activeRef : undefined}
-                    className={`glass-panel glass-panel-hover p-3 rounded-xl border cursor-pointer transition-all ${
-                      isActive ? "ring-1 ring-primary/60 border-primary/60" : ""
-                    } ${
-                      comp.id === equippedId
-                        ? "border-primary/60 bg-primary/5"
-                        : idx === 0
-                        ? "border-emerald-500/40"
-                        : "border-border/30"
-                    }`}
-                    onClick={() => handleRowClick(comp)}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-foreground truncate">{comp.name}</span>
-                          {comp.id === equippedId && (
-                            <Badge className="bg-primary/20 text-primary border-primary/40 text-[10px] gap-1">
-                              <Check className="h-2.5 w-2.5" /> Equipado
-                            </Badge>
-                          )}
-                          {idx === 0 && comp.id !== equippedId && (
-                            <Badge variant="secondary" className="text-[10px]">Mejor en {summary.primaryLabel}</Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {comp.manufacturer.name || "Desconocido"} • {comp.class || "General"} • Grado {comp.stats.grade ?? "—"}
-                        </div>
-                        {/* Trade-off stats */}
-                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pt-1.5 text-[11px] font-mono">
-                          <span className="text-primary font-semibold">
-                            {summary.primaryLabel}: {summary.primaryFormatted}
-                          </span>
-                          {summary.tradeoffs.map((t) => (
-                            <span key={t.label} className="text-muted-foreground">
-                              {t.label}: <span className="text-foreground/80">{t.format}</span>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="text-right text-xs font-mono space-y-1 shrink-0">
-                        {comp.price_auec ? (
-                          <div className="text-amber-300 font-semibold flex items-center gap-1 justify-end">
-                            {comp.price_auec.toLocaleString()} aUEC
-                            {comp.buy_locations && comp.buy_locations.length > 0 && (
-                              <ShoppingBag className="h-3 w-3 opacity-50" />
-                            )}
+            <Stagger className="space-y-2">
+              {sorted.map((comp, idx) => {
+                const summary = componentStatSummary(comp);
+                const isExpanded = expandedId === comp.id;
+                const isActive = idx === safeIndex;
+                return (
+                  <StaggerItem key={comp.id}>
+                    <div className="space-y-1.5">
+                      <div
+                        ref={isActive ? activeRef : undefined}
+                        className={`glass-panel glass-panel-hover p-3 rounded-xl border cursor-pointer transition-all ${
+                          isActive ? "ring-1 ring-primary/60 border-primary/60" : ""
+                        } ${
+                          comp.id === equippedId
+                            ? "border-primary/60 bg-primary/5"
+                            : idx === 0
+                            ? "border-emerald-500/40"
+                            : "border-border/30"
+                        }`}
+                        onClick={() => handleRowClick(comp)}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-foreground truncate">{comp.name}</span>
+                              {comp.id === equippedId && (
+                                <Badge className="bg-primary/20 text-primary border-primary/40 text-[10px] gap-1">
+                                  <Check className="h-2.5 w-2.5" /> Equipado
+                                </Badge>
+                              )}
+                              {idx === 0 && comp.id !== equippedId && (
+                                <Badge variant="secondary" className="text-[10px]">Mejor en {summary.primaryLabel}</Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {comp.manufacturer.name || "Desconocido"} • {comp.class || "General"} • Grado {comp.stats.grade ?? "—"}
+                            </div>
+                            {/* Trade-off stats */}
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 pt-1.5 text-[11px] font-mono">
+                              <span className="text-primary font-semibold">
+                                {summary.primaryLabel}: {summary.primaryFormatted}
+                              </span>
+                              {summary.tradeoffs.map((t) => (
+                                <span key={t.label} className="text-muted-foreground">
+                                  {t.label}: <span className="text-foreground/80">{t.format}</span>
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        ) : null}
-                        {comp.buy_locations && comp.buy_locations.length > 0 && (
-                          <div className="text-muted-foreground/70 text-[10px] space-y-0.5">
-                            {comp.buy_locations.slice(0, 1).map((loc, i) => (
-                              <div key={i} className="flex items-center gap-1 justify-end">
-                                <span>{loc.shop_name}</span>
-                                {loc.planet_moon && <span className="opacity-60">({loc.planet_moon})</span>}
+
+                          <div className="text-right text-xs font-mono space-y-1 shrink-0">
+                            {comp.price_auec ? (
+                              <div className="text-amber-300 font-semibold flex items-center gap-1 justify-end">
+                                {comp.price_auec.toLocaleString()} aUEC
+                                {comp.buy_locations && comp.buy_locations.length > 0 && (
+                                  <ShoppingBag className="h-3 w-3 opacity-50" />
+                                )}
                               </div>
-                            ))}
+                            ) : null}
+                            {comp.buy_locations && comp.buy_locations.length > 0 && (
+                              <div className="text-muted-foreground/70 text-[10px] space-y-0.5">
+                                {comp.buy_locations.slice(0, 1).map((loc, i) => (
+                                  <div key={i} className="flex items-center gap-1 justify-end">
+                                    <span>{loc.shop_name}</span>
+                                    {loc.planet_moon && <span className="opacity-60">({loc.planet_moon})</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1 justify-end text-[10px] text-primary">
+                              <ChevronDown
+                                className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                              />
+                              {isExpanded ? "Ocultar detalle" : "Ver detalle"}
+                            </div>
                           </div>
-                        )}
-                        <div className="flex items-center gap-1 justify-end text-[10px] text-primary">
-                          <ChevronDown
-                            className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                          />
-                          {isExpanded ? "Ocultar detalle" : "Ver detalle"}
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {isExpanded && (
-                    <ComponentDetailPanel
-                      component={comp}
-                      equipped={equippedComponent}
-                      onSelect={() => handleSelect(comp)}
-                      onClose={() => setExpandedId(null)}
-                    />
-                  )}
-                </div>
-              );
-            })}
+                      {isExpanded && (
+                        <ComponentDetailPanel
+                          component={comp}
+                          equipped={equippedComponent}
+                          onSelect={() => handleSelect(comp)}
+                          onClose={() => setExpandedId(null)}
+                        />
+                      )}
+                    </div>
+                  </StaggerItem>
+                );
+              })}
+            </Stagger>
           </div>
         )}
       </ScrollArea>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsIndicator } from "@/components/ui/tabs";
 import { useRouter } from "next/navigation";
 import { useLoadoutStore } from "@/stores/loadoutStore";
 import { Wand2, Gauge, ShoppingCart, Zap } from "lucide-react";
@@ -15,6 +15,7 @@ import ComponentListTab from "@/components/optimizer/ComponentListTab";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
 import ShoppingList from "@/components/budget/ShoppingList";
 import Breadcrumb from "@/components/Breadcrumb";
+import { AnimatedIcon } from "@/components/motion/AnimatedIcon";
 import type { Component, OptimizeResult } from "@/lib/types";
 
 export default function OptimizerPage() {
@@ -177,13 +178,14 @@ export default function OptimizerPage() {
 
                 <Tabs defaultValue="components" className="w-full">
                   <TabsList className="grid w-full grid-cols-3 glass-panel p-1 rounded-2xl border-border/40">
-                    <TabsTrigger value="components" className="rounded-xl text-xs font-bold gap-1.5">
+                    <TabsIndicator className="bg-background/70 backdrop-blur-sm border border-border/40 rounded-xl shadow-sm" />
+                    <TabsTrigger value="components" className="relative z-10 rounded-xl text-xs font-bold gap-1.5">
                       <Zap className="h-3.5 w-3.5" /> Componentes ({result.optimization?.selected?.length || 0})
                     </TabsTrigger>
-                    <TabsTrigger value="shopping" className="rounded-xl text-xs font-bold gap-1.5">
+                    <TabsTrigger value="shopping" className="relative z-10 rounded-xl text-xs font-bold gap-1.5">
                       <ShoppingCart className="h-3.5 w-3.5" /> Comprar
                     </TabsTrigger>
-                    <TabsTrigger value="radar" className="rounded-xl text-xs font-bold gap-1.5">
+                    <TabsTrigger value="radar" className="relative z-10 rounded-xl text-xs font-bold gap-1.5">
                       <Gauge className="h-3.5 w-3.5" /> Radar
                     </TabsTrigger>
                   </TabsList>
@@ -223,7 +225,9 @@ export default function OptimizerPage() {
             ) : (
               <Card className="glass-panel border-border/40 min-h-[500px] flex items-center justify-center">
                 <CardContent className="text-center text-muted-foreground space-y-4 p-8">
-                  <Wand2 className="h-16 w-16 mx-auto opacity-30 text-primary animate-pulse" />
+                  <AnimatedIcon className="h-16 w-16 mx-auto text-primary/50">
+                    <Wand2 className="h-full w-full" />
+                  </AnimatedIcon>
                   <div className="space-y-1">
                     <h3 className="text-lg font-bold text-foreground">Configura tus Prioridades y Presiona &quot;Ejecutar Optimización&quot;</h3>
                     <p className="text-xs text-muted-foreground max-w-sm mx-auto">

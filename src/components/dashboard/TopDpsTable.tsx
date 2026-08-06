@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 
 interface ShipDps {
   id: string;
@@ -26,39 +27,42 @@ export default function TopDpsTable({ ships }: { ships: ShipDps[] }) {
     <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-5">
       <h3 className="text-sm font-medium text-muted-foreground mb-4">Top 5 DPS</h3>
       <div className="space-y-3">
-        {ships.map((ship, i) => (
-          <Link
-            key={ship.id}
-            href={`/ships/${ship.id}`}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
-          >
-            <span className="text-lg font-bold text-muted-foreground w-6 text-center font-mono">
-              {i + 1}
-            </span>
-            {ship.image_url && (
-              <img
-                src={ship.image_url}
-                alt={ship.name}
-                className="w-10 h-10 rounded-lg object-cover bg-muted"
-              />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                {ship.name}
-              </p>
-              <Badge
-                variant="outline"
-                className={`text-[10px] px-1.5 py-0 mt-0.5 ${classColors[ship.classification] || ""}`}
+        <Stagger className="space-y-3">
+          {ships.map((ship, i) => (
+            <StaggerItem key={ship.id}>
+              <Link
+                href={`/ships/${ship.id}`}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
               >
-                {ship.classification}
-              </Badge>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold font-mono text-primary">{ship.dps.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">DPS</p>
-            </div>
-          </Link>
-        ))}
+                <span className="text-lg font-bold text-muted-foreground w-6 text-center font-mono">
+                  {i + 1}
+                </span>
+                {ship.image_url && (
+                  <img
+                    src={ship.image_url}
+                    alt={ship.name}
+                    className="w-10 h-10 rounded-lg object-cover bg-muted"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                    {ship.name}
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 mt-0.5 ${classColors[ship.classification] || ""}`}
+                  >
+                    {ship.classification}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold font-mono text-primary">{ship.dps.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground">DPS</p>
+                </div>
+              </Link>
+            </StaggerItem>
+          ))}
+        </Stagger>
       </div>
     </div>
   );

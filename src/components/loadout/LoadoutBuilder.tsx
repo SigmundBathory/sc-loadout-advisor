@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLoadoutStore } from "@/stores/loadoutStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsIndicator } from "@/components/ui/tabs";
 import { ArrowLeft, Save, Upload, Wand2, ShoppingCart, Zap, Settings } from "lucide-react";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
 import ShoppingList from "@/components/budget/ShoppingList";
@@ -376,15 +376,16 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
 
       <Tabs defaultValue="loadout" className="w-full">
         <TabsList className="glass-panel border border-border/40 p-1 bg-muted/30 rounded-xl">
+          <TabsIndicator className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-sm" />
           <TabsTrigger
             value="loadout"
-            className="rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-semibold"
+            className="relative z-10 rounded-lg font-semibold"
           >
             <Zap className="h-4 w-4 mr-2" /> Loadout
           </TabsTrigger>
           <TabsTrigger
             value="shopping"
-            className="rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-semibold"
+            className="relative z-10 rounded-lg font-semibold"
           >
             <ShoppingCart className="h-4 w-4 mr-2" /> Comprar
           </TabsTrigger>

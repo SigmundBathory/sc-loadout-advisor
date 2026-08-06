@@ -53,6 +53,32 @@ function TabsList({
   )
 }
 
+/**
+ * Animated indicator that slides to the active tab. Renders a `<span>`
+ * absolutely positioned over the active tab; CSS vars (`--active-tab-*`) are
+ * set by Base UI, so a simple `transition-all` produces the glide effect.
+ */
+function TabsIndicator({ className, ...props }: TabsPrimitive.Indicator.Props) {
+  return (
+    <TabsPrimitive.Indicator
+      data-slot="tabs-indicator"
+      className={cn(
+        "pointer-events-none absolute z-0 rounded-md transition-all duration-300 ease-out",
+        className
+      )}
+      style={{
+        left: "var(--active-tab-left)",
+        right: "var(--active-tab-right)",
+        top: "var(--active-tab-top)",
+        bottom: "var(--active-tab-bottom)",
+        width: "var(--active-tab-width)",
+        height: "var(--active-tab-height)",
+      }}
+      {...props}
+    />
+  )
+}
+
 function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
   return (
     <TabsPrimitive.Tab
@@ -79,4 +105,4 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }
+export { Tabs, TabsList, TabsTrigger, TabsContent, TabsIndicator, tabsListVariants }
