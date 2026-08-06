@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, DollarSign, ShoppingCart, Building, Compass } from "lucide-react";
+import { MapPin, ShoppingCart, Building } from "lucide-react";
 import type { Component, BuyLocation } from "@/lib/types";
 import { translateComponentTypeEs } from "@/lib/utils";
 

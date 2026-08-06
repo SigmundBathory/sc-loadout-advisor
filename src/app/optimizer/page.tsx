@@ -5,8 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from "next/navigation";
 import { useLoadoutStore } from "@/stores/loadoutStore";
-import { translateSlotTypeEs } from "@/lib/utils";
-import { Wand2, Gauge, ShoppingCart, Zap, CheckSquare, Compass } from "lucide-react";
+import { Wand2, Gauge, ShoppingCart, Zap } from "lucide-react";
 import ShipSelector from "@/components/optimizer/ShipSelector";
 import PresetSliders from "@/components/optimizer/PresetSliders";
 import SlotTypeSelector from "@/components/optimizer/SlotTypeSelector";
@@ -16,7 +15,7 @@ import ComponentListTab from "@/components/optimizer/ComponentListTab";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
 import ShoppingList from "@/components/budget/ShoppingList";
 import Breadcrumb from "@/components/Breadcrumb";
-import type { Component } from "@/lib/types";
+import type { Component, OptimizeResult } from "@/lib/types";
 
 export default function OptimizerPage() {
   const router = useRouter();
@@ -26,7 +25,7 @@ export default function OptimizerPage() {
   const [selectedSlotTypes, setSelectedSlotTypes] = useState<string[]>(["weapon", "shield", "quantum_drive", "power_plant", "cooler", "missile"]);
   const [maxBudget, setMaxBudget] = useState<number | undefined>();
   const [optimizing, setOptimizing] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<OptimizeResult | null>(null);
   const [savedMsg, setSavedMsg] = useState("");
 
   const { addSavedLoadout, setCurrentLoadout } = useLoadoutStore();
@@ -118,7 +117,7 @@ export default function OptimizerPage() {
   }
 
   const selectedComponentsList: Component[] =
-    result?.optimization?.selected?.map((sel: any) => sel.component).filter(Boolean) || [];
+    result?.optimization?.selected?.map((sel) => sel.component).filter(Boolean) || [];
 
   const qdComponent = selectedComponentsList.find((c) => c.type === "QuantumDrive");
 
@@ -226,7 +225,7 @@ export default function OptimizerPage() {
                 <CardContent className="text-center text-muted-foreground space-y-4 p-8">
                   <Wand2 className="h-16 w-16 mx-auto opacity-30 text-primary animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-foreground">Configura tus Prioridades y Presiona "Ejecutar Optimización"</h3>
+                    <h3 className="text-lg font-bold text-foreground">Configura tus Prioridades y Presiona &quot;Ejecutar Optimización&quot;</h3>
                     <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                       Ajusta los controles de armas, defensa, viajes quantum y coste para obtener un loadout exacto con tiendas, precios y métricas completas.
                     </p>

@@ -11,11 +11,10 @@ interface SaveLoadoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ship: Ship;
-  slotAssignments: Record<string, string>;
   onSave: (name: string) => Promise<void>;
 }
 
-export default function SaveLoadoutDialog({ open, onOpenChange, ship, slotAssignments, onSave }: SaveLoadoutDialogProps) {
+export default function SaveLoadoutDialog({ open, onOpenChange, ship, onSave }: SaveLoadoutDialogProps) {
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");

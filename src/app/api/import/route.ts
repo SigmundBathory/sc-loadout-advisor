@@ -17,17 +17,17 @@ export async function POST(request: Request) {
     
     let file: File | null = null;
     let version = "";
-    let importType = "";
+    let importType: ImportData["type"] = "full";
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
       file = formData.get("file") as File;
       version = formData.get("version") as string;
-      importType = formData.get("type") as string;
+      importType = (formData.get("type") as ImportData["type"]) || "full";
     } else {
       const body = await request.json();
       version = body.version;
-      importType = body.type;
+      importType = (body.type as ImportData["type"]) || "full";
       
       if (body.fileContent) {
         const binaryStr = atob(body.fileContent);
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
     try {
       data = JSON.parse(text);
-    } catch (e) {
+    } catch {
       return NextResponse.json(
         { error: "Invalid JSON file" },
         { status: 400 }
@@ -66,10 +66,13 @@ export async function POST(request: Request) {
     }
 
     const db = getDb();
-    let imported = { ships: 0, components: 0, hardpoints: 0 };
+    const imported = { ships: 0, components: 0, hardpoints: 0 };
+
+    const shouldImport = (t: "ships" | "components" | "weapons") =>
+      importType === "full" || importType === t;
 
     const ships = data.ships || data.vehicles || [];
-    if (ships.length > 0) {
+    if (shouldImport("ships") && ships.length > 0) {
       const insertShip = db.prepare(`
         INSERT OR REPLACE INTO ships (id, name, class_name, manufacturer_code, classification, crew, mass, cargo_capacity, scm_speed, max_speed, hull_hp, shield_hp, image_url)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -142,7 +145,7 @@ export async function POST(request: Request) {
     }
 
     const components = data.components || [];
-    if (components.length > 0) {
+    if (shouldImport("components") && components.length > 0) {
       const insertComponent = db.prepare(`
         INSERT OR REPLACE INTO components (id, name, class_name, manufacturer_code, type, size, class, stats, image_url)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -171,7 +174,7 @@ export async function POST(request: Request) {
     }
 
     const weapons = data.weapons || [];
-    if (weapons.length > 0) {
+    if (shouldImport("weapons") && weapons.length > 0) {
       const insertComponent = db.prepare(`
         INSERT OR REPLACE INTO components (id, name, class_name, manufacturer_code, type, size, class, stats, image_url)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

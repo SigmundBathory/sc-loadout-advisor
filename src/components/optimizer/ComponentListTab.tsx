@@ -3,9 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, Building } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { translateSlotTypeEs } from "@/lib/utils";
-import type { Component } from "@/lib/types";
+import type { Component, BuyLocation } from "@/lib/types";
 
 interface ComponentListTabProps {
   components: { component: Component; score: number; slotId: string }[];
@@ -68,7 +68,7 @@ export default function ComponentListTab({ components }: ComponentListTabProps) 
                         <MapPin className="h-3.5 w-3.5 text-blue-400" /> Tiendas Disponibles:
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-2">
-                        {locations.map((loc: any, idx: number) => (
+                        {locations.map((loc: BuyLocation, idx: number) => (
                           <div key={idx} className="flex items-center justify-between text-[11px] bg-muted/40 p-2 rounded-lg border border-border/30">
                             <div>
                               <span className="font-bold text-foreground block">{loc.shop_name}</span>

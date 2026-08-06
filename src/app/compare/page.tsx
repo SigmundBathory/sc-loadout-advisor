@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -61,49 +61,58 @@ export default function ComparePage() {
   }, [loadoutsData]);
 
   const [shareFeedback, setShareFeedback] = useState("");
+  const [hashRestored, setHashRestored] = useState(false);
+  const idCounter = useRef(0);
+  const nextId = () => `cfg_${++idCounter.current}`;
 
-  // Restore a shared compare from the URL hash (#compare=SCLA:...)
-  useEffect(() => {
-    if (typeof window === "undefined" || ships.length === 0) return;
-    const hash = window.location.hash;
-    if (!hash.startsWith("#compare=")) return;
-    const decoded = decodeCompareShare(hash.slice("#compare=".length));
-    if (!decoded || decoded.entries.length === 0) return;
-    const byId = new Map(ships.map((s) => [s.id, s]));
-    const restored = decoded.entries
-      .filter((e) => byId.has(e.ship.id))
-      .map((e) => {
-        const ship = byId.get(e.ship.id)!;
-        return {
-          id: `cfg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          ship,
-          loadout: null,
-          assignments: { ...e.components },
-          stats: {
-            total_dps: (ship as any).dps || 0,
-            sustained_dps: 0,
-            burst_dps: 0,
-            missile_dps: 0,
-            shield_hp: ship.shield_hp,
-            shield_regen: 0,
-            hull_hp: ship.hull_hp,
-            scm_speed: ship.scm_speed,
-            max_speed: ship.max_speed,
-            qt_range: 0,
-            qt_fuel: 0,
-            total_cost: 0,
-            power_output: 0,
-            power_demand: 0,
-            cooling_rate: 0,
-          },
-          isOptimized: false,
-        };
-      });
-    if (restored.length > 0) {
-      setConfigs(restored.slice(0, 4));
-      window.history.replaceState(null, "", window.location.pathname);
+  // Restore a shared compare from the URL hash (#compare=SCLA:...).
+  // Runs once ships have loaded, adjusting state during render (React-recommended pattern).
+  const shipsLoaded = ships.length > 0;
+  if (shipsLoaded && !hashRestored) {
+    setHashRestored(true);
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash;
+      if (hash.startsWith("#compare=")) {
+        const decoded = decodeCompareShare(hash.slice("#compare=".length));
+        if (decoded && decoded.entries.length > 0) {
+          const byId = new Map(ships.map((s) => [s.id, s]));
+          const restored = decoded.entries
+            .filter((e) => byId.has(e.ship.id))
+            .map((e, i) => {
+              const ship = byId.get(e.ship.id)!;
+              return {
+                id: `cfg_shared_${i}`,
+                ship,
+                loadout: null,
+                assignments: { ...e.components },
+                stats: {
+                  total_dps: ship.dps || 0,
+                  sustained_dps: 0,
+                  burst_dps: 0,
+                  missile_dps: 0,
+                  shield_hp: ship.shield_hp,
+                  shield_regen: 0,
+                  hull_hp: ship.hull_hp,
+                  scm_speed: ship.scm_speed,
+                  max_speed: ship.max_speed,
+                  qt_range: 0,
+                  qt_fuel: 0,
+                  total_cost: 0,
+                  power_output: 0,
+                  power_demand: 0,
+                  cooling_rate: 0,
+                },
+                isOptimized: false,
+              };
+            });
+          if (restored.length > 0) {
+            setConfigs(restored.slice(0, 4));
+            window.history.replaceState(null, "", window.location.pathname);
+          }
+        }
+      }
     }
-  }, [ships]);
+  }
 
   const handleShare = async () => {
     if (configs.length === 0) return;
@@ -127,12 +136,12 @@ export default function ComparePage() {
     const loadouts = loadoutsByShip[ship.id] || [];
     const loadout = loadouts.length > 0 ? loadouts[0] : null;
     const entry: ConfigEntry = {
-      id: `cfg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id: nextId(),
       ship,
       loadout,
       assignments: loadout?.components ? { ...loadout.components } : {},
       stats: {
-        total_dps: (ship as any).dps || 0,
+        total_dps: ship.dps || 0,
         sustained_dps: 0,
         burst_dps: 0,
         missile_dps: 0,

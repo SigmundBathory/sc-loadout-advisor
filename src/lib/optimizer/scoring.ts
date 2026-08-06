@@ -1,4 +1,4 @@
-import type { Component, FilterWeights, ComponentScore, Ship, LoadoutStats } from "../types";
+import type { Component, FilterWeights, ComponentScore, Ship } from "../types";
 import { getCompatibleComponents } from "../db/queries";
 export { calculateLoadoutStats } from "./loadoutStats";
 
@@ -47,8 +47,7 @@ const MAX_VALUES = {
 
 export function scoreComponent(
   component: Component,
-  slotType: string,
-  weights: FilterWeights
+  slotType: string
 ): ComponentScore {
   const s = component.stats;
   const price = component.price_auec || 50000;
@@ -168,9 +167,9 @@ export function optimizeLoadout(
       // Score each compatible component
       const scored = compatible.map((comp) => ({
         component: comp,
-        score: scoreComponent(comp, slotType, weights),
+        score: scoreComponent(comp, slotType),
         weightedScore: calculateWeightedScore(
-          scoreComponent(comp, slotType, weights),
+          scoreComponent(comp, slotType),
           weights
         ),
       }));

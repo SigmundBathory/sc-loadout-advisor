@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Plus, Minus, Minus as MinusIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 interface VersionChangesProps {
   fromVersion: string;

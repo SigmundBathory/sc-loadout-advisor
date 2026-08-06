@@ -46,18 +46,16 @@ export default function CompareEditor({ ship, initialLoadout, onChange }: Compar
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [optimizing, setOptimizing] = useState(false);
   const [preset, setPreset] = useState("balanced");
+  const [prevInitial, setPrevInitial] = useState(initialLoadout);
 
   const { data: components = [], isLoading: loading } = useShipComponents(ship);
   const componentMap = useMemo(() => new Map(components.map((c) => [c.id, c])), [components]);
 
-  // Apply initial loadout components
-  useEffect(() => {
-    if (initialLoadout?.components) {
-      setAssignments({ ...initialLoadout.components });
-    } else {
-      setAssignments({});
-    }
-  }, [initialLoadout]);
+  // Apply initial loadout components. Adjust state during render (React-recommended pattern).
+  if (initialLoadout !== prevInitial) {
+    setPrevInitial(initialLoadout);
+    setAssignments(initialLoadout?.components ? { ...initialLoadout.components } : {});
+  }
 
   // Notify parent whenever assignments change
   const fullStats = useMemo(

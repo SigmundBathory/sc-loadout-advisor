@@ -8,7 +8,6 @@ import VersionSelector from "@/components/VersionSelector";
 import SyncIndicator from "@/components/sync/SyncIndicator";
 import UpdateModal from "@/components/layout/UpdateModal";
 import {
-  Wrench,
   Wand2,
   GitCompare,
   Upload,

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Check, Loader2, Download } from "lucide-react";
+import { Check, Loader2, Download } from "lucide-react";
 
 interface GameVersion {
   code: string;
@@ -89,19 +89,6 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
     const isPtu = code.includes("PTU");
     const label = match ? `Alpha ${match[1]}` : code;
     return isPtu ? `${label} PTU` : `${label} LIVE`;
-  }
-
-  function formatDate(dateStr: string) {
-    if (!dateStr) return "";
-    try {
-      return new Date(dateStr).toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return dateStr;
-    }
   }
 
   if (loading) {

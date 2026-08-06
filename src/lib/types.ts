@@ -72,7 +72,7 @@ export type ComponentType =
 
 export interface ComponentStats {
   // Common
-  grade?: number;
+  grade?: number | string;
   // Weapons
   dps?: number;
   alpha?: number;
@@ -186,6 +186,23 @@ export interface SyncMeta {
 export interface ShipComparison {
   ship: Ship;
   loadout: Loadout;
+  stats: LoadoutStats;
+}
+
+export interface OptimizeSelection {
+  slotId: string;
+  component: Component;
+  score: number;
+}
+
+export interface OptimizeResult {
+  ship: Ship;
+  optimization: {
+    selected: OptimizeSelection[];
+    totalScore: number;
+    totalCost: number;
+    explanation: string[];
+  };
   stats: LoadoutStats;
 }
 

@@ -1,15 +1,14 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Crosshair, Shield, Compass, DollarSign, ArrowRight, Save, Check } from "lucide-react";
-import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
-import type { Component } from "@/lib/types";
+import type { Component, Ship, OptimizeResult } from "@/lib/types";
 
 interface ResultHeaderProps {
-  ship: any;
-  result: any;
+  ship: Ship;
+  result: OptimizeResult;
   qdComponent: Component | undefined;
   onApplyToBuilder: () => void;
   onSave: () => void;

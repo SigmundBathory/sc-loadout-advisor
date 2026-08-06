@@ -1,4 +1,4 @@
-import type { Component, Loadout, Ship } from "@/lib/types";
+import type { Loadout, Ship } from "@/lib/types";
 
 const PREFIX = "SCLA:";
 
@@ -169,7 +169,16 @@ export function parseLoadoutImport(text: string): ImportedLoadout | null {
   }
 }
 
-function normalizeImported(raw: any): ImportedLoadout | null {
+interface RawImport {
+  name: unknown;
+  ship_id: unknown;
+  components: unknown;
+  is_optimized?: unknown;
+  optimized_preset?: unknown;
+  stats?: unknown;
+}
+
+function normalizeImported(raw: RawImport): ImportedLoadout | null {
   if (typeof raw.name !== "string" || typeof raw.ship_id !== "string") return null;
   if (typeof raw.components !== "object" || raw.components === null) return null;
   const components: Record<string, string> = {};
@@ -181,8 +190,10 @@ function normalizeImported(raw: any): ImportedLoadout | null {
     ship_id: raw.ship_id,
     components,
     is_optimized: !!raw.is_optimized,
-    optimized_preset: raw.optimized_preset || "",
-    stats: raw.stats,
+    optimized_preset: typeof raw.optimized_preset === "string" ? raw.optimized_preset : "",
+    stats: (typeof raw.stats === "object" && raw.stats !== null
+      ? raw.stats
+      : undefined) as ImportedLoadout["stats"],
   };
 }
 

@@ -1,12 +1,11 @@
 import { getDashboardStats, getTopShipsByDps, getManufacturerDistribution, getRecentLoadouts, getVersionChanges } from "@/lib/db/queries";
-import { getGameVersionsFromDb, getSelectedVersion, getSyncMeta, getShipCount } from "@/lib/db/sync";
+import { getGameVersionsFromDb, getSelectedVersion, getShipCount } from "@/lib/db/sync";
 import StatCard from "@/components/dashboard/StatCard";
 import PieChartFabricants from "@/components/dashboard/PieChartFabricants";
 import TopDpsTable from "@/components/dashboard/TopDpsTable";
 import VersionChanges from "@/components/dashboard/VersionChanges";
 import RecentLoadouts from "@/components/dashboard/RecentLoadouts";
 import QuickActions from "@/components/dashboard/QuickActions";
-import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import SyncPanel from "@/components/dashboard/SyncPanel";
 import SyncHistory from "@/components/dashboard/SyncHistory";
 import { Rocket, Wrench, Factory, Calendar } from "lucide-react";
@@ -15,24 +14,38 @@ import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
+interface GameVersionRow {
+  code: string;
+  channel?: string;
+  released_at?: string;
+  is_default?: number;
+  is_synced?: number;
+  last_synced_at?: string;
+}
+
+interface ManufacturerRow {
+  name: string;
+  count: number;
+}
+
 export default async function DashboardPage() {
   const shipCount = getShipCount();
   const stats = getDashboardStats();
   const topDps = getTopShipsByDps(5);
   const manufacturers = getManufacturerDistribution();
   const recentLoadouts = getRecentLoadouts(4);
-  const versions = getGameVersionsFromDb() as any[];
+  const versions = getGameVersionsFromDb() as GameVersionRow[];
   const selectedVersion = getSelectedVersion();
 
-  const currentVersion = versions.find((v: any) => v.code === selectedVersion);
-  const previousVersion = versions.find((v: any) => v.code !== selectedVersion && v.is_synced);
+  const currentVersion = versions.find((v) => v.code === selectedVersion);
+  const previousVersion = versions.find((v) => v.code !== selectedVersion && v.is_synced);
 
   const versionChanges =
     currentVersion && previousVersion
       ? getVersionChanges(currentVersion.code, previousVersion.code)
       : null;
 
-  const pieData = manufacturers.map((m: any) => ({
+  const pieData = (manufacturers as ManufacturerRow[]).map((m) => ({
     name: m.name,
     count: m.count,
   }));
@@ -126,10 +139,7 @@ export default async function DashboardPage() {
           />
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RecentLoadouts loadouts={recentLoadouts} />
-          <ActivityFeed entries={[]} />
-        </div>
+        <RecentLoadouts loadouts={recentLoadouts} />
 
         <SyncHistory />
 

@@ -11,8 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { useLoadoutStore } from "@/stores/loadoutStore";
 import {
   Download,
@@ -22,11 +20,18 @@ import {
   Sparkles,
   Terminal,
   ShieldCheck,
-  AlertCircle,
   Database,
   ArrowUpCircle,
-  Info,
 } from "lucide-react";
+
+interface AppInfo {
+  appName: string;
+  currentVersion: string;
+  dbStats?: {
+    shipCount: number;
+    componentCount: number;
+  };
+}
 
 interface UpdateModalProps {
   open: boolean;
@@ -34,7 +39,7 @@ interface UpdateModalProps {
 }
 
 export default function UpdateModal({ open, onOpenChange }: UpdateModalProps) {
-  const [appInfo, setAppInfo] = useState<any>(null);
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
@@ -54,8 +59,8 @@ export default function UpdateModal({ open, onOpenChange }: UpdateModalProps) {
       const res = await fetch("/api/app-version");
       const data = await res.json();
       setAppInfo(data);
-    } catch (e) {
-      console.error("Failed to fetch app version:", e);
+    } catch (error) {
+      console.error("Failed to fetch app version:", error);
     }
     setLoading(false);
   }
@@ -68,7 +73,7 @@ export default function UpdateModal({ open, onOpenChange }: UpdateModalProps) {
       const data = await res.json();
       setSyncMsg(data.message || "Sincronización de base de datos completada");
       await fetchAppInfo();
-    } catch (e) {
+    } catch {
       setSyncMsg("Error durante la sincronización.");
     }
     setSyncing(false);

@@ -11,17 +11,17 @@ export function calculateLoadoutStats(
   let missile_dps = 0;
   let shield_hp = 0;
   let shield_regen = 0;
-  let hull_hp = ship.hull_hp;
-  let scm_speed = ship.scm_speed;
-  let max_speed = ship.max_speed;
+  const hull_hp = ship.hull_hp;
+  const scm_speed = ship.scm_speed;
+  const max_speed = ship.max_speed;
   let qt_range = 0;
   let qt_fuel = 0;
   let total_cost = 0;
   let power_output = 0;
-  let power_demand = 0;
+  const power_demand = 0;
   let cooling_rate = 0;
 
-  for (const [slotId, componentId] of Object.entries(componentIds)) {
+  for (const componentId of Object.values(componentIds)) {
     const comp = allComponents.get(componentId);
     if (!comp) continue;
 

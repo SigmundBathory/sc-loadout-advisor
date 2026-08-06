@@ -95,4 +95,25 @@ export function useOptimizedShipIds() {
   return ids;
 }
 
+export interface SyncStatusResponse {
+  meta: {
+    wiki_version: string;
+    uex_version: string;
+    last_sync_at: string;
+    sync_status: string;
+    selected_wiki_version: string;
+  };
+  shipCount: number;
+  componentCount: number;
+  selectedVersion: string;
+}
+
+export function useSyncStatus() {
+  return useQuery<SyncStatusResponse>({
+    queryKey: ["sync", "status"],
+    queryFn: () => fetcher<SyncStatusResponse>("/api/sync"),
+    staleTime: 30 * 1000,
+  });
+}
+
 export type { Hardpoint };

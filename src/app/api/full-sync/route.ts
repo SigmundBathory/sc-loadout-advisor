@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkVersionAndSync, syncDataForVersion, getSyncMeta, getShipCount, getComponentCount, getSelectedVersion, syncGameVersions } from "@/lib/db/sync";
+import { checkVersionAndSync, syncDataForVersion, getSyncMeta, getShipCount, getComponentCount, syncGameVersions } from "@/lib/db/sync";
 
 export async function POST() {
   try {

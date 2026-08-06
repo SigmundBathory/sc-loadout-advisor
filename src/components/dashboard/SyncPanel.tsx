@@ -4,13 +4,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Rocket, Download, Upload, ArrowRight, CheckCircle2, Loader2, AlertCircle, Globe, MapPin, ClipboardList } from "lucide-react";
 import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
 
 type SyncState = "idle" | "syncing" | "done" | "error";
 
 interface SyncStep {
   name: string;
   status: "pending" | "syncing" | "done" | "error";
-  icon: any;
+  icon: LucideIcon;
   message?: string;
 }
 
@@ -56,7 +57,7 @@ export default function SyncPanel() {
           status: data.steps?.[i]?.status === "error" ? "error" : s.status
         })));
       }
-    } catch (e) {
+    } catch {
       setState("error");
       setMessage("Error de red. Verifica tu conexión.");
     }
@@ -89,7 +90,7 @@ export default function SyncPanel() {
           Sincronización completa (3 pasos)
         </h3>
         <div className="space-y-2">
-          {stepStates.map((step, i) => (
+          {stepStates.map((step) => (
             <div key={step.name} className="flex items-center gap-3 p-3 bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl transition-all">
               <div className="flex-shrink-0">{getStepIcon(step)}</div>
               <div className="flex-1">

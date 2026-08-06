@@ -24,6 +24,10 @@ interface SortConfig {
 
 const n = (v: number | undefined): number => v ?? 0;
 
+/** Normalize a component grade to a numeric value (A/B/C/D letters → 1-4). */
+const gradeToNumber = (g: Component["stats"]["grade"]): number =>
+  typeof g === "string" ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[g.toUpperCase()] || 3 : g ?? 3;
+
 export const SORT_CONFIGS: Record<string, SortConfig> = {
   QuantumDrive: {
     primary: (s) => n(s.quantum_fuel_claimed) || (s.fuel_efficiency ? s.fuel_efficiency * 1e8 : 0),
@@ -56,7 +60,7 @@ export const SORT_CONFIGS: Record<string, SortConfig> = {
     tradeoffs: [
       { label: "Regen", value: (s) => n(s.regen_rate), format: (v) => `${v.toFixed(0)}/s` },
       { label: "Regen delay", value: (s) => n(s.regen_delay), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
-      { label: "Grado", value: (s) => n(s.grade) },
+      { label: "Grado", value: (s) => gradeToNumber(s.grade) },
     ],
   },
   PowerPlant: {

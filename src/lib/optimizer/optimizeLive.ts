@@ -17,7 +17,7 @@ const SLOT_TYPE_MAP: Record<string, string[]> = {
 };
 
 export function gradeValue(comp: Component): number {
-  const rawGrade = (comp.stats as any).grade;
+  const rawGrade = comp.stats.grade;
   if (typeof rawGrade === "string") {
     return ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[rawGrade.toUpperCase()] || 3;
   }
@@ -92,7 +92,7 @@ export function scoreForPreset(preset: string, comp: Component): number {
     case "best_defense":
       if (type === "Shield") {
         const absorptionVal = s.absorption
-          ? Object.values(s.absorption).reduce((sum, v: any) => sum + (v.max || 0), 0)
+          ? Object.values(s.absorption).reduce((sum, v) => sum + (v.max || 0), 0)
           : 0;
         score = (maxHp * 2 + regen * 10 + absorptionVal * 100) * (1 + gb);
       } else if (type === "PowerPlant") {

@@ -28,14 +28,6 @@ export async function getUexTerminals() {
   return uexFetch<{ data: any[] }>("/terminals");
 }
 
-const UEX_COMPONENT_CATEGORIES: Record<string, string> = {
-  weapon: "1",
-  shield: "1",
-  powerplant: "1",
-  cooler: "1",
-  quantumdrive: "1",
-};
-
 export async function getUexItemPricesByCategory(categoryId: string) {
   return uexFetch<{ data: any[] }>("/items_prices", { id_category: categoryId });
 }

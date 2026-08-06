@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import {
   checkVersionAndSync,
-  syncAllData,
   syncDataForVersion,
   syncGameVersions,
   getSelectedVersion,

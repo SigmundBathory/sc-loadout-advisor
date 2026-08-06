@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Ship, Component, Loadout, FilterWeights } from "@/lib/types";
+import type { Ship, Loadout, FilterWeights } from "@/lib/types";
 
 interface LoadoutStore {
   // Current ship
@@ -10,6 +10,12 @@ interface LoadoutStore {
   // Current loadout
   currentLoadout: Loadout | null;
   setCurrentLoadout: (loadout: Loadout | null) => void;
+
+  // Loadout currently loaded in the builder (may differ from saved currentLoadout)
+  loadedLoadout: Loadout | null;
+  setLoadedLoadout: (loadout: Loadout | null) => void;
+  lastOptimizedPreset: string;
+  setLastOptimizedPreset: (preset: string) => void;
 
   // Slot assignments: slotId -> componentId
   slotAssignments: Record<string, string>;
@@ -57,6 +63,11 @@ export const useLoadoutStore = create<LoadoutStore>()(
           slotAssignments: loadout?.components || {},
           loadoutName: loadout?.name || "",
         }),
+
+      loadedLoadout: null,
+      setLoadedLoadout: (loadout) => set({ loadedLoadout: loadout }),
+      lastOptimizedPreset: "",
+      setLastOptimizedPreset: (preset) => set({ lastOptimizedPreset: preset }),
 
       slotAssignments: {},
       setSlotAssignment: (slotId, componentId) =>

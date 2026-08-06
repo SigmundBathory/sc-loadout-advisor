@@ -1,42 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { RefreshCw, Check, AlertCircle, Loader2 } from "lucide-react";
-
-interface SyncStatus {
-  meta: {
-    wiki_version: string;
-    uex_version: string;
-    last_sync_at: string;
-    sync_status: string;
-    selected_wiki_version: string;
-  };
-  shipCount: number;
-  componentCount: number;
-  selectedVersion: string;
-}
+import { useSyncStatus } from "@/lib/api/client";
 
 export default function SyncIndicator() {
-  const [status, setStatus] = useState<SyncStatus | null>(null);
+  const { data: status, refetch, isLoading } = useSyncStatus();
+  const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
-
-  useEffect(() => {
-    fetchStatus();
-  }, []);
-
-  async function fetchStatus() {
-    try {
-      const res = await fetch("/api/sync");
-      const data = await res.json();
-      setStatus(data);
-    } catch (e) {
-      console.error("Failed to fetch sync status:", e);
-    }
-  }
 
   async function handleSync() {
     setSyncing(true);
@@ -45,8 +20,9 @@ export default function SyncIndicator() {
       const res = await fetch("/api/sync", { method: "POST" });
       const data = await res.json();
       setSyncMessage(data.message || "Sincronizacion completada");
-      await fetchStatus();
-    } catch (e) {
+      await queryClient.invalidateQueries({ queryKey: ["sync"] });
+      await refetch();
+    } catch {
       setSyncMessage("Error en la sincronizacion");
     }
     setSyncing(false);
@@ -72,6 +48,11 @@ export default function SyncIndicator() {
         <Badge variant="secondary" className="gap-1">
           <Loader2 className="h-3 w-3 animate-spin" />
           Sincronizando...
+        </Badge>
+      ) : isLoading ? (
+        <Badge variant="outline" className="gap-1 text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Cargando...
         </Badge>
       ) : isUpToDate ? (
         <Badge variant="default" className="gap-1 bg-green-600">

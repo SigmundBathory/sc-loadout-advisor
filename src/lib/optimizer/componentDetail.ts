@@ -9,6 +9,9 @@ export interface StatRow {
 
 const n = (v: number | undefined): number => v ?? 0;
 
+const gradeToNumber = (g: ComponentStats["grade"]): number =>
+  typeof g === "string" ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[g.toUpperCase()] || 3 : g ?? 3;
+
 function fmt(v: number, digits = 0): string {
   return v.toLocaleString("es-ES", { maximumFractionDigits: digits });
 }
@@ -92,7 +95,7 @@ export function componentDetailRows(comp: Component): StatRow[] {
       ];
     default:
       return [
-        { label: "Grado", value: n(s.grade), format: fmt(n(s.grade)) },
+        { label: "Grado", value: gradeToNumber(s.grade), format: fmt(gradeToNumber(s.grade)) },
         { label: "Salida", value: n(s.output), format: fmt(n(s.output)) },
         { label: "HP", value: n(s.hp), format: fmt(n(s.hp)) },
       ];

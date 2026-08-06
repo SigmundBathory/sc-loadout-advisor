@@ -4,16 +4,22 @@ import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Upload, FileJson, AlertCircle, Check, Loader2, Download } from "lucide-react";
+import { Upload, FileJson, AlertCircle, Check, Loader2 } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
+
+interface ImportResult {
+  imported?: {
+    ships: number;
+    components: number;
+  };
+}
 
 export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [version, setVersion] = useState("");
   const [importType, setImportType] = useState<"full" | "ships" | "components" | "weapons">("full");
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +58,7 @@ export default function ImportPage() {
         // Refresh page after successful import
         setTimeout(() => window.location.reload(), 2000);
       }
-    } catch (e) {
+    } catch {
       setError("Error de conexion");
     } finally {
       setImporting(false);
@@ -211,7 +217,7 @@ export default function ImportPage() {
                 <li>Presiona F12 para abrir DevTools</li>
                 <li>Ve a la pestana Network (Red)</li>
                 <li>Recarga la pagina y busca las llamadas a la API</li>
-                <li>Haz click derecho en la respuesta y selecciona "Copy response"</li>
+                <li>Haz click derecho en la respuesta y selecciona &quot;Copy response&quot;</li>
                 <li>Pega la respuesta en un archivo JSON</li>
                 <li>Sube el archivo aqui</li>
               </ol>

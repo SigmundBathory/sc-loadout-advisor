@@ -4,13 +4,11 @@ import {
   getGameVersions,
   getVehicles,
   getVehicleWeapons,
-  getLocations,
   getAllVehicleItems,
 } from "../api/starCitizenWiki";
 import {
   getUexGameVersions,
   getUexTerminals,
-  getUexItemPricesByCategory,
 } from "../api/uexCorp";
 import {
   startSyncLog,
@@ -259,7 +257,7 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
 
     // --- Sync components with real Wiki API data ---
     onProgress?.("Guardando componentes...", 70);
-    for (const [key, comp] of portComponentMap) {
+    for (const comp of portComponentMap.values()) {
       try {
         const compId = String(comp.class_name);
         const compType = comp.type === "LifeSupportGenerator" ? "LifeSupport" : comp.type;
@@ -268,7 +266,7 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
 
         // Try to find real stats from Wiki API
         const wikiItem = wikiItemMap.get(comp.class_name.toLowerCase());
-        let stats: Record<string, any> = { grade };
+        const stats: Record<string, any> = { grade };
         let price = 0;
         let imageUrl = "";
 
@@ -345,7 +343,6 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
           stats.cooling_rate = Math.round(baseCooling * gradeMultiplier);
         }
         if (!wikiItem || stats.travel_speed === undefined && compType === "QuantumDrive") {
-          const gradeMultiplier = grade === 1 ? 1.3 : grade === 2 ? 1.15 : grade === 3 ? 1.0 : 0.85;
           stats.travel_speed = size === 1 ? 125000 : size === 2 ? 185000 : 250000;
           stats.spool_time = size === 1 ? 3 : size === 2 ? 4.5 : 7;
         }
@@ -789,7 +786,7 @@ export async function syncDataForVersion(
 
     // --- Sync components with real Wiki API data ---
     onProgress?.("Guardando componentes...", 70);
-    for (const [key, comp] of portComponentMap) {
+    for (const comp of portComponentMap.values()) {
       try {
         const compId = String(comp.class_name);
         const compType = comp.type === "LifeSupportGenerator" ? "LifeSupport" : comp.type;
@@ -797,7 +794,7 @@ export async function syncDataForVersion(
         const grade = Number(comp.grade) || 3;
 
         const wikiItem = wikiItemMap.get(comp.class_name.toLowerCase());
-        let stats: Record<string, any> = { grade };
+        const stats: Record<string, any> = { grade };
         let price = 0;
         let imageUrl = "";
 

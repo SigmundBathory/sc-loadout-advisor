@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useLoadoutStore } from "@/stores/loadoutStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Save, Upload, Wand2, ShoppingCart, Zap, Settings } from "lucide-react";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
@@ -17,25 +16,33 @@ import ComponentPickerDialog from "./ComponentPickerDialog";
 import SaveLoadoutDialog from "./SaveLoadoutDialog";
 import LoadLoadoutDialog from "./LoadLoadoutDialog";
 import OptimizerDialog from "./OptimizerDialog";
-import type { Ship, Component, Loadout, Hardpoint } from "@/lib/types";
+import type { Ship, Loadout, Hardpoint } from "@/lib/types";
 import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
 import { optimizeAssignments } from "@/lib/optimizer/optimizeLive";
 import { useShipComponents, useLoadoutsByShip } from "@/lib/api/client";
-import { decodeLoadoutShare, parseLoadoutImport, type ImportedLoadout } from "@/lib/loadout/share";
+import { decodeLoadoutShare, type ImportedLoadout } from "@/lib/loadout/share";
 
 export default function LoadoutBuilder({ ship }: { ship: Ship }) {
   const router = useRouter();
-  const { slotAssignments, setSlotAssignment, clearSlotAssignment, savedLoadouts, addSavedLoadout } = useLoadoutStore();
+  const {
+    slotAssignments,
+    setSlotAssignment,
+    clearSlotAssignment,
+    savedLoadouts,
+    addSavedLoadout,
+    loadedLoadout,
+    setLoadedLoadout,
+    lastOptimizedPreset,
+    setLastOptimizedPreset,
+  } = useLoadoutStore();
   const [selectedSlot, setSelectedSlot] = useState<Hardpoint | null>(null);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
-  const [lastOptimizedPreset, setLastOptimizedPreset] = useState<string>("");
-  const [loadedLoadout, setLoadedLoadout] = useState<Loadout | null>(null);
 
   const { data: availableComponents, isLoading: loadingComponents } = useShipComponents(ship);
-  const components = availableComponents || [];
+  const components = useMemo(() => availableComponents || [], [availableComponents]);
   const componentMap = useMemo(
     () => new Map(components.map((c) => [c.id, c])),
     [components]
@@ -115,7 +122,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         });
       }
     }
-  }, [shipLoadouts]);
+  }, [shipLoadouts, setLoadedLoadout, setLastOptimizedPreset, setSlotAssignment]);
 
   // Deep-link support: apply a shared loadout from the URL hash (#loadout=SCLA:...)
   useEffect(() => {
@@ -128,14 +135,13 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
       setSlotAssignment(slotId, compId);
     });
     if (decoded.name) {
-      setLoadedLoadout((prev) =>
-        prev ? { ...prev, name: decoded.name! } : prev
-      );
+      const current = useLoadoutStore.getState().loadedLoadout;
+      setLoadedLoadout(current ? { ...current, name: decoded.name } : null);
     }
     setLastOptimizedPreset(decoded.preset || (decoded.optimized ? "shared" : ""));
     const cleanUrl = window.location.pathname + window.location.search;
     window.history.replaceState(null, "", cleanUrl);
-  }, [ship.id]);
+  }, [ship.id, setLoadedLoadout, setLastOptimizedPreset, setSlotAssignment]);
 
   const handleImport = (imported: ImportedLoadout) => {
     Object.entries(imported.components).forEach(([slotId, compId]) => {
@@ -433,7 +439,6 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         open={showSaveDialog}
         onOpenChange={setShowSaveDialog}
         ship={ship}
-        slotAssignments={slotAssignments}
         onSave={handleSaveLoadout}
       />
 
