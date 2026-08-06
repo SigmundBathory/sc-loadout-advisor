@@ -10,11 +10,13 @@ interface ShipBuyLocationsProps {
 }
 
 interface ParsedWikeloComponent {
+  slotKey: string;
   slotType: string;
   quantity: string;
   name: string;
   size?: string;
   grade?: string;
+  classType?: string;
   weaponsNote?: string;
 }
 
@@ -36,19 +38,46 @@ const SLOT_LABEL: Record<string, string> = {
   "Other components": "Componentes Extra",
 };
 
+const CLASS_LABEL: Record<string, string> = {
+  Military: "Militar",
+  Civilian: "Civil",
+  Industrial: "Industrial",
+  Stealth: "Sigilo",
+  Competition: "Competición",
+  Explorer: "Explorador",
+  Transport: "Transporte",
+};
+
+const MOJI_STAR = "\u00d4\u00a1\u00c9";
+
 function hasStar(name: string): boolean {
-  return /⭐|★/.test(name);
+  if (!name) return false;
+  return /[⭐★]/.test(name) || name.includes(MOJI_STAR);
 }
 function stripStars(name: string): string {
-  return name.replace(/[⭐★]/g, "").trim();
+  if (!name) return "";
+  return name
+    .replace(/[⭐★]/g, "")
+    .split(MOJI_STAR).join("")
+    .trim();
+}
+
+function sanitizeToken(s: string): string {
+  return (s || "")
+    .replace(/\r/g, "")
+    .replace(/\n/g, "")
+    .replace(/\t/g, " ")
+    .replace(/\u00a0/g, " ")
+    .trim();
 }
 
 function splitRespectingQuotes(raw: string): string[] {
+  const clean = raw.replace(/\r/g, "");
   const result: string[] = [];
   let buffer = "";
   let inQuotes = false;
-  for (let i = 0; i < raw.length; i++) {
-    const ch = raw[i];
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
     if (ch === '"') {
       inQuotes = !inQuotes;
       continue;
@@ -61,12 +90,27 @@ function splitRespectingQuotes(raw: string): string[] {
     buffer += ch;
   }
   if (buffer.length) result.push(buffer);
-  return result.map((s) => s.trim()).filter(Boolean);
+  return result.map(sanitizeToken).filter(Boolean);
+}
+
+function normalizeSlot(slot: string): string {
+  const s = sanitizeToken(slot)
+    .replace(/:$/, "")
+    .trim()
+    .toLowerCase();
+  const keys = Object.keys(SLOT_ICON);
+  for (const k of keys) {
+    if (k.toLowerCase() === s) return k;
+  }
+  for (const k of keys) {
+    if (k.toLowerCase().startsWith(s) || s.startsWith(k.toLowerCase())) return k;
+  }
+  return slot;
 }
 
 function parseWikeloComponents(raw: string): ParsedWikeloComponent[] {
   if (!raw) return [];
-  const cleaned = raw
+  const cleaned = sanitizeToken(raw)
     .replace(/^Componentes incluidos[:：]\s*/i, "")
     .replace(/^Components included[:：]\s*/i, "")
     .trim();
@@ -74,62 +118,86 @@ function parseWikeloComponents(raw: string): ParsedWikeloComponent[] {
   const segments = splitRespectingQuotes(cleaned);
   const parsed: ParsedWikeloComponent[] = [];
 
-  const slotKeys = Object.keys(SLOT_ICON);
+  const gradeSet = new Set(["A", "B", "C", "D", "E", "F"]);
+  const classKeys = Object.keys(CLASS_LABEL);
 
   for (const seg of segments) {
-    const parts = seg.split(",").map((p) => p.trim());
-    const slotToken = (parts[0] || "").replace(/:$/, "").trim();
-    const slotType = slotKeys.find(
-      (k) => k.toLowerCase() === slotToken.toLowerCase()
-    ) || (slotToken || "Otros");
+    const parts = seg.split(",").map(sanitizeToken).filter((_, idx, arr) => {
+      if (idx === 0) return true;
+      return arr[idx - 1] !== "" || _ !== "";
+    }).concat(Array(6).fill("")).slice(0, 8);
 
-    let cursor = 1;
-    const quantity = parts[cursor] || "";
-    cursor++;
+    const rawSlot = parts[0] || "";
+    const slotKey = normalizeSlot(rawSlot);
+    const slotLabel = SLOT_LABEL[slotKey] || sanitizeToken(rawSlot).replace(/:$/, "") || "Otros";
 
-    let name = (parts[cursor] || "").replace(/^"|"$/g, "").trim();
+    const quantity = parts[1] || "";
+    const rawName = parts[2] || "";
+    const sizeRaw = parts[3] || "";
+    const classRaw = parts[4] || "";
+    const gradeRaw = parts[5] || "";
+
+    let size: string | undefined;
+    if (/^\d+$/.test(sizeRaw)) {
+      const n = Number(sizeRaw);
+      if (n >= 0 && n <= 9) size = `Tamaño ${n}`;
+    } else {
+      for (let j = 2; j < parts.length; j++) {
+        const t = parts[j];
+        if (/^\d+$/.test(t) && Number(t) >= 0 && Number(t) <= 9) {
+          size = `Tamaño ${t}`;
+          break;
+        }
+      }
+    }
+
+    let grade: string | undefined;
+    if (gradeRaw && gradeSet.has(gradeRaw.toUpperCase())) {
+      grade = `Grado ${gradeRaw.toUpperCase()}`;
+    } else {
+      for (let j = 2; j < parts.length; j++) {
+        const t = (parts[j] || "").toUpperCase();
+        if (gradeSet.has(t)) {
+          grade = `Grado ${t}`;
+          break;
+        }
+      }
+    }
+
+    let classType: string | undefined;
+    const classUpper = classRaw;
+    const matchedClass =
+      classKeys.find((k) => k.toLowerCase() === classUpper.toLowerCase()) ||
+      classKeys.find((k) => classUpper.toLowerCase().startsWith(k.toLowerCase()));
+    if (matchedClass) {
+      classType = CLASS_LABEL[matchedClass] || matchedClass;
+    } else if (sanitizeToken(classRaw) && !/^(null|<null>|\d+)$/i.test(classRaw)) {
+      classType = sanitizeToken(classRaw).replace(/^"|"$/g, "");
+    }
+
+    const cleanName = stripStars(rawName);
+
     let weaponsNote: string | undefined;
-
-    if (!name && slotType.toLowerCase() === "weapons") {
-      for (let i = cursor; i < parts.length; i++) {
-        const t = parts[i].trim().replace(/^"|"$/g, "");
-        if (t) {
+    if (!cleanName && slotKey.toLowerCase().includes("weapon")) {
+      for (let i = 2; i < parts.length; i++) {
+        const t = sanitizeToken(parts[i]).replace(/^"|"$/g, "");
+        if (t && !/^(<null>|null)$/i.test(t)) {
           weaponsNote = t;
           break;
         }
       }
     }
 
-    let size: string | undefined;
-    for (let j = cursor + 1; j < parts.length; j++) {
-      const t = parts[j].trim();
-      if (!t || t.toLowerCase() === "<null>") continue;
-      if (/^\d+$/.test(t) && Number(t) >= 1 && Number(t) <= 9) {
-        size = `Tamaño ${t}`;
-        break;
-      }
-    }
-
-    let grade: string | undefined;
-    const gradeCandidates = ["A", "B", "C", "D", "E", "F"];
-    for (let j = cursor + 1; j < parts.length; j++) {
-      const t = parts[j].trim().toUpperCase();
-      if (gradeCandidates.includes(t)) {
-        grade = `Grado ${t}`;
-        break;
-      }
-    }
-
-    name = stripStars(name);
-
-    if (!name && !weaponsNote) continue;
+    if (!cleanName && !weaponsNote) continue;
 
     parsed.push({
-      slotType: SLOT_LABEL[slotType] || slotType,
+      slotKey,
+      slotType: slotLabel,
       quantity,
-      name,
+      name: cleanName,
       size,
       grade,
+      classType,
       weaponsNote,
     });
   }
@@ -254,7 +322,7 @@ export default function ShipBuyLocations({ locations, wikelo }: ShipBuyLocations
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          {SLOT_ICON[c.slotType] || <Box className="h-3 w-3 text-purple-400" />}
+                          {SLOT_ICON[c.slotKey] || SLOT_ICON[c.slotType] || <Box className="h-3 w-3 text-purple-400" />}
                           <span className="text-[10px] font-semibold text-purple-300 uppercase tracking-wide">
                             {c.slotType}
                           </span>
@@ -284,6 +352,11 @@ export default function ShipBuyLocations({ locations, wikelo }: ShipBuyLocations
                             {c.size && (
                               <span className="text-[9px] px-1.5 py-0.5 rounded border border-border/50 bg-muted/30 text-muted-foreground">
                                 {c.size}
+                              </span>
+                            )}
+                            {c.classType && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded border border-indigo-500/20 bg-indigo-500/10 text-indigo-300">
+                                {c.classType}
                               </span>
                             )}
                             {c.grade && (
