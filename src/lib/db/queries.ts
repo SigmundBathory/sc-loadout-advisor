@@ -476,17 +476,6 @@ export function getRecentLoadouts(limit: number = 4) {
   `).all([limit]) as any[];
 }
 
-export function getShipCountByClassification() {
-  const db = getDb();
-  return db.prepare(`
-    SELECT classification, COUNT(*) as count
-    FROM ships
-    WHERE classification != ''
-    GROUP BY classification
-    ORDER BY count DESC
-  `).all() as any[];
-}
-
 export function getShipsWithDps(filters?: {
   manufacturer?: string;
   classification?: string;
@@ -530,20 +519,6 @@ export interface ShipBuyLocation {
   location_name: string;
   shop_name: string;
   location_type: "sale" | "rental" | "earn";
-}
-
-export function getShipBuyLocations(shipName: string): ShipBuyLocation[] {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM ship_buy_locations WHERE ship_name = ? ORDER BY price_auec ASC")
-    .all(shipName) as any[];
-  return rows.map((r: any) => ({
-    ship_name: r.ship_name,
-    price_auec: r.price_auec,
-    location_name: r.location_name,
-    shop_name: r.shop_name,
-    location_type: r.location_type,
-  }));
 }
 
 export function getShipBuyLocationsFuzzy(shipName: string): ShipBuyLocation[] {

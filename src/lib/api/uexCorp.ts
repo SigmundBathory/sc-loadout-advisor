@@ -28,12 +28,7 @@ export async function getUexTerminals() {
   return uexFetch<{ data: any[] }>("/terminals");
 }
 
-export async function getUexItemPricesByCategory(categoryId: string) {
-  return uexFetch<{ data: any[] }>("/items_prices", { id_category: categoryId });
-}
-
 export default {
   getUexGameVersions,
   getUexTerminals,
-  getUexItemPricesByCategory,
 };

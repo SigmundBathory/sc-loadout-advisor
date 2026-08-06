@@ -140,21 +140,6 @@ export async function getVehicleWeapons(version?: string) {
   return { data };
 }
 
-export async function getLocations(version?: string) {
-  const params: Record<string, string> = {};
-  if (version) params.version = version;
-  const data = await wikiFetchAllPages("/locations", params);
-  return { data };
-}
-
-export async function getChangelog(version: string) {
-  return wikiFetch<any>(`/game-versions/${version}/changelog`);
-}
-
-export async function getChangelogChanges(version: string) {
-  return wikiFetch<any>(`/game-versions/${version}/changelog/changes`);
-}
-
 export default {
   getGameVersions,
   getDefaultVersion,
@@ -162,7 +147,4 @@ export default {
   getVehicle,
   getItems,
   getVehicleWeapons,
-  getLocations,
-  getChangelog,
-  getChangelogChanges,
 };
