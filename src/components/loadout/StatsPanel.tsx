@@ -18,9 +18,19 @@ interface StatsPanelProps {
   };
   assignedCount: number;
   totalSlots: number;
+  baseline?: {
+    totalDps: number;
+    shieldHp: number;
+    shieldRegen: number;
+    powerOutput: number;
+    coolingRate: number;
+    quantumSpeed: number;
+    totalCost: number;
+    emissionEm: number;
+  };
 }
 
-export default function StatsPanel({ stats, assignedCount, totalSlots }: StatsPanelProps) {
+export default function StatsPanel({ stats, assignedCount, totalSlots, baseline }: StatsPanelProps) {
   return (
     <Card className="glass-panel border-border/40">
       <CardHeader className="p-4 border-b border-border/30 flex flex-row items-center justify-between">
@@ -33,23 +43,29 @@ export default function StatsPanel({ stats, assignedCount, totalSlots }: StatsPa
         </Badge>
       </CardHeader>
       <CardContent className="p-4 space-y-3">
-        <StatBar label="DPS Potencial Armas" value={stats.totalDps} max={4000} unit="DPS" color="from-red-500 to-amber-500" />
-        <StatBar label="HP Total Escudos" value={stats.shieldHp} max={30000} unit="HP" color="from-emerald-500 to-teal-400" />
-        <StatBar label="Regen Escudos" value={stats.shieldRegen} max={5000} unit="/s" color="from-cyan-500 to-blue-400" />
-        <StatBar label="Salida Energía" value={stats.powerOutput} max={20000} unit="W" color="from-amber-500 to-yellow-400" />
-        <StatBar label="Enfriamiento" value={stats.coolingRate} max={500} unit="c/s" color="from-sky-500 to-cyan-400" />
+        <StatBar label="DPS Potencial Armas" value={stats.totalDps} max={4000} unit="DPS" color="from-red-500 to-amber-500" baseline={baseline?.totalDps} />
+        <StatBar label="HP Total Escudos" value={stats.shieldHp} max={30000} unit="HP" color="from-emerald-500 to-teal-400" baseline={baseline?.shieldHp} />
+        <StatBar label="Regen Escudos" value={stats.shieldRegen} max={5000} unit="/s" color="from-cyan-500 to-blue-400" baseline={baseline?.shieldRegen} />
+        <StatBar label="Salida Energía" value={stats.powerOutput} max={20000} unit="W" color="from-amber-500 to-yellow-400" baseline={baseline?.powerOutput} />
+        <StatBar label="Enfriamiento" value={stats.coolingRate} max={500} unit="c/s" color="from-sky-500 to-cyan-400" baseline={baseline?.coolingRate} />
         {stats.quantumSpeed > 0 && (
-          <StatBar label="Velocidad Quantum" value={stats.quantumSpeed / 1000000} max={300} unit="G km/s" color="from-violet-500 to-purple-400" />
+          <StatBar label="Velocidad Quantum" value={stats.quantumSpeed / 1000000} max={300} unit="G km/s" color="from-violet-500 to-purple-400" baseline={baseline ? baseline.quantumSpeed / 1000000 : undefined} />
         )}
         <Separator className="my-2 bg-border/40" />
         <div className="flex justify-between items-center text-sm font-semibold pt-1">
           <span>Coste Estimado</span>
-          <span className="font-mono text-amber-400 text-base">{stats.totalCost.toLocaleString()} aUEC</span>
+          <span className="flex items-center gap-2">
+            <DeltaBadge current={stats.totalCost} baseline={baseline?.totalCost} invert />
+            <span className="font-mono text-amber-400 text-base">{stats.totalCost.toLocaleString()} aUEC</span>
+          </span>
         </div>
         {stats.emissionEm > 0 && (
           <div className="flex justify-between items-center text-xs text-muted-foreground">
             <span>Firma EM</span>
-            <span className="font-mono text-orange-400">{stats.emissionEm.toLocaleString()}</span>
+            <span className="flex items-center gap-2">
+              <DeltaBadge current={stats.emissionEm} baseline={baseline?.emissionEm} invert />
+              <span className="font-mono text-orange-400">{stats.emissionEm.toLocaleString()}</span>
+            </span>
           </div>
         )}
       </CardContent>
@@ -57,12 +73,13 @@ export default function StatsPanel({ stats, assignedCount, totalSlots }: StatsPa
   );
 }
 
-function StatBar({ label, value, max, unit, color }: {
+function StatBar({ label, value, max, unit, color, baseline }: {
   label: string;
   value: number;
   max: number;
   unit: string;
   color: string;
+  baseline?: number;
 }) {
   const textColors: Record<string, string> = {
     "from-red-500 to-amber-500": "text-red-400",
@@ -75,10 +92,13 @@ function StatBar({ label, value, max, unit, color }: {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex justify-between text-xs font-medium">
+      <div className="flex justify-between text-xs font-medium items-center">
         <span className="text-muted-foreground">{label}</span>
-        <span className={`font-mono font-bold ${textColors[color] || "text-primary"}`}>
-          {typeof value === "number" && value % 1 !== 0 ? value.toFixed(1) : value.toLocaleString()} {unit}
+        <span className="flex items-center gap-2">
+          <DeltaBadge current={value} baseline={baseline} />
+          <span className={`font-mono font-bold ${textColors[color] || "text-primary"}`}>
+            {typeof value === "number" && value % 1 !== 0 ? value.toFixed(1) : value.toLocaleString()} {unit}
+          </span>
         </span>
       </div>
       <div className="h-1.5 bg-muted/60 rounded-full overflow-hidden">
@@ -88,5 +108,24 @@ function StatBar({ label, value, max, unit, color }: {
         />
       </div>
     </div>
+  );
+}
+
+function DeltaBadge({ current, baseline, invert }: { current?: number; baseline?: number; invert?: boolean }) {
+  if (baseline === undefined || current === undefined) return null;
+  const diff = Math.round(current - baseline);
+  if (diff === 0) return null;
+  const isPositive = diff > 0;
+  // For cost/emissions, a lower value is better, so invert the color meaning
+  const good = invert ? !isPositive : isPositive;
+  return (
+    <span
+      className={`font-mono text-[10px] px-1 py-0.5 rounded ${
+        good ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+      }`}
+    >
+      {isPositive ? "+" : ""}
+      {diff.toLocaleString()}
+    </span>
   );
 }

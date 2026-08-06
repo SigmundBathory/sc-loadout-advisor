@@ -19,6 +19,7 @@ import LoadLoadoutDialog from "./LoadLoadoutDialog";
 import OptimizerDialog from "./OptimizerDialog";
 import type { Ship, Component, Loadout, Hardpoint } from "@/lib/types";
 import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
+import { optimizeAssignments } from "@/lib/optimizer/optimizeLive";
 
 export default function LoadoutBuilder({ ship }: { ship: Ship }) {
   const router = useRouter();
@@ -63,6 +64,32 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
 
     return { totalDps, shieldHp, shieldRegen, powerOutput, coolingRate, quantumSpeed, totalCost, emissionEm };
   }, [slotAssignments, componentMap]);
+
+  const baselineStats = useMemo(() => {
+    if (loadedLoadout?.stats) {
+      const s = loadedLoadout.stats;
+      return {
+        totalDps: s.total_dps || 0,
+        shieldHp: s.shield_hp || 0,
+        shieldRegen: s.shield_regen || 0,
+        powerOutput: s.power_output || 0,
+        coolingRate: s.cooling_rate || 0,
+        quantumSpeed: s.scm_speed || 0,
+        totalCost: s.total_cost || 0,
+        emissionEm: 0,
+      };
+    }
+    return {
+      totalDps: 0,
+      shieldHp: ship.shield_hp || 0,
+      shieldRegen: 0,
+      powerOutput: 0,
+      coolingRate: 0,
+      quantumSpeed: 0,
+      totalCost: 0,
+      emissionEm: 0,
+    };
+  }, [loadedLoadout, ship]);
 
   const equippedComponentList = useMemo(() => {
     return Array.from(componentMap.values());
@@ -167,150 +194,10 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     setOptimizing(true);
     setLastOptimizedPreset(preset);
     setTimeout(() => {
-      const bestComponents = new Map<string, string>();
-      ship.hardpoints.forEach((hp) => {
-        const slotType = hp.slot_type.toLowerCase();
-        const validTypes: Record<string, string[]> = {
-          weapon: ["weapon"],
-          turret: ["weapon"],
-          shield: ["shield"],
-          power_plant: ["powerplant"],
-          powerplant: ["powerplant"],
-          cooler: ["cooler"],
-          quantum_drive: ["quantumdrive"],
-          quantumdrive: ["quantumdrive"],
-          radar: ["radar"],
-          thruster: ["flightcontroller"],
-          flight_controller: ["flightcontroller"],
-          life_support: ["lifesupport"],
-          lifesupport: ["lifesupport"],
-        };
-        const slotKey = slotType.replace(/[-\s]/g, "_");
-        const types = validTypes[slotKey] || [slotType];
-        const compatible = availableComponents.filter(c => types.includes(c.type.toLowerCase()));
-
-        if (compatible.length > 0) {
-          const scored = compatible.map(comp => {
-            let score = 0;
-            const dps = comp.stats.dps || 0;
-            const hp = comp.stats.hp || 0;
-            const maxHp = comp.stats.max_hp || hp;
-            const regen = comp.stats.regen_rate || 0;
-            const output = comp.stats.output || 0;
-            const range = comp.stats.range || 0;
-            const speed = comp.stats.travel_speed || 0;
-            const spoolTime = comp.stats.spool_time || 0;
-            const cooling = comp.stats.cooling_rate || 0;
-            const suppressionIr = comp.stats.suppression_ir || 0;
-            const suppressionHeat = comp.stats.suppression_heat || 0;
-            const sensitivityEm = comp.stats.sensitivity_em || 0;
-            const sensitivityIr = comp.stats.sensitivity_ir || 0;
-            const scmSpeed = comp.stats.scm_speed || 0;
-            const boostFwd = comp.stats.boost_forward || 0;
-            const pitch = comp.stats.pitch || 0;
-            const yaw = comp.stats.yaw || 0;
-            const roll = comp.stats.roll || 0;
-            const emissionEm = comp.stats.emission_em_max || 0;
-            const emissionIr = comp.stats.emission_ir || 0;
-            const price = comp.price_auec || 0;
-            const rawGrade = comp.stats.grade as any;
-            const grade = typeof rawGrade === "string"
-              ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[rawGrade.toUpperCase()] || 3
-              : Number(rawGrade) || 3;
-
-            // Normalize grade (lower is better)
-            const gradeBonus = Math.max(0, (4 - grade) * 0.15);
-
-            switch (preset) {
-              case "fastest":
-                if (comp.type === "QuantumDrive") {
-                  score = (speed / 100000) * (1 + gradeBonus) - (spoolTime || 0) * 2;
-                } else if (comp.type === "PowerPlant") {
-                  score = (output / 1000) * (1 + gradeBonus);
-                } else if (comp.type === "FlightController") {
-                  score = ((scmSpeed + boostFwd) / 100) * (1 + gradeBonus) + (pitch + yaw + roll) / 10;
-                } else {
-                  score = (output / 1000) * (1 + gradeBonus) + dps * 0.3;
-                }
-                break;
-              case "max_range":
-                if (comp.type === "QuantumDrive") {
-                  score = (speed / 100000) * (1 + gradeBonus) * (1 + (comp.stats.fuel_efficiency || 0) / 100);
-                } else if (comp.type === "PowerPlant") {
-                  score = (output / 1000) * (1 + gradeBonus);
-                } else if (comp.type === "Radar") {
-                  score = (range / 1000) * (1 + gradeBonus) + (sensitivityEm + sensitivityIr) * 10;
-                } else {
-                  score = (range / 1000) * (1 + gradeBonus) + hp * 0.001;
-                }
-                break;
-              case "best_weapons":
-                if (comp.type === "Weapon") {
-                  score = dps * 10 * (1 + gradeBonus) + (comp.stats.alpha || 0) * 2 + (comp.stats.fire_rate || 0) * 0.5;
-                } else if (comp.type === "Shield") {
-                  score = (hp + regen * 5) * (1 + gradeBonus);
-                } else if (comp.type === "PowerPlant") {
-                  score = (output / 100) * (1 + gradeBonus);
-                } else {
-                  score = 1;
-                }
-                break;
-              case "best_defense":
-                if (comp.type === "Shield") {
-                  const absorptionVal = comp.stats.absorption
-                    ? Object.values(comp.stats.absorption).reduce((sum, v) => sum + (v.max || 0), 0)
-                    : 0;
-                  score = (maxHp * 2 + regen * 10 + absorptionVal * 100) * (1 + gradeBonus);
-                } else if (comp.type === "PowerPlant") {
-                  score = (output / 100) * (1 + gradeBonus);
-                } else if (comp.type === "Cooler") {
-                  score = (cooling / 100000 + suppressionIr * 10 + suppressionHeat * 10) * (1 + gradeBonus);
-                } else if (comp.type === "Radar") {
-                  score = (sensitivityIr * 100 + sensitivityEm * 100) * (1 + gradeBonus);
-                } else {
-                  score = hp * 0.5 + output * 0.01;
-                }
-                break;
-              case "cheapest":
-                score = Math.max(0, 1000000 - price);
-                break;
-              case "stealth":
-                if (comp.type === "Cooler") {
-                  score = (suppressionIr * 20 + suppressionHeat * 20 + cooling / 100000) * (1 + gradeBonus) - emissionIr * 0.1;
-                } else if (comp.type === "Shield") {
-                  score = (regen * 5 - emissionEm * 0.01) * (1 + gradeBonus);
-                } else if (comp.type === "PowerPlant") {
-                  score = (output / 1000 - emissionEm * 0.01) * (1 + gradeBonus);
-                } else if (comp.type === "Radar") {
-                  score = -(sensitivityEm + sensitivityIr) * 10;
-                } else {
-                  score = -emissionEm * 0.01;
-                }
-                break;
-              case "balanced":
-              default:
-                // Balanced: DPS + Defense + Utility + Efficiency
-                const offense = dps * 3 + (comp.stats.alpha || 0) * 1.5;
-                const defense = hp * 0.4 + regen * 3 + maxHp * 0.2;
-                const utility = output * 0.02 + cooling * 0.00001 + speed * 0.00001;
-                const efficiency = regen / Math.max(1, hp * 0.01) + output / Math.max(1, price * 0.001);
-                const maneuver = (scmSpeed + boostFwd + pitch + yaw + roll) / 50;
-                const stealthPenalty = emissionEm * 0.001 + emissionIr * 0.001;
-                score = (offense + defense + utility + efficiency * 100 + maneuver) * (1 + gradeBonus) - stealthPenalty;
-                break;
-            }
-            return { comp, score };
-          });
-
-          scored.sort((a, b) => b.score - a.score);
-          bestComponents.set(hp.id, scored[0].comp.id);
-        }
-      });
-
+      const bestComponents = optimizeAssignments(ship, availableComponents, preset);
       bestComponents.forEach((compId, slotId) => {
         setSlotAssignment(slotId, compId);
       });
-
       setOptimizing(false);
     }, 1200);
   };
@@ -432,7 +319,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-3 space-y-6">
           <ShipInfoCard ship={ship} />
-          <StatsPanel stats={stats} assignedCount={assignedCount} totalSlots={totalSlots} />
+          <StatsPanel stats={stats} assignedCount={assignedCount} totalSlots={totalSlots} baseline={baselineStats} />
         </div>
 
         <div className="lg:col-span-5">

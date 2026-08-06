@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import SyncIndicator from "@/components/sync/SyncIndicator";
-import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumb";
+import CompareEditor from "@/components/compare/CompareEditor";
 import {
   RadarChart,
   PolarGrid,
@@ -26,6 +25,9 @@ interface ConfigEntry {
   id: string;
   ship: Ship;
   loadout: Loadout | null;
+  assignments: Record<string, string>;
+  stats: LoadoutStats;
+  isOptimized: boolean;
 }
 
 function configLabel(entry: ConfigEntry): string {
@@ -33,29 +35,8 @@ function configLabel(entry: ConfigEntry): string {
   return "Estándar";
 }
 
-function statsFor(entry: ConfigEntry): LoadoutStats & { dps: number } {
-  if (entry.loadout?.stats) {
-    return entry.loadout.stats as LoadoutStats & { dps: number };
-  }
-  // Standard config: use ship base stats (dps is estimated by the server)
-  return {
-    total_dps: (entry.ship as any).dps || 0,
-    sustained_dps: 0,
-    burst_dps: 0,
-    missile_dps: 0,
-    shield_hp: entry.ship.shield_hp,
-    shield_regen: 0,
-    hull_hp: entry.ship.hull_hp,
-    scm_speed: entry.ship.scm_speed,
-    max_speed: entry.ship.max_speed,
-    qt_range: 0,
-    qt_fuel: 0,
-    total_cost: 0,
-    power_output: 0,
-    power_demand: 0,
-    cooling_rate: 0,
-    dps: (entry.ship as any).dps || 0,
-  };
+function liveStats(entry: ConfigEntry): LoadoutStats {
+  return entry.stats;
 }
 
 export default function ComparePage() {
@@ -96,10 +77,30 @@ export default function ComparePage() {
   function addConfig(ship: Ship) {
     if (configs.length >= 4) return;
     const loadouts = loadoutsByShip[ship.id] || [];
+    const loadout = loadouts.length > 0 ? loadouts[0] : null;
     const entry: ConfigEntry = {
       id: `cfg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       ship,
-      loadout: loadouts.length > 0 ? loadouts[0] : null,
+      loadout,
+      assignments: loadout?.components ? { ...loadout.components } : {},
+      stats: {
+        total_dps: (ship as any).dps || 0,
+        sustained_dps: 0,
+        burst_dps: 0,
+        missile_dps: 0,
+        shield_hp: ship.shield_hp,
+        shield_regen: 0,
+        hull_hp: ship.hull_hp,
+        scm_speed: ship.scm_speed,
+        max_speed: ship.max_speed,
+        qt_range: 0,
+        qt_fuel: 0,
+        total_cost: 0,
+        power_output: 0,
+        power_demand: 0,
+        cooling_rate: 0,
+      },
+      isOptimized: !!loadout?.is_optimized,
     };
     setConfigs([...configs, entry]);
     setSearch("");
@@ -111,16 +112,29 @@ export default function ComparePage() {
 
   function changeLoadout(id: string, loadoutId: string) {
     setConfigs(
-      configs.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              loadout: loadoutId
-                ? (loadoutsByShip[c.ship.id] || []).find((l) => l.id === loadoutId) || null
-                : null,
-            }
-          : c
-      )
+      configs.map((c) => {
+        if (c.id !== id) return c;
+        const loadout = loadoutId
+          ? (loadoutsByShip[c.ship.id] || []).find((l) => l.id === loadoutId) || null
+          : null;
+        const assignments = loadout?.components ? { ...loadout.components } : {};
+        return {
+          ...c,
+          loadout,
+          assignments,
+          isOptimized: !!loadout?.is_optimized,
+        };
+      })
+    );
+  }
+
+  function handleEditorChange(
+    id: string,
+    assignments: Record<string, string>,
+    stats: LoadoutStats
+  ) {
+    setConfigs((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, assignments, stats } : c))
     );
   }
 
@@ -128,25 +142,25 @@ export default function ComparePage() {
     {
       stat: "DPS",
       ...Object.fromEntries(
-        configs.map((c, i) => [`ship${i}`, (statsFor(c).total_dps || statsFor(c).dps || 0) / 10])
+        configs.map((c, i) => [`ship${i}`, (liveStats(c).total_dps || 0) / 10])
       ),
     },
     {
       stat: "Escudos",
       ...Object.fromEntries(
-        configs.map((c, i) => [`ship${i}`, statsFor(c).shield_hp / 100])
+        configs.map((c, i) => [`ship${i}`, liveStats(c).shield_hp / 100])
       ),
     },
     {
       stat: "Casco",
       ...Object.fromEntries(
-        configs.map((c, i) => [`ship${i}`, (statsFor(c).hull_hp || c.ship.hull_hp) / 1000])
+        configs.map((c, i) => [`ship${i}`, (liveStats(c).hull_hp || c.ship.hull_hp) / 1000])
       ),
     },
     {
       stat: "Velocidad",
       ...Object.fromEntries(
-        configs.map((c, i) => [`ship${i}`, (statsFor(c).scm_speed || c.ship.scm_speed) / 10])
+        configs.map((c, i) => [`ship${i}`, (liveStats(c).scm_speed || c.ship.scm_speed) / 10])
       ),
     },
     {
@@ -167,46 +181,36 @@ export default function ComparePage() {
       { label: "Masa (kg)", get: (c: ConfigEntry) => c.ship.mass?.toLocaleString() },
       { label: "SCM Speed", get: (c: ConfigEntry) => `${c.ship.scm_speed} m/s` },
       { label: "Max Speed", get: (c: ConfigEntry) => `${c.ship.max_speed} m/s` },
-      { label: "Hull HP", get: (c: ConfigEntry) => (statsFor(c).hull_hp || c.ship.hull_hp)?.toLocaleString() },
-      { label: "Shield HP", get: (c: ConfigEntry) => statsFor(c).shield_hp?.toLocaleString() },
+      { label: "Hull HP", get: (c: ConfigEntry) => (liveStats(c).hull_hp || c.ship.hull_hp)?.toLocaleString() },
+      { label: "Shield HP", get: (c: ConfigEntry) => liveStats(c).shield_hp?.toLocaleString() },
+      { label: "Regen Escudo", get: (c: ConfigEntry) => liveStats(c).shield_regen?.toLocaleString() },
       { label: "Cargo (SCU)", get: (c: ConfigEntry) => c.ship.cargo_capacity.toString() },
       { label: "Slots", get: (c: ConfigEntry) => c.ship.hardpoints?.length?.toString() || "0" },
       {
         label: "DPS (loadout)",
-        get: (c: ConfigEntry) =>
-          c.loadout?.stats ? c.loadout.stats.total_dps?.toLocaleString() : "—",
-      },
-      {
-        label: "Regen escudo (loadout)",
-        get: (c: ConfigEntry) =>
-          c.loadout?.stats ? c.loadout.stats.shield_regen?.toLocaleString() : "—",
+        get: (c: ConfigEntry) => liveStats(c).total_dps?.toLocaleString(),
       },
       {
         label: "Potencia (loadout)",
-        get: (c: ConfigEntry) =>
-          c.loadout?.stats ? c.loadout.stats.power_output?.toLocaleString() : "—",
+        get: (c: ConfigEntry) => liveStats(c).power_output?.toLocaleString(),
       },
       {
         label: "Refrigeracion (loadout)",
-        get: (c: ConfigEntry) =>
-          c.loadout?.stats ? c.loadout.stats.cooling_rate?.toLocaleString() : "—",
+        get: (c: ConfigEntry) => liveStats(c).cooling_rate?.toLocaleString(),
       },
       {
         label: "Alcance QT (loadout)",
-        get: (c: ConfigEntry) =>
-          c.loadout?.stats ? c.loadout.stats.qt_range?.toLocaleString() : "—",
+        get: (c: ConfigEntry) => liveStats(c).qt_range?.toLocaleString(),
       },
       {
         label: "Costo (loadout)",
         get: (c: ConfigEntry) =>
-          c.loadout?.stats
-            ? `${c.loadout.stats.total_cost.toLocaleString()} aUEC`
-            : "—",
+          liveStats(c).total_cost ? `${liveStats(c).total_cost.toLocaleString()} aUEC` : "—",
       },
       {
         label: "Tipo",
         get: (c: ConfigEntry) =>
-          c.loadout?.is_optimized ? "Optimizada" : c.loadout ? "Manual" : "Estándar",
+          c.isOptimized ? "Optimizada" : c.loadout ? "Manual" : "Estándar",
       },
     ],
     []
@@ -222,8 +226,8 @@ export default function ComparePage() {
           <CardHeader>
             <CardTitle>Comparar configuraciones (nave + loadout)</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Añade una nave varias veces para comparar su configuración Estándar contra sus
-              loadouts guardados (por ejemplo, una optimizada).
+              Añade una nave varias veces para comparar configuraciones distintas (Estándar vs
+              optimizada). Usa el editor para cambiar componentes en tiempo real.
             </p>
           </CardHeader>
           <CardContent>
@@ -296,88 +300,114 @@ export default function ComparePage() {
         </Card>
 
         {configs.length >= 2 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Radar Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Comparacion Visual</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={350}>
-                  <RadarChart data={radarData}>
-                    <PolarGrid stroke="#334155" />
-                    <PolarAngleAxis dataKey="stat" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                    {configs.map((cfg, i) => (
-                      <Radar
-                        key={cfg.id}
-                        name={`${cfg.ship.name} · ${configLabel(cfg)}`}
-                        dataKey={`ship${i}`}
-                        stroke={COLORS[i]}
-                        fill={COLORS[i]}
-                        fillOpacity={0.15}
-                      />
-                    ))}
-                    <Legend />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#1e293b",
-                        border: "1px solid #334155",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                      }}
+          <>
+            {/* Live editors per config */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {configs.map((cfg, idx) => (
+                <Card key={cfg.id} className="border-border/40">
+                  <CardHeader className="p-4 border-b border-border/30 flex flex-row items-center justify-between gap-2">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[idx] }} />
+                      {cfg.ship.name}
+                    </CardTitle>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {configLabel(cfg)}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <CompareEditor
+                      ship={cfg.ship}
+                      initialLoadout={cfg.loadout}
+                      onChange={(assignments, stats) => handleEditorChange(cfg.id, assignments, stats)}
                     />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-            {/* Stats Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Estadisticas Detalladas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2 text-muted-foreground">Stat</th>
-                        {configs.map((cfg, i) => (
-                          <th key={cfg.id} className="text-right p-2">
-                            <span className="inline-flex items-center gap-1.5 justify-end">
-                              <span
-                                className="h-2 w-2 rounded-full inline-block"
-                                style={{ backgroundColor: COLORS[i] }}
-                              />
-                              {cfg.ship.name}
-                            </span>
-                            <span className="block text-[10px] font-normal text-muted-foreground">
-                              {configLabel(cfg)}
-                            </span>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tableRows.map(({ label, get, bold }) => (
-                        <tr key={label} className="border-b border-border/50">
-                          <td className="p-2 text-muted-foreground">{label}</td>
-                          {configs.map((cfg) => (
-                            <td
-                              key={cfg.id}
-                              className={`p-2 text-right font-mono ${bold ? "font-bold" : ""}`}
-                            >
-                              {get(cfg)}
-                            </td>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Radar Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Comparacion Visual</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={350}>
+                    <RadarChart data={radarData}>
+                      <PolarGrid stroke="#334155" />
+                      <PolarAngleAxis dataKey="stat" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                      {configs.map((cfg, i) => (
+                        <Radar
+                          key={cfg.id}
+                          name={`${cfg.ship.name} · ${configLabel(cfg)}`}
+                          dataKey={`ship${i}`}
+                          stroke={COLORS[i]}
+                          fill={COLORS[i]}
+                          fillOpacity={0.15}
+                        />
+                      ))}
+                      <Legend />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1e293b",
+                          border: "1px solid #334155",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                        }}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Stats Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Estadisticas Detalladas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2 text-muted-foreground">Stat</th>
+                          {configs.map((cfg, i) => (
+                            <th key={cfg.id} className="text-right p-2">
+                              <span className="inline-flex items-center gap-1.5 justify-end">
+                                <span
+                                  className="h-2 w-2 rounded-full inline-block"
+                                  style={{ backgroundColor: COLORS[i] }}
+                                />
+                                {cfg.ship.name}
+                              </span>
+                              <span className="block text-[10px] font-normal text-muted-foreground">
+                                {configLabel(cfg)}
+                              </span>
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                      </thead>
+                      <tbody>
+                        {tableRows.map(({ label, get, bold }) => (
+                          <tr key={label} className="border-b border-border/50">
+                            <td className="p-2 text-muted-foreground">{label}</td>
+                            {configs.map((cfg) => (
+                              <td
+                                key={cfg.id}
+                                className={`p-2 text-right font-mono ${bold ? "font-bold" : ""}`}
+                              >
+                                {get(cfg)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
         ) : (
           <Card className="min-h-[300px] flex items-center justify-center">
             <CardContent className="text-center text-muted-foreground">
