@@ -423,6 +423,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         slot={selectedSlot}
         components={pickerComponents}
         loading={loadingComponents}
+        equippedId={selectedSlot ? slotAssignments[selectedSlot.id] : null}
         onSelect={(comp) => {
           if (selectedSlot) {
             setSlotAssignment(selectedSlot.id, comp.id);

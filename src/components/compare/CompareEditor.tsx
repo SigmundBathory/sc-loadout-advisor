@@ -7,6 +7,7 @@ import { Wand2, Loader2, RotateCcw } from "lucide-react";
 import type { Ship, Component, Hardpoint, Loadout } from "@/lib/types";
 import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
 import { optimizeAssignments } from "@/lib/optimizer/optimizeLive";
+import { sortComponentsForSlot, componentStatSummary } from "@/lib/optimizer/componentSort";
 
 interface CompareEditorProps {
   ship: Ship;
@@ -143,7 +144,8 @@ export default function CompareEditor({ ship, initialLoadout, onChange }: Compar
       lifesupport: ["LifeSupport"],
     };
     const types = validTypes[slotKey] || [hp.slot_type];
-    return components.filter((c) => types.some((t) => t.toLowerCase() === c.type.toLowerCase()));
+    const filtered = components.filter((c) => types.some((t) => t.toLowerCase() === c.type.toLowerCase()));
+    return sortComponentsForSlot(filtered, filtered[0]?.type || "", assignments[hp.id]);
   }
 
   return (
@@ -205,11 +207,17 @@ export default function CompareEditor({ ship, initialLoadout, onChange }: Compar
                   className="flex-1 min-w-0 px-2 py-1 rounded-md border border-border/40 bg-muted/40 text-foreground text-xs focus:outline-none"
                 >
                   <option value="">Sin asignar</option>
-                  {options.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-card">
-                      {c.name} ({c.size} {c.type})
-                    </option>
-                  ))}
+                  {options.map((c) => {
+                    const summary = componentStatSummary(c);
+                    return (
+                      <option key={c.id} value={c.id} className="bg-card">
+                        {c.name} — {summary.primaryLabel}: {summary.primaryFormatted}
+                        {summary.tradeoffs.length > 0
+                          ? ` (${summary.tradeoffs.map((t) => `${t.label} ${t.format}`).join(", ")})`
+                          : ""}
+                      </option>
+                    );
+                  })}
                 </select>
                 <span className="w-16 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
                   {current ? `${(current.price_auec || 0).toLocaleString()} aUEC` : "—"}

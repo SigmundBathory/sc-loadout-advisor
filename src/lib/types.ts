@@ -107,6 +107,8 @@ export interface ComponentStats {
   travel_speed?: number;
   cooldown?: number;
   fuel_efficiency?: number;
+  fuel_rate?: number;
+  fuel_consumption_scu_per_gm?: number;
   // Radars
   sensitivity_ir?: number;
   sensitivity_cs?: number;

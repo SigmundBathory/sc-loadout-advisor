@@ -293,6 +293,11 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
             stats.cooldown = sj.cooldown_time || 0;
             stats.fuel_efficiency = qd.fuel_efficiency || 0;
             stats.fuel_rate = qd.fuel_rate || 0;
+            stats.fuel_consumption_scu_per_gm = qd.fuel_consumption_scu_per_gm || 0;
+            const jumpRange = Number(qd.jump_range);
+            if (Number.isFinite(jumpRange) && jumpRange > 0 && jumpRange < 1e30) {
+              stats.quantum_fuel_claimed = jumpRange;
+            }
           } else if (compType === "Radar" && wikiItem.radar) {
             stats.detection_range = wikiItem.radar.detection_range || 0;
           }
@@ -796,6 +801,12 @@ export async function syncDataForVersion(
             stats.spool_time = sj.spool_up_time || 0;
             stats.cooldown = sj.cooldown_time || 0;
             stats.fuel_efficiency = qd.fuel_efficiency || 0;
+            stats.fuel_rate = qd.fuel_rate || 0;
+            stats.fuel_consumption_scu_per_gm = qd.fuel_consumption_scu_per_gm || 0;
+            const jumpRange = Number(qd.jump_range);
+            if (Number.isFinite(jumpRange) && jumpRange > 0 && jumpRange < 1e30) {
+              stats.quantum_fuel_claimed = jumpRange;
+            }
           } else if (compType === "Radar" && wikiItem.radar) {
             const r = wikiItem.radar;
             stats.cooldown = r.cooldown || 0;

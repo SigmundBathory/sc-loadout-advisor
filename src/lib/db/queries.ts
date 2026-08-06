@@ -116,6 +116,9 @@ export function getAllComponents(filters?: {
   `;
   const params: any[] = [];
 
+  // Hide internal game placeholder components (name "<=" PLACEHOLDER "=>")
+  query += " AND c.name NOT LIKE '%PLACEHOLDER%'";
+
   if (filters?.type) {
     query += " AND c.type = ?";
     params.push(filters.type);
@@ -213,6 +216,7 @@ export function getCompatibleComponents(
        LEFT JOIN manufacturers m ON c.manufacturer_code = m.code
        LEFT JOIN component_prices cp ON c.id = cp.component_id
        WHERE c.type = ? AND c.size <= ?
+       AND c.name NOT LIKE '%PLACEHOLDER%'
        ORDER BY c.name`
     )
     .all([componentType, slotSize]) as any[];
