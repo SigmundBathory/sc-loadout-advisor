@@ -16,6 +16,7 @@ export default function OptimizerDialog({ open, onOpenChange, onOptimize, optimi
     { preset: "max_range", label: "Mayor Alcance Quantum", icon: "🌌" },
     { preset: "best_weapons", label: "Mejor Armamento", icon: "🔫" },
     { preset: "best_defense", label: "Mejor Defensa", icon: "🛡️" },
+    { preset: "stealth", label: "Sigilo / Low Profile", icon: "👻" },
     { preset: "cheapest", label: "Más Económica", icon: "💰" },
     { preset: "balanced", label: "Equilibrado", icon: "⚖️" },
   ];

@@ -66,7 +66,9 @@ export type ComponentType =
   | "MissileRack"
   | "Radar"
   | "EMP"
-  | "QED";
+  | "QED"
+  | "FlightController"
+  | "LifeSupport";
 
 export interface ComponentStats {
   // Common
