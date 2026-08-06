@@ -71,25 +71,40 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     const fetchComponents = async () => {
       setLoadingComponents(true);
       try {
-        const ids = ship.hardpoints.map(hp => hp.component_id).filter(Boolean);
-        if (ids.length > 0) {
-          const res = await fetch(`/api/components?ids=${ids.join(",")}`);
+        // Get unique slot type+size combinations to fetch all compatible components
+        const slotSpecs = new Map<string, { slotType: string; slotSize: number }>();
+        ship.hardpoints.forEach(hp => {
+          const key = `${hp.slot_type}_${hp.size}`;
+          if (!slotSpecs.has(key)) {
+            slotSpecs.set(key, { slotType: hp.slot_type, slotSize: hp.size });
+          }
+        });
+
+        const allComponents: Component[] = [];
+        for (const spec of slotSpecs.values()) {
+          const res = await fetch(`/api/components?compatibleShipId=${ship.id}&slotType=${spec.slotType}&slotSize=${spec.slotSize}`);
           if (res.ok) {
             const data = await res.json();
-            const components: Component[] = data.components || [];
-            setAvailableComponents(components);
-            const map = new Map<string, Component>();
-            components.forEach(c => map.set(c.id, c));
-            setComponentMap(map);
+            if (data.components) {
+              allComponents.push(...data.components);
+            }
           }
         }
+
+        // Deduplicate by id
+        const uniqueComponents = Array.from(new Map(allComponents.map(c => [c.id, c])).values());
+        
+        setAvailableComponents(uniqueComponents);
+        const map = new Map<string, Component>();
+        uniqueComponents.forEach(c => map.set(c.id, c));
+        setComponentMap(map);
       } finally {
         setLoadingComponents(false);
       }
     };
 
     fetchComponents();
-  }, [ship.hardpoints]);
+  }, [ship.hardpoints, ship.id]);
 
   const loadComponentPicker = useCallback(() => {
     if (!selectedSlot) return null;
