@@ -23,7 +23,10 @@ export function calculateLoadoutStats(
 
   for (const componentId of Object.values(componentIds)) {
     const comp = allComponents.get(componentId);
-    if (!comp) continue;
+    if (!comp) {
+      console.warn(`Component ${componentId} not found in componentMap, skipping`);
+      continue;
+    }
 
     const s = comp.stats;
     const price = comp.price_auec || 0;

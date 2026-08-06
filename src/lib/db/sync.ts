@@ -236,7 +236,7 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
       console.warn("Failed to fetch Wiki items:", e);
     }
 
-    // Build lookup map by class_name for real stats
+// Build lookup map by class_name for real stats
     const wikiItemMap = new Map<string, any>();
     for (const item of wikiItems) {
       const cn = String(item.class_name || "");
@@ -245,7 +245,7 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
 
     // --- Extract hardpoints from vehicle ports ---
     onProgress?.("Sincronizando hardpoints de naves...", 68);
-    const componentSlotTypes = ["Shield", "PowerPlant", "Cooler", "QuantumDrive", "Radar", "LifeSupportGenerator", "FlightController"];
+    const componentSlotTypes = ["Shield", "PowerPlant", "Cooler", "QuantumDrive", "Radar", "LifeSupportGenerator", "FlightController", "Missile", "EMP", "QED"];
     const portComponentMap = new Map<string, any>();
 
     for (const vehicle of vehicles) {
@@ -323,6 +323,24 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
             }
           } else if (compType === "Radar" && wikiItem.radar) {
             stats.detection_range = wikiItem.radar.detection_range || 0;
+          } else if (compType === "Missile" && wikiItem.missile) {
+            const m = wikiItem.missile;
+            stats.alpha = m.damage || 0;
+            stats.range = m.range || 0;
+            stats.velocity = m.speed || 0;
+            stats.capacity = m.capacity || 0;
+          } else if (compType === "EMP" && wikiItem.emp) {
+            const e = wikiItem.emp;
+            stats.range = e.range || 0;
+            stats.emission_em_max = e.emission_em || 0;
+          } else if (compType === "QED" && wikiItem.qed) {
+            const q = wikiItem.qed;
+            stats.range = q.range || 0;
+            stats.cooldown = q.cooldown || 0;
+          } else if (compType === "LifeSupport" && wikiItem.life_support_generator) {
+            const ls = wikiItem.life_support_generator;
+            stats.output = ls.power_output || 0;
+            stats.emission_em_max = ls.emission_em || 0;
           }
 
           // Extract real price
@@ -365,6 +383,17 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
         if (!wikiItem || stats.travel_speed === undefined && compType === "QuantumDrive") {
           stats.travel_speed = size === 1 ? 125000 : size === 2 ? 185000 : 250000;
           stats.spool_time = size === 1 ? 3 : size === 2 ? 4.5 : 7;
+        }
+        if (!wikiItem || (stats.alpha === undefined && compType === "Missile")) {
+          const baseAlpha = size === 1 ? 850 : size === 2 ? 2400 : size === 3 ? 6500 : size === 4 ? 18000 : 45000;
+          stats.alpha = Math.round(baseAlpha * (grade === 1 ? 1.3 : grade === 2 ? 1.15 : grade === 3 ? 1.0 : 0.85));
+          stats.range = stats.alpha * 10;
+        }
+        if (!wikiItem || (stats.range === undefined && compType === "EMP")) {
+          stats.range = size === 1 ? 2000 : size === 2 ? 5000 : size === 3 ? 10000 : 15000;
+        }
+        if (!wikiItem || (stats.output === undefined && compType === "LifeSupport")) {
+          stats.output = size === 1 ? 500 : size === 2 ? 1500 : size === 3 ? 5000 : 15000;
         }
 
         insertComponent.run([
@@ -888,6 +917,24 @@ export async function syncDataForVersion(
             stats.pitch = fc.pitch || 0;
             stats.yaw = fc.yaw || 0;
             stats.roll = fc.roll || 0;
+          } else if (compType === "Missile" && wikiItem.missile) {
+            const m = wikiItem.missile;
+            stats.alpha = m.damage || 0;
+            stats.range = m.range || 0;
+            stats.velocity = m.speed || 0;
+            stats.capacity = m.capacity || 0;
+          } else if (compType === "EMP" && wikiItem.emp) {
+            const e = wikiItem.emp;
+            stats.range = e.range || 0;
+            stats.emission_em_max = e.emission_em || 0;
+          } else if (compType === "QED" && wikiItem.qed) {
+            const q = wikiItem.qed;
+            stats.range = q.range || 0;
+            stats.cooldown = q.cooldown || 0;
+          } else if (compType === "LifeSupport" && wikiItem.life_support_generator) {
+            const ls = wikiItem.life_support_generator;
+            stats.output = ls.power_output || 0;
+            stats.emission_em_max = ls.emission_em || 0;
           }
 
           // Common: emission data
@@ -920,9 +967,24 @@ export async function syncDataForVersion(
           const gm = grade === 1 ? 1.3 : grade === 2 ? 1.15 : grade === 3 ? 1.0 : 0.85;
           stats.output = Math.round((size === 1 ? 3800 : size === 2 ? 16000 : size === 3 ? 125000 : 450000) * gm);
         }
+        if (!wikiItem || (stats.cooling_rate === undefined && compType === "Cooler")) {
+          const gm = grade === 1 ? 1.3 : grade === 2 ? 1.15 : grade === 3 ? 1.0 : 0.85;
+          stats.cooling_rate = Math.round((size === 1 ? 450000 : size === 2 ? 2500000 : size === 3 ? 18000000 : 50000000) * gm);
+        }
         if (!wikiItem || (stats.travel_speed === undefined && compType === "QuantumDrive")) {
           stats.travel_speed = size === 1 ? 125000 : size === 2 ? 185000 : 250000;
           stats.spool_time = size === 1 ? 3 : size === 2 ? 4.5 : 7;
+        }
+        if (!wikiItem || (stats.alpha === undefined && compType === "Missile")) {
+          const baseAlpha = size === 1 ? 850 : size === 2 ? 2400 : size === 3 ? 6500 : size === 4 ? 18000 : 45000;
+          stats.alpha = Math.round(baseAlpha * (grade === 1 ? 1.3 : grade === 2 ? 1.15 : grade === 3 ? 1.0 : 0.85));
+          stats.range = stats.alpha * 10;
+        }
+        if (!wikiItem || (stats.range === undefined && compType === "EMP")) {
+          stats.range = size === 1 ? 2000 : size === 2 ? 5000 : size === 3 ? 10000 : 15000;
+        }
+        if (!wikiItem || (stats.output === undefined && compType === "LifeSupport")) {
+          stats.output = size === 1 ? 500 : size === 2 ? 1500 : size === 3 ? 5000 : 15000;
         }
 
         insertComponent.run([
