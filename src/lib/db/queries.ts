@@ -15,7 +15,7 @@ export function getAllShips(filters?: {
            MAX(CASE WHEN sbl.ship_name IS NOT NULL THEN 1 ELSE 0 END) as is_buyable
     FROM ships s
     LEFT JOIN manufacturers m ON s.manufacturer_code = m.code
-    LEFT JOIN ship_buy_locations sbl ON sbl.ship_name = s.name
+    LEFT JOIN ship_buy_locations sbl ON (sbl.ship_id = s.id OR (sbl.ship_id = '' AND sbl.ship_name = s.name))
     WHERE 1=1
   `;
   const params: any[] = [];

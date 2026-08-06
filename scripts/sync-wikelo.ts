@@ -26,7 +26,8 @@ const WIKELO_SHIPS = [
   "Sabre Firebird", "Scorpius", "Super Hornet Mk II", "Terrapin Medic",
   "Guardian QI", "Zeus CL", "Starlancer MAX", "Constellation Taurus",
   "Apollo Triage", "F8C Lightning Military", "F8C Lightning Stealth",
-  "Starlancer TAC", "A2 Hercules", "Asgard", "Prowler Utility", "Idris-P"
+  "Starlancer TAC", "A2 Hercules", "Asgard", "Prowler Utility", "Idris-P",
+  "Polaris"
 ];
 
 function parseCsv(csv: string): WikeloShip[] {
@@ -80,7 +81,7 @@ function parseCsv(csv: string): WikeloShip[] {
 
     // Check for mission/cost lines
     if (leftComp.includes("Mission:") || leftComp.includes("Cost:")) {
-      const shipName = matchKnownShip(currentShipLeft);
+      const shipName = matchKnownShip(currentShipLeft) || matchKnownShipFromMission(leftComp);
       if (shipName && !shipSet.has(shipName + "_left")) {
         shipSet.add(shipName + "_left");
         const mission = extractMissionFromLine(leftComp);
@@ -95,7 +96,7 @@ function parseCsv(csv: string): WikeloShip[] {
     }
 
     if (rightComp.includes("Mission:") || rightComp.includes("Cost:")) {
-      const shipName = matchKnownShip(currentShipRight);
+      const shipName = matchKnownShip(currentShipRight) || matchKnownShipFromMission(rightComp);
       if (shipName && !shipSet.has(shipName + "_right")) {
         shipSet.add(shipName + "_right");
         const mission = extractMissionFromLine(rightComp);
@@ -149,6 +150,19 @@ function matchKnownShip(name: string): string | null {
   for (const ship of WIKELO_SHIPS) {
     const shipWords = ship.toLowerCase().split(" ");
     if (shipWords.some(w => lower.includes(w) && w.length > 3)) {
+      return ship;
+    }
+  }
+  return null;
+}
+
+/** Detect the ship from a mission line like "Mission: Now make Polaris." */
+function matchKnownShipFromMission(line: string): string | null {
+  if (!line) return null;
+  const lower = line.toLowerCase();
+  for (const ship of WIKELO_SHIPS) {
+    const words = ship.toLowerCase().split(" ");
+    if (words.every(w => w.length > 1 && lower.includes(w))) {
       return ship;
     }
   }

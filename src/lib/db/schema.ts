@@ -120,6 +120,7 @@ function initSchema(db: InstanceType<typeof Database>) {
     CREATE TABLE IF NOT EXISTS ship_buy_locations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ship_name TEXT NOT NULL,
+      ship_id TEXT DEFAULT '',
       price_auec REAL DEFAULT 0,
       location_name TEXT NOT NULL,
       shop_name TEXT DEFAULT '',
@@ -165,6 +166,7 @@ function initSchema(db: InstanceType<typeof Database>) {
     CREATE INDEX IF NOT EXISTS idx_hardpoints_ship ON hardpoints(ship_id);
     CREATE INDEX IF NOT EXISTS idx_buy_locations_component ON buy_locations(component_id);
     CREATE INDEX IF NOT EXISTS idx_ship_buy_locations_name ON ship_buy_locations(ship_name);
+    CREATE INDEX IF NOT EXISTS idx_ship_buy_locations_ship ON ship_buy_locations(ship_id);
     CREATE INDEX IF NOT EXISTS idx_wikelo_ships_name ON wikelo_ships(ship_name);
     CREATE INDEX IF NOT EXISTS idx_sync_log_version ON sync_log(version);
     CREATE INDEX IF NOT EXISTS idx_sync_log_started ON sync_log(started_at);
@@ -174,6 +176,12 @@ function initSchema(db: InstanceType<typeof Database>) {
   const existing = db.prepare("SELECT id FROM sync_meta WHERE id = 1").get();
   if (!existing) {
     db.prepare("INSERT INTO sync_meta (id) VALUES (1)").run();
+  }
+
+  // --- Migrations for existing tables ---
+  const sblCols = (db.prepare("PRAGMA table_info(ship_buy_locations)").all() as any[]).map((c) => c.name);
+  if (!sblCols.includes("ship_id")) {
+    db.exec("ALTER TABLE ship_buy_locations ADD COLUMN ship_id TEXT DEFAULT ''");
   }
 
   // --- Migrations for existing tables ---

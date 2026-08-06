@@ -93,8 +93,28 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    let shipCount = 0;
+    // The wiki API returns several variants sharing the same numeric id
+    // (e.g. Polaris id 116 as both RSI_Polaris and RSI_Polaris_Collector_Military).
+    // Deduplicate by id preferring the base (non-collector/wikelo/special) variant.
+    const vehiclesById = new Map<string, any>();
     for (const vehicle of vehicles) {
+      const v = vehicle || {};
+      const id = String(v.id || v.uuid || v.class_name || "");
+      if (!id) continue;
+      const prev = vehiclesById.get(id);
+      if (!prev) {
+        vehiclesById.set(id, v);
+        continue;
+      }
+      const isSpecial = (s: any) => /collector|wikelo|special|exec|paint|skin/i.test(String(s.class_name || ""));
+      if (isSpecial(prev) && !isSpecial(v)) {
+        vehiclesById.set(id, v);
+      }
+    }
+    const uniqueVehicles = Array.from(vehiclesById.values());
+
+    let shipCount = 0;
+    for (const vehicle of uniqueVehicles) {
       try {
         const v = vehicle || {};
         const mfg = v.manufacturer || {};
@@ -623,8 +643,28 @@ export async function syncDataForVersion(
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    let shipCount = 0;
+    // The wiki API returns several variants sharing the same numeric id
+    // (e.g. Polaris id 116 as both RSI_Polaris and RSI_Polaris_Collector_Military).
+    // Deduplicate by id preferring the base (non-collector/wikelo/special) variant.
+    const vehiclesById = new Map<string, any>();
     for (const vehicle of vehicles) {
+      const v = vehicle || {};
+      const id = String(v.id || v.uuid || v.class_name || "");
+      if (!id) continue;
+      const prev = vehiclesById.get(id);
+      if (!prev) {
+        vehiclesById.set(id, v);
+        continue;
+      }
+      const isSpecial = (s: any) => /collector|wikelo|special|exec|paint|skin/i.test(String(s.class_name || ""));
+      if (isSpecial(prev) && !isSpecial(v)) {
+        vehiclesById.set(id, v);
+      }
+    }
+    const uniqueVehicles = Array.from(vehiclesById.values());
+
+    let shipCount = 0;
+    for (const vehicle of uniqueVehicles) {
       try {
         const v = vehicle || {};
         const mfg = v.manufacturer || {};

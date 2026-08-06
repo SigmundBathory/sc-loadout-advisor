@@ -1,11 +1,13 @@
 import Database from "better-sqlite3";
 import * as cheerio from "cheerio";
+import { normalizeShipName } from "../src/lib/db/shipNames";
 
 const DB_PATH = "data/sc-loadout.db";
 const URL = "https://scfocus.org/ship-sale-rental-locations-history/";
 
 interface ShipLocation {
   ship_name: string;
+  ship_id: string;
   price_auec: number;
   location_name: string;
   shop_name: string;
@@ -95,6 +97,7 @@ function parseShipsFromPage(html: string): ShipLocation[] {
 
       locations.push({
         ship_name: shipName,
+        ship_id: "",
         price_auec: price,
         location_name: cleanLocation || locName,
         shop_name: shopName,
@@ -106,6 +109,39 @@ function parseShipsFromPage(html: string): ShipLocation[] {
   return locations;
 }
 
+/** Match scfocus names against canonical wiki ship names (normalized). */
+function attachShipIds(locations: ShipLocation[]): ShipLocation[] {
+  const db = new Database(DB_PATH);
+  try {
+    const ships = db.prepare("SELECT id, name, class_name FROM ships").all() as Array<{ id: string; name: string; class_name: string }>;
+    const byName = new Map<string, string[]>();
+    for (const s of ships) {
+      const key = normalizeShipName(s.name);
+      if (!key) continue;
+      const list = byName.get(key) || [];
+      list.push(s.id);
+      byName.set(key, list);
+    }
+
+    for (const loc of locations) {
+      const key = normalizeShipName(loc.ship_name);
+      if (!key) continue;
+      const ids = byName.get(key);
+      if (ids && ids.length === 1) {
+        loc.ship_id = ids[0];
+      } else if (ids && ids.length > 1) {
+        // Prefer the ship whose class_name matches the base (non-collector) variant
+        const shipsById = ids.map((id) => ships.find((s) => s.id === id)).filter(Boolean) as Array<{ id: string; class_name: string }>;
+        const base = shipsById.find((s) => !/collector|wikelo|special/i.test(s.class_name));
+        loc.ship_id = (base || shipsById[0]).id;
+      }
+    }
+  } finally {
+    db.close();
+  }
+  return locations;
+}
+
 function saveToDb(locations: ShipLocation[]): void {
   const db = new Database(DB_PATH);
 
@@ -113,6 +149,7 @@ function saveToDb(locations: ShipLocation[]): void {
     CREATE TABLE IF NOT EXISTS ship_buy_locations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ship_name TEXT NOT NULL,
+      ship_id TEXT DEFAULT '',
       price_auec REAL DEFAULT 0,
       location_name TEXT NOT NULL,
       shop_name TEXT DEFAULT '',
@@ -121,29 +158,37 @@ function saveToDb(locations: ShipLocation[]): void {
       updated_at TEXT DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_ship_buy_locations_name ON ship_buy_locations(ship_name);
+    CREATE INDEX IF NOT EXISTS idx_ship_buy_locations_ship ON ship_buy_locations(ship_id);
   `);
+
+  // Migration: add ship_id column if missing (older databases)
+  const cols = (db.prepare("PRAGMA table_info(ship_buy_locations)").all() as any[]).map((c) => c.name);
+  if (!cols.includes("ship_id")) {
+    db.exec("ALTER TABLE ship_buy_locations ADD COLUMN ship_id TEXT DEFAULT ''");
+  }
 
   db.exec("DELETE FROM ship_buy_locations");
 
   const insert = db.prepare(`
-    INSERT INTO ship_buy_locations (ship_name, price_auec, location_name, shop_name, location_type)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO ship_buy_locations (ship_name, ship_id, price_auec, location_name, shop_name, location_type)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
   const insertMany = db.transaction((locs: ShipLocation[]) => {
     for (const loc of locs) {
-      insert.run([loc.ship_name, loc.price_auec, loc.location_name, loc.shop_name, loc.location_type]);
+      insert.run([loc.ship_name, loc.ship_id, loc.price_auec, loc.location_name, loc.shop_name, loc.location_type]);
     }
   });
 
   insertMany(locations);
 
   const total = db.prepare("SELECT COUNT(*) as n FROM ship_buy_locations").get() as any;
+  const linked = db.prepare("SELECT COUNT(*) as n FROM ship_buy_locations WHERE ship_id != ''").get() as any;
   const sales = db.prepare("SELECT COUNT(*) as n FROM ship_buy_locations WHERE location_type = 'sale'").get() as any;
   const rentals = db.prepare("SELECT COUNT(*) as n FROM ship_buy_locations WHERE location_type = 'rental'").get() as any;
   const earns = db.prepare("SELECT COUNT(*) as n FROM ship_buy_locations WHERE location_type = 'earn'").get() as any;
 
-  console.log(`Saved ${total.n} locations (${sales.n} sale, ${rentals.n} rental, ${earns.n} earn)`);
+  console.log(`Saved ${total.n} locations (${linked.n} linked to ships, ${sales.n} sale, ${rentals.n} rental, ${earns.n} earn)`);
 
   const ships = db.prepare("SELECT DISTINCT ship_name FROM ship_buy_locations ORDER BY ship_name").all() as any[];
   console.log(`Unique ships: ${ships.length}`);
@@ -167,8 +212,11 @@ async function main() {
   console.log(`Page fetched (${html.length} bytes)`);
 
   console.log("Parsing ship locations...");
-  const locations = parseShipsFromPage(html);
+  let locations = parseShipsFromPage(html);
   console.log(`Found ${locations.length} ship locations`);
+
+  console.log("Matching ships against wiki database...");
+  locations = attachShipIds(locations);
 
   console.log("\nSaving to database...");
   saveToDb(locations);
