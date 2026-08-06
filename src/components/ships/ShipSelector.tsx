@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign, Wand2 } from "lucide-react";
+import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign, Wand2, AlertTriangle } from "lucide-react";
 import type { Ship } from "@/lib/types";
 import Link from "next/link";
+import { useShips, useOptimizedShipIds } from "@/lib/api/client";
 
 interface ShipSelectorProps {
   initialShips?: Ship[];
@@ -20,38 +21,23 @@ export default function ShipSelector({
   manufacturers = [],
   classifications = [],
 }: ShipSelectorProps) {
-  const [ships, setShips] = useState<Ship[]>(initialShips);
   const [search, setSearch] = useState("");
   const [selectedManufacturer, setSelectedManufacturer] = useState("");
   const [selectedClassification, setSelectedClassification] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [loading, setLoading] = useState(initialShips.length === 0);
-  const [optimizedShipIds, setOptimizedShipIds] = useState<Set<string>>(new Set());
-  const allShipsRef = useRef<Ship[]>(initialShips);
 
-  useEffect(() => {
-    fetch("/api/loadouts")
-      .then((r) => r.json())
-      .then((d) => {
-        const ids = new Set<string>();
-        (d.loadouts || []).forEach((l: any) => {
-          if (l.is_optimized) ids.add(l.ship_id);
-        });
-        setOptimizedShipIds(ids);
-      })
-      .catch(() => {});
-  }, []);
+  const { data, isLoading, isError, refetch } = useShips(false);
+  const optimizedShipIds = useOptimizedShipIds();
 
-  useEffect(() => {
-    if (initialShips.length > 0) {
-      allShipsRef.current = initialShips;
-      return;
-    }
-    fetchShips();
-  }, []);
+  const allShips = useMemo(
+    () => (initialShips.length > 0 ? initialShips : data?.ships || []),
+    [initialShips, data]
+  );
 
-  const filterShips = useCallback(() => {
-    let filtered = allShipsRef.current;
+  const loading = isLoading && allShips.length === 0;
+
+  const ships = useMemo(() => {
+    let filtered = allShips;
     if (search) {
       const q = search.toLowerCase();
       filtered = filtered.filter(
@@ -71,32 +57,15 @@ export default function ShipSelector({
         (s) => s.classification === selectedClassification
       );
     }
-    setShips(filtered);
-  }, [search, selectedManufacturer, selectedClassification]);
-
-  useEffect(() => {
-    filterShips();
-  }, [filterShips]);
-
-  async function fetchShips() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/ships");
-      const data = await res.json();
-      allShipsRef.current = data.ships || [];
-      filterShips();
-    } catch (e) {
-      console.error("Failed to fetch ships:", e);
-    }
-    setLoading(false);
-  }
+    return filtered;
+  }, [allShips, search, selectedManufacturer, selectedClassification]);
 
   const uniqueManufacturers =
     manufacturers.length > 0
       ? manufacturers
       : Array.from(
           new Map(
-            allShipsRef.current.map((s) => [s.manufacturer?.code, s.manufacturer])
+            allShips.map((s) => [s.manufacturer?.code, s.manufacturer])
           ).values()
         ).filter((m): m is { code: string; name: string } => Boolean(m && m.code));
 
@@ -104,7 +73,7 @@ export default function ShipSelector({
     classifications.length > 0
       ? classifications
       : Array.from(
-          new Set(allShipsRef.current.map((s) => s.classification).filter(Boolean))
+          new Set(allShips.map((s) => s.classification).filter(Boolean))
         ).sort();
 
   function getClassificationBadge(classification: string) {
@@ -221,7 +190,16 @@ export default function ShipSelector({
       </div>
 
       {/* Grid or List Display */}
-      {loading ? (
+      {isError && allShips.length === 0 ? (
+        <div className="glass-panel rounded-2xl p-12 text-center text-muted-foreground space-y-4">
+          <AlertTriangle className="h-10 w-10 mx-auto opacity-60 text-red-400" />
+          <p className="text-base font-medium text-foreground">No se pudieron cargar las naves.</p>
+          <p className="text-xs">Revisa la conexión o inténtalo de nuevo.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="rounded-xl">
+            Reintentar
+          </Button>
+        </div>
+      ) : loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="glass-panel border-border/40 animate-pulse">

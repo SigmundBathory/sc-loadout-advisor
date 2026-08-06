@@ -138,6 +138,26 @@ function initSchema(db: InstanceType<typeof Database>) {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS sync_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      version TEXT DEFAULT '',
+      started_at TEXT DEFAULT (datetime('now')),
+      finished_at TEXT DEFAULT '',
+      status TEXT DEFAULT 'running',
+      ships_synced INTEGER DEFAULT 0,
+      components_synced INTEGER DEFAULT 0,
+      locations_synced INTEGER DEFAULT 0,
+      error_message TEXT DEFAULT ''
+    );
+
+    CREATE TABLE IF NOT EXISTS version_snapshots (
+      version TEXT PRIMARY KEY,
+      ship_count INTEGER DEFAULT 0,
+      component_count INTEGER DEFAULT 0,
+      weapon_count INTEGER DEFAULT 0,
+      captured_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_ships_manufacturer ON ships(manufacturer_code);
     CREATE INDEX IF NOT EXISTS idx_ships_classification ON ships(classification);
     CREATE INDEX IF NOT EXISTS idx_components_type ON components(type);
@@ -146,6 +166,8 @@ function initSchema(db: InstanceType<typeof Database>) {
     CREATE INDEX IF NOT EXISTS idx_buy_locations_component ON buy_locations(component_id);
     CREATE INDEX IF NOT EXISTS idx_ship_buy_locations_name ON ship_buy_locations(ship_name);
     CREATE INDEX IF NOT EXISTS idx_wikelo_ships_name ON wikelo_ships(ship_name);
+    CREATE INDEX IF NOT EXISTS idx_sync_log_version ON sync_log(version);
+    CREATE INDEX IF NOT EXISTS idx_sync_log_started ON sync_log(started_at);
   `);
 
   // Ensure sync_meta row exists

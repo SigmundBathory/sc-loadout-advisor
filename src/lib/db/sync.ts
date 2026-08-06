@@ -12,6 +12,11 @@ import {
   getUexTerminals,
   getUexItemPricesByCategory,
 } from "../api/uexCorp";
+import {
+  startSyncLog,
+  finishSyncLog,
+  captureVersionSnapshot,
+} from "./queries";
 
 export async function checkVersionAndSync(): Promise<{
   needsSync: boolean;
@@ -537,9 +542,32 @@ export async function syncGameVersions(): Promise<void> {
 
 export async function syncDataForVersion(
   version: string,
-  onProgress?: (step: string, progress: number) => void
+  onProgress?: (step: string, progress: number) => void,
+  opts?: { force?: boolean }
 ): Promise<void> {
   const db = getDb();
+  const force = opts?.force ?? false;
+
+  // Incremental: if this version was already synced and not forced, skip the
+  // expensive re-fetch + rebuild and just report the stored snapshot counts.
+  const existing = db
+    .prepare("SELECT code, is_synced FROM game_versions WHERE code = ?")
+    .get(version) as any;
+  if (!force && existing?.is_synced) {
+    const ships = (db.prepare("SELECT COUNT(*) as c FROM ships").get() as any)?.c || 0;
+    const comps = (db.prepare("SELECT COUNT(*) as c FROM components").get() as any)?.c || 0;
+    const locs = (db.prepare("SELECT COUNT(*) as c FROM buy_locations").get() as any)?.c || 0;
+    onProgress?.(`${version} ya sincronizada — omitiendo (usa force para forzar)`, 100);
+    finishSyncLog(startSyncLog(version), {
+      status: "ok",
+      ships,
+      components: comps,
+      locations: locs,
+    });
+    return;
+  }
+
+  const syncLogId = startSyncLog(version);
 
   db.prepare("UPDATE sync_meta SET sync_status = 'syncing' WHERE id = 1").run();
 
@@ -926,10 +954,22 @@ export async function syncDataForVersion(
     const locTotal = (db.prepare("SELECT COUNT(*) as c FROM buy_locations").get() as any)?.c || 0;
     console.log(`Sync complete for ${version}: ${shipTotal} ships, ${compTotal} components, ${locTotal} locations`);
 
+    captureVersionSnapshot(version);
+    finishSyncLog(syncLogId, {
+      status: "ok",
+      ships: shipTotal,
+      components: compTotal,
+      locations: locTotal,
+    });
+
     onProgress?.("Sincronizacion completada", 100);
   } catch (error) {
     console.error("Sync error:", error);
     db.prepare("UPDATE sync_meta SET sync_status = 'error' WHERE id = 1").run();
+    finishSyncLog(syncLogId, {
+      status: "error",
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   }
 }

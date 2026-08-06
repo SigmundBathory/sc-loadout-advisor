@@ -644,3 +644,98 @@ export function getWikeloShipFuzzy(shipName: string): WikeloShip | null {
     components_description: row.components_description,
   };
 }
+
+// ==================== SYNC LOG ====================
+
+export interface SyncLogEntry {
+  id: number;
+  version: string;
+  started_at: string;
+  finished_at: string;
+  status: string;
+  ships_synced: number;
+  components_synced: number;
+  locations_synced: number;
+  error_message: string;
+}
+
+export function startSyncLog(version: string): number {
+  const db = getDb();
+  const result = db
+    .prepare("INSERT INTO sync_log (version, status) VALUES (?, 'running')")
+    .run(version);
+  return Number(result.lastInsertRowid);
+}
+
+export function finishSyncLog(
+  id: number,
+  opts: { status: string; ships?: number; components?: number; locations?: number; error?: string }
+) {
+  const db = getDb();
+  db.prepare(`
+    UPDATE sync_log SET
+      finished_at = datetime('now'),
+      status = ?,
+      ships_synced = ?,
+      components_synced = ?,
+      locations_synced = ?,
+      error_message = ?
+    WHERE id = ?
+  `).run([
+    opts.status,
+    opts.ships || 0,
+    opts.components || 0,
+    opts.locations || 0,
+    opts.error || "",
+    id,
+  ]);
+}
+
+export function getRecentSyncLogs(limit = 10): SyncLogEntry[] {
+  const db = getDb();
+  const rows = db
+    .prepare("SELECT * FROM sync_log ORDER BY started_at DESC LIMIT ?")
+    .all(limit) as any[];
+  return rows.map((r: any) => ({
+    id: r.id,
+    version: r.version,
+    started_at: r.started_at,
+    finished_at: r.finished_at,
+    status: r.status,
+    ships_synced: r.ships_synced,
+    components_synced: r.components_synced,
+    locations_synced: r.locations_synced,
+    error_message: r.error_message,
+  }));
+}
+
+// ==================== VERSION SNAPSHOTS ====================
+
+export function captureVersionSnapshot(version: string) {
+  const db = getDb();
+  const ships = (db.prepare("SELECT COUNT(*) as c FROM ships").get() as any)?.c || 0;
+  const components = (db.prepare("SELECT COUNT(*) as c FROM components").get() as any)?.c || 0;
+  const weapons = (db.prepare("SELECT COUNT(*) as c FROM components WHERE type = 'Weapon'").get() as any)?.c || 0;
+  db.prepare(`
+    INSERT OR REPLACE INTO version_snapshots (version, ship_count, component_count, weapon_count, captured_at)
+    VALUES (?, ?, ?, ?, datetime('now'))
+  `).run([version, ships, components, weapons]);
+}
+
+export function getVersionSnapshot(version: string) {
+  const db = getDb();
+  return db.prepare("SELECT * FROM version_snapshots WHERE version = ?").get(version) as
+    | { version: string; ship_count: number; component_count: number; weapon_count: number; captured_at: string }
+    | undefined;
+}
+
+export function getVersionChanges(currentVersion: string, previousVersion: string) {
+  const current = getVersionSnapshot(currentVersion);
+  const previous = getVersionSnapshot(previousVersion);
+  if (!current || !previous) return null;
+  return {
+    shipDelta: current.ship_count - previous.ship_count,
+    componentDelta: current.component_count - previous.component_count,
+    weaponDelta: current.weapon_count - previous.weapon_count,
+  };
+}

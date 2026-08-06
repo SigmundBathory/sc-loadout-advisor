@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import SyncIndicator from "@/components/sync/SyncIndicator";
+import { Button } from "@/components/ui/button";
 import Breadcrumb from "@/components/Breadcrumb";
 import CompareEditor from "@/components/compare/CompareEditor";
 import {
@@ -17,7 +17,9 @@ import {
   Tooltip,
 } from "recharts";
 import type { Ship, Loadout, LoadoutStats } from "@/lib/types";
-import { GitCompare, Plus, X, Wand2 } from "lucide-react";
+import { GitCompare, Plus, X, Wand2, Link2 } from "lucide-react";
+import { useShips, useAllLoadouts } from "@/lib/api/client";
+import { encodeCompareShare, decodeCompareShare, copyShareUrl } from "@/lib/loadout/share";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
 
@@ -40,33 +42,79 @@ function liveStats(entry: ConfigEntry): LoadoutStats {
 }
 
 export default function ComparePage() {
-  const [ships, setShips] = useState<Ship[]>([]);
   const [configs, setConfigs] = useState<ConfigEntry[]>([]);
   const [search, setSearch] = useState("");
-  const [loadoutsByShip, setLoadoutsByShip] = useState<Record<string, Loadout[]>>({});
+  const { data: shipsData } = useShips(true);
+  const ships = shipsData?.ships || [];
+  const { data: loadoutsData } = useAllLoadouts();
 
-  useEffect(() => {
-    fetch("/api/ships?withDps=true")
-      .then((r) => r.json())
-      .then((d) => setShips(d.ships || []));
-  }, []);
+  const loadoutsByShip = useMemo(() => {
+    const map: Record<string, Loadout[]> = {};
+    (loadoutsData?.loadouts || []).forEach((l: Loadout) => {
+      if (!map[l.ship_id]) map[l.ship_id] = [];
+      map[l.ship_id].push(l);
+    });
+    Object.values(map).forEach((list) =>
+      list.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))
+    );
+    return map;
+  }, [loadoutsData]);
 
+  const [shareFeedback, setShareFeedback] = useState("");
+
+  // Restore a shared compare from the URL hash (#compare=SCLA:...)
   useEffect(() => {
-    fetch("/api/loadouts")
-      .then((r) => r.json())
-      .then((d) => {
-        const map: Record<string, Loadout[]> = {};
-        (d.loadouts || []).forEach((l: Loadout) => {
-          if (!map[l.ship_id]) map[l.ship_id] = [];
-          map[l.ship_id].push(l);
-        });
-        Object.values(map).forEach((list) =>
-          list.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))
-        );
-        setLoadoutsByShip(map);
-      })
-      .catch(() => {});
-  }, []);
+    if (typeof window === "undefined" || ships.length === 0) return;
+    const hash = window.location.hash;
+    if (!hash.startsWith("#compare=")) return;
+    const decoded = decodeCompareShare(hash.slice("#compare=".length));
+    if (!decoded || decoded.entries.length === 0) return;
+    const byId = new Map(ships.map((s) => [s.id, s]));
+    const restored = decoded.entries
+      .filter((e) => byId.has(e.ship.id))
+      .map((e) => {
+        const ship = byId.get(e.ship.id)!;
+        return {
+          id: `cfg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          ship,
+          loadout: null,
+          assignments: { ...e.components },
+          stats: {
+            total_dps: (ship as any).dps || 0,
+            sustained_dps: 0,
+            burst_dps: 0,
+            missile_dps: 0,
+            shield_hp: ship.shield_hp,
+            shield_regen: 0,
+            hull_hp: ship.hull_hp,
+            scm_speed: ship.scm_speed,
+            max_speed: ship.max_speed,
+            qt_range: 0,
+            qt_fuel: 0,
+            total_cost: 0,
+            power_output: 0,
+            power_demand: 0,
+            cooling_rate: 0,
+          },
+          isOptimized: false,
+        };
+      });
+    if (restored.length > 0) {
+      setConfigs(restored.slice(0, 4));
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [ships]);
+
+  const handleShare = async () => {
+    if (configs.length === 0) return;
+    const token = encodeCompareShare(
+      configs.map((c) => ({ ship: c.ship, components: c.assignments }))
+    );
+    const url = `${window.location.origin}${window.location.pathname}#compare=${token}`;
+    const ok = await copyShareUrl(url);
+    setShareFeedback(ok ? "¡Enlace de comparación copiado!" : "No se pudo copiar el enlace.");
+    setTimeout(() => setShareFeedback(""), 2500);
+  };
 
   const filteredShips = ships.filter(
     (s) =>
@@ -224,11 +272,30 @@ export default function ComparePage() {
         {/* Config Selection */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Comparar configuraciones (nave + loadout)</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Añade una nave varias veces para comparar configuraciones distintas (Estándar vs
-              optimizada). Usa el editor para cambiar componentes en tiempo real.
-            </p>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <CardTitle>Comparar configuraciones (nave + loadout)</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Añade una nave varias veces para comparar configuraciones distintas (Estándar vs
+                  optimizada). Usa el editor para cambiar componentes en tiempo real.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {shareFeedback && (
+                  <span className="text-xs text-emerald-400 font-medium">{shareFeedback}</span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl gap-2 text-xs"
+                  onClick={handleShare}
+                  disabled={configs.length === 0}
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  Compartir
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2 mb-4">
@@ -366,9 +433,9 @@ export default function ComparePage() {
                   <CardTitle>Estadisticas Detalladas</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10 bg-card">
                         <tr className="border-b">
                           <th className="text-left p-2 text-muted-foreground">Stat</th>
                           {configs.map((cfg, i) => (
@@ -389,7 +456,7 @@ export default function ComparePage() {
                       </thead>
                       <tbody>
                         {tableRows.map(({ label, get, bold }) => (
-                          <tr key={label} className="border-b border-border/50">
+                          <tr key={label} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                             <td className="p-2 text-muted-foreground">{label}</td>
                             {configs.map((cfg) => (
                               <td
@@ -410,9 +477,20 @@ export default function ComparePage() {
           </>
         ) : (
           <Card className="min-h-[300px] flex items-center justify-center">
-            <CardContent className="text-center text-muted-foreground">
+            <CardContent className="text-center text-muted-foreground space-y-3">
               <GitCompare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Selecciona al menos 2 configuraciones para comparar</p>
+              <p className="font-medium text-foreground">Selecciona al menos 2 configuraciones para comparar</p>
+              <p className="text-xs max-w-sm mx-auto">
+                Escribe el nombre de una nave en el campo de búsqueda de arriba. Puedes añadir la misma
+                nave varias veces para comparar Estándar vs. configuraciones optimizadas.
+              </p>
+              <Input
+                placeholder="Buscar nave para comenzar..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="max-w-xs mx-auto mt-2"
+                autoFocus
+              />
             </CardContent>
           </Card>
         )}

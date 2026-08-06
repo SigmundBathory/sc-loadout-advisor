@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useLoadoutStore } from "@/stores/loadoutStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Save, Upload, Wand2, RotateCcw, ShoppingCart, Crosshair, Shield, Zap, Settings } from "lucide-react";
+import { ArrowLeft, Save, Upload, Wand2, ShoppingCart, Zap, Settings } from "lucide-react";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
 import ShoppingList from "@/components/budget/ShoppingList";
 import ShipInfoCard from "./ShipInfoCard";
@@ -20,20 +20,26 @@ import OptimizerDialog from "./OptimizerDialog";
 import type { Ship, Component, Loadout, Hardpoint } from "@/lib/types";
 import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
 import { optimizeAssignments } from "@/lib/optimizer/optimizeLive";
+import { useShipComponents, useLoadoutsByShip } from "@/lib/api/client";
+import { decodeLoadoutShare, parseLoadoutImport, type ImportedLoadout } from "@/lib/loadout/share";
 
 export default function LoadoutBuilder({ ship }: { ship: Ship }) {
   const router = useRouter();
-  const { slotAssignments, setSlotAssignment, clearSlotAssignment, savedLoadouts, setSavedLoadouts, addSavedLoadout } = useLoadoutStore();
+  const { slotAssignments, setSlotAssignment, clearSlotAssignment, savedLoadouts, addSavedLoadout } = useLoadoutStore();
   const [selectedSlot, setSelectedSlot] = useState<Hardpoint | null>(null);
-  const [availableComponents, setAvailableComponents] = useState<Component[]>([]);
-  const [componentMap, setComponentMap] = useState<Map<string, Component>>(new Map());
-  const [loadingComponents, setLoadingComponents] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
   const [lastOptimizedPreset, setLastOptimizedPreset] = useState<string>("");
   const [loadedLoadout, setLoadedLoadout] = useState<Loadout | null>(null);
+
+  const { data: availableComponents, isLoading: loadingComponents } = useShipComponents(ship);
+  const components = availableComponents || [];
+  const componentMap = useMemo(
+    () => new Map(components.map((c) => [c.id, c])),
+    [components]
+  );
 
   const assignedCount = Object.keys(slotAssignments).length;
   const totalSlots = ship.hardpoints.length;
@@ -95,76 +101,66 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     return Array.from(componentMap.values());
   }, [componentMap]);
 
-  useEffect(() => {
-    if (!ship.hardpoints.length) return;
-
-    const fetchComponents = async () => {
-      setLoadingComponents(true);
-      try {
-        // Get unique slot type+size combinations to fetch all compatible components
-        const slotSpecs = new Map<string, { slotType: string; slotSize: number }>();
-        ship.hardpoints.forEach(hp => {
-          const maxSize = hp.max_size || hp.size;
-          const key = `${hp.slot_type}_${maxSize}`;
-          if (!slotSpecs.has(key)) {
-            slotSpecs.set(key, { slotType: hp.slot_type, slotSize: maxSize });
-          }
-        });
-
-        const allComponents: Component[] = [];
-        for (const spec of slotSpecs.values()) {
-          const res = await fetch(`/api/components?compatibleShipId=${ship.id}&slotType=${spec.slotType}&slotSize=${spec.slotSize}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.components) {
-              allComponents.push(...data.components);
-            }
-          }
-        }
-
-        // Deduplicate by id
-        const uniqueComponents = Array.from(new Map(allComponents.map(c => [c.id, c])).values());
-        
-        setAvailableComponents(uniqueComponents);
-        const map = new Map<string, Component>();
-        uniqueComponents.forEach(c => map.set(c.id, c));
-        setComponentMap(map);
-      } finally {
-        setLoadingComponents(false);
-      }
-    };
-
-    fetchComponents();
-  }, [ship.hardpoints, ship.id]);
-
   // Auto-load the most recent saved loadout for this ship
+  const { data: shipLoadouts } = useLoadoutsByShip(ship.id);
   useEffect(() => {
-    if (!ship.id) return;
-    let cancelled = false;
-    fetch(`/api/loadouts?ship_id=${encodeURIComponent(ship.id)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        const loadouts: Loadout[] = data.loadouts || [];
-        if (loadouts.length > 0) {
-          const latest = loadouts[0];
-          setLoadedLoadout(latest);
-          setLastOptimizedPreset(latest.optimized_preset || "");
-          if (latest.components) {
-            Object.entries(latest.components).forEach(([slotId, compId]) => {
-              setSlotAssignment(slotId, compId);
-            });
-          }
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
+    const loadouts = shipLoadouts?.loadouts || [];
+    if (loadouts.length > 0) {
+      const latest = loadouts[0];
+      setLoadedLoadout(latest);
+      setLastOptimizedPreset(latest.optimized_preset || "");
+      if (latest.components) {
+        Object.entries(latest.components).forEach(([slotId, compId]) => {
+          setSlotAssignment(slotId, compId);
+        });
+      }
+    }
+  }, [shipLoadouts]);
+
+  // Deep-link support: apply a shared loadout from the URL hash (#loadout=SCLA:...)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (!hash.startsWith("#loadout=")) return;
+    const decoded = decodeLoadoutShare(hash.slice("#loadout=".length));
+    if (!decoded || decoded.ship.id !== ship.id) return;
+    Object.entries(decoded.components).forEach(([slotId, compId]) => {
+      setSlotAssignment(slotId, compId);
+    });
+    if (decoded.name) {
+      setLoadedLoadout((prev) =>
+        prev ? { ...prev, name: decoded.name! } : prev
+      );
+    }
+    setLastOptimizedPreset(decoded.preset || (decoded.optimized ? "shared" : ""));
+    const cleanUrl = window.location.pathname + window.location.search;
+    window.history.replaceState(null, "", cleanUrl);
   }, [ship.id]);
+
+  const handleImport = (imported: ImportedLoadout) => {
+    Object.entries(imported.components).forEach(([slotId, compId]) => {
+      setSlotAssignment(slotId, compId);
+    });
+    setLoadedLoadout({
+      id: `imported_${Date.now()}`,
+      name: imported.name,
+      ship_id: imported.ship_id,
+      components: imported.components,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      is_favorite: false,
+      is_optimized: imported.is_optimized,
+      optimized_preset: imported.optimized_preset,
+      stats: imported.stats,
+    });
+    setLastOptimizedPreset(imported.optimized_preset || "");
+    setShowLoadDialog(false);
+  };
 
   const loadComponentPicker = useCallback(() => {
     if (!selectedSlot) return null;
 
-    const compsForSlot = availableComponents.filter((c) => {
+    const compsForSlot = components.filter((c) => {
       const slotTypeMap: Record<string, string[]> = {
         weapon: ["Weapon"],
         turret: ["Weapon"],
@@ -186,7 +182,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     });
 
     return compsForSlot;
-  }, [selectedSlot, availableComponents]);
+  }, [selectedSlot, components]);
 
   const pickerComponents = loadComponentPicker() || [];
 
@@ -194,7 +190,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     setOptimizing(true);
     setLastOptimizedPreset(preset);
     setTimeout(() => {
-      const bestComponents = optimizeAssignments(ship, availableComponents, preset);
+      const bestComponents = optimizeAssignments(ship, components, preset);
       bestComponents.forEach((compId, slotId) => {
         setSlotAssignment(slotId, compId);
       });
@@ -445,7 +441,9 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         open={showLoadDialog}
         onOpenChange={setShowLoadDialog}
         loadouts={savedLoadouts}
+        ship={ship}
         onSelect={handleLoadPreset}
+        onImport={handleImport}
       />
 
       <OptimizerDialog

@@ -1,4 +1,4 @@
-import { getDashboardStats, getTopShipsByDps, getManufacturerDistribution, getRecentLoadouts } from "@/lib/db/queries";
+import { getDashboardStats, getTopShipsByDps, getManufacturerDistribution, getRecentLoadouts, getVersionChanges } from "@/lib/db/queries";
 import { getGameVersionsFromDb, getSelectedVersion, getSyncMeta, getShipCount } from "@/lib/db/sync";
 import StatCard from "@/components/dashboard/StatCard";
 import PieChartFabricants from "@/components/dashboard/PieChartFabricants";
@@ -8,6 +8,7 @@ import RecentLoadouts from "@/components/dashboard/RecentLoadouts";
 import QuickActions from "@/components/dashboard/QuickActions";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import SyncPanel from "@/components/dashboard/SyncPanel";
+import SyncHistory from "@/components/dashboard/SyncHistory";
 import { Rocket, Wrench, Factory, Calendar } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,11 @@ export default async function DashboardPage() {
 
   const currentVersion = versions.find((v: any) => v.code === selectedVersion);
   const previousVersion = versions.find((v: any) => v.code !== selectedVersion && v.is_synced);
+
+  const versionChanges =
+    currentVersion && previousVersion
+      ? getVersionChanges(currentVersion.code, previousVersion.code)
+      : null;
 
   const pieData = manufacturers.map((m: any) => ({
     name: m.name,
@@ -114,9 +120,9 @@ export default async function DashboardPage() {
           <VersionChanges
             fromVersion={previousVersion.code}
             toVersion={currentVersion.code}
-            shipDelta={0}
-            componentDelta={0}
-            weaponDelta={0}
+            shipDelta={versionChanges?.shipDelta ?? 0}
+            componentDelta={versionChanges?.componentDelta ?? 0}
+            weaponDelta={versionChanges?.weaponDelta ?? 0}
           />
         )}
 
@@ -124,6 +130,8 @@ export default async function DashboardPage() {
           <RecentLoadouts loadouts={recentLoadouts} />
           <ActivityFeed entries={[]} />
         </div>
+
+        <SyncHistory />
 
         <QuickActions />
       </main>

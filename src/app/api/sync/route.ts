@@ -36,6 +36,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const forceVersion = body.version;
+    const force = !!body.force;
     
     // Always sync game versions list first
     await syncGameVersions();
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     // Run sync for specific version
-    await syncDataForVersion(versionToSync);
+    await syncDataForVersion(versionToSync, undefined, { force });
 
     const meta = getSyncMeta();
     const shipCount = getShipCount();

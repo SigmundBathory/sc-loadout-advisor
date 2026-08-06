@@ -10,7 +10,7 @@ export async function POST() {
     await syncGameVersions();
     const vc = await checkVersionAndSync();
     results.step1.version = vc.currentVersion;
-    await syncDataForVersion(vc.currentVersion);
+    await syncDataForVersion(vc.currentVersion, undefined, { force: true });
     results.step1.status = "completed";
     results.step1.ships = getShipCount();
     results.step1.components = getComponentCount();

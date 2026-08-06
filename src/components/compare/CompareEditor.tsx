@@ -8,6 +8,7 @@ import type { Ship, Component, Hardpoint, Loadout } from "@/lib/types";
 import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
 import { optimizeAssignments } from "@/lib/optimizer/optimizeLive";
 import { sortComponentsForSlot, componentStatSummary } from "@/lib/optimizer/componentSort";
+import { useShipComponents } from "@/lib/api/client";
 
 interface CompareEditorProps {
   ship: Ship;
@@ -43,49 +44,11 @@ const SLOT_LABELS: Record<string, string> = {
 
 export default function CompareEditor({ ship, initialLoadout, onChange }: CompareEditorProps) {
   const [assignments, setAssignments] = useState<Record<string, string>>({});
-  const [components, setComponents] = useState<Component[]>([]);
-  const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
   const [preset, setPreset] = useState("balanced");
 
+  const { data: components = [], isLoading: loading } = useShipComponents(ship);
   const componentMap = useMemo(() => new Map(components.map((c) => [c.id, c])), [components]);
-
-  // Fetch compatible components for this ship
-  useEffect(() => {
-    if (!ship.hardpoints.length) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    const fetchComponents = async () => {
-      setLoading(true);
-      try {
-        const slotSpecs = new Map<string, { slotType: string; slotSize: number }>();
-        ship.hardpoints.forEach((hp) => {
-          const maxSize = hp.max_size || hp.size;
-          const key = `${hp.slot_type}_${maxSize}`;
-          if (!slotSpecs.has(key)) {
-            slotSpecs.set(key, { slotType: hp.slot_type, slotSize: maxSize });
-          }
-        });
-
-        const all: Component[] = [];
-        for (const spec of slotSpecs.values()) {
-          const res = await fetch(`/api/components?compatibleShipId=${ship.id}&slotType=${spec.slotType}&slotSize=${spec.slotSize}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.components) all.push(...data.components);
-          }
-        }
-        if (cancelled) return;
-        setComponents(Array.from(new Map(all.map((c) => [c.id, c])).values()));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchComponents();
-    return () => { cancelled = true; };
-  }, [ship.id, ship.hardpoints]);
 
   // Apply initial loadout components
   useEffect(() => {
