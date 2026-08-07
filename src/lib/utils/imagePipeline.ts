@@ -21,6 +21,80 @@ const ERKUL_BASE = "https://erkul.games/assets/images";
 const ERKUL_SHIPS = `${ERKUL_BASE}/ships`;
 const ERKUL_COMPONENTS = `${ERKUL_BASE}/components`;
 
+// Special edition patterns to detect variant ships
+const SPECIAL_EDITION_PATTERNS = [
+  /_Collector_\w+/i,      // Wikelo Collector variants
+  /_Exec_\w+/i,            // PYAM Executive variants
+  /_BTALA$/i,              // Alliance variants
+  /_Showdown$/i,           // Best In Show variants
+  /CitizenCon\d*/i,        // CitizenCon editions
+  /Heartseeker/i,          // Heartseeker editions
+  /_Military$/i,           // Military variants (often Wikelo)
+  /_Industrial$/i,         // Industrial variants (often Wikelo)
+  /_Stealth$/i,            // Stealth variants
+  /_Medic$/i,              // Medic variants
+  /_Mod$/i,                // Modified variants
+  /_Competition$/i,        // Competition variants
+  /_Grad02$/i,             // Grad variants (ATLS Orange Line)
+];
+
+export type SpecialEditionType = 'wikelo' | 'pyam' | 'alliance' | 'bis' | 'citizencon' | 'heartseeker' | 'other';
+
+/**
+ * Detect if a ship is a special edition and return its type
+ */
+export function detectSpecialEdition(ship: {
+  name?: string;
+  class_name?: string;
+}): SpecialEditionType | null {
+  const name = ship.name || '';
+  const className = ship.class_name || '';
+  
+  if (name.includes('Wikelo') || className.includes('_Collector_')) return 'wikelo';
+  if (name.includes('PYAM') || className.includes('_Exec_')) return 'pyam';
+  if (name.includes('Alliance') || className.includes('_BTALA')) return 'alliance';
+  if (name.includes('Best In Show') || className.includes('_Showdown')) return 'bis';
+  if (name.includes('CitizenCon')) return 'citizencon';
+  if (name.includes('Heartseeker')) return 'heartseeker';
+  
+  return null;
+}
+
+/**
+ * Extract the base ship class_name from a special edition variant
+ * e.g., "CRUS_Starlifter_A2_Collector_Military" → "CRUS_Starlifter_A2"
+ *        "ANVL_Hornet_F7A_Mk2_Exec_Stealth" → "ANVL_Hornet_F7A_Mk2"
+ *        "AEGS_Hammerhead_Showdown" → "AEGS_Hammerhead"
+ */
+export function resolveBaseShipClassName(className: string): string | null {
+  // Try each pattern and strip the suffix
+  for (const pattern of SPECIAL_EDITION_PATTERNS) {
+    if (pattern.test(className)) {
+      const base = className.replace(pattern, '');
+      if (base !== className && base.length > 3) {
+        return base;
+      }
+    }
+  }
+  
+  // Manual fallback: find last underscore segment that looks like a variant suffix
+  const parts = className.split('_');
+  if (parts.length > 2) {
+    const last = parts[parts.length - 1].toLowerCase();
+    const secondLast = parts[parts.length - 2].toLowerCase();
+    
+    // Known suffix patterns
+    const suffixes = ['military', 'industrial', 'stealth', 'medic', 'mod', 'competition', 'grad02', 'exec', 'collector', 'btala', 'showdown'];
+    if (suffixes.some(s => last.includes(s) || secondLast.includes(s))) {
+      // Remove last 1-2 parts
+      const trimmed = parts.slice(0, -1).join('_');
+      if (trimmed.length > 3) return trimmed;
+    }
+  }
+  
+  return null;
+}
+
 // Placeholder generators
 const PLACEHOLDER_SVG = (width: number, height: number, text: string, bgColor = "1E293B", textColor = "64748B") => 
   `data:image/svg+xml,${encodeURIComponent(`
@@ -36,9 +110,10 @@ const PLACEHOLDER_SVG = (width: number, height: number, text: string, bgColor = 
 /**
  * Get ship image with fallback chain:
  * 1. Wiki API thumbnail_url
- * 2. Wiki API original_url  
- * 3. Erkul.games ship image (by class_name)
- * 4. Generated placeholder
+ * 2. Erkul.games ship image (by class_name)
+ * 3. Erkul.games ship image (by base class_name for special editions)
+ * 4. Erkul by manufacturer + name
+ * 5. Generated placeholder
  */
 export function getShipImageSources(ship: {
   image_url?: string;
@@ -63,7 +138,19 @@ export function getShipImageSources(ship: {
     fallbacks.push(`${ERKUL_SHIPS}/${erkulName}.jpg`);
   }
 
-  // 3. Erkul by manufacturer + name
+  // 3. Special editions: try base ship image as fallback
+  if (ship.class_name) {
+    const baseClassName = resolveBaseShipClassName(ship.class_name);
+    if (baseClassName) {
+      const baseErkulName = baseClassName
+        .replace(/[_\s]+/g, '_')
+        .toLowerCase();
+      fallbacks.push(`${ERKUL_SHIPS}/${baseErkulName}.webp`);
+      fallbacks.push(`${ERKUL_SHIPS}/${baseErkulName}.png`);
+    }
+  }
+
+  // 4. Erkul by manufacturer + name
   if (ship.manufacturer?.code && ship.name) {
     const mfg = ship.manufacturer.code.toLowerCase();
     const name = ship.name.toLowerCase().replace(/[_\s]+/g, '_');
@@ -71,7 +158,7 @@ export function getShipImageSources(ship: {
     fallbacks.push(`${ERKUL_SHIPS}/${mfg}_${name}.png`);
   }
 
-  // 4. Placeholder
+  // 5. Placeholder
   const placeholder = PLACEHOLDER_SVG(400, 300, ship.name || "SHIP", "0F172A", "3B82F6");
 
   return {
@@ -233,6 +320,8 @@ const imagePipeline = {
   useProgressiveImage,
   preloadImage,
   preloadImages,
+  resolveBaseShipClassName,
+  detectSpecialEdition,
 };
 
 export default imagePipeline;

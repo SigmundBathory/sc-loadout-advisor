@@ -12,6 +12,7 @@ import { useShips, useOptimizedShipIds } from "@/lib/api/client";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { ShipImage } from "@/components/ui/ProgressiveImage";
 import { ClassBadge } from "@/components/ships/ClassBadge";
+import { SpecialEditionBadge } from "@/components/ships/SpecialEditionBadge";
 
 interface ShipSelectorProps {
   initialShips?: Ship[];
@@ -285,6 +286,11 @@ export default function ShipSelector({
                   <div className="relative h-36 w-full bg-muted/20 border-b border-border/30">
                     <ShipImage ship={ship} fill priority={false} alt={ship.name} />
                     <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
+                    {/* Special edition overlay badge */}
+                    <SpecialEditionBadge
+                      ship={ship}
+                      className="absolute top-2 right-2 shadow-lg backdrop-blur-sm"
+                    />
                   </div>
                   <CardContent className="p-5 space-y-3">
                     <div className="flex items-start justify-between gap-2">
@@ -296,12 +302,15 @@ export default function ShipSelector({
                           {ship.manufacturer?.name || "Unknown Manufacturer"}
                         </p>
                       </div>
-                      {optimizedShipIds.has(ship.id) && (
-                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1 shrink-0">
-                          <Wand2 className="h-3 w-3" />
-                          Optimizada
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <SpecialEditionBadge ship={ship} />
+                        {optimizedShipIds.has(ship.id) && (
+                          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
+                            <Wand2 className="h-3 w-3" />
+                            Optimizada
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between gap-2">
@@ -369,6 +378,7 @@ export default function ShipSelector({
                 </div>
 
                 <div className="shrink-0 flex items-center gap-3">
+                  <SpecialEditionBadge ship={ship} />
                   <ClassBadge classification={ship.classification} />
                   {optimizedShipIds.has(ship.id) && (
                     <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
