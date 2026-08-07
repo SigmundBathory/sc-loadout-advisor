@@ -59,42 +59,10 @@ export default async function ShipPage({ params }: ShipPageProps) {
             </div>
           </div>
 
-          {/* Cuerpo: holograma + specs */}
+          {/* Cuerpo: holograma (specs abajo en sección dedicada) */}
           <div className="p-5">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Holograma */}
-              <div className="flex items-center justify-center">
-                <HologramImage ship={ship} className="w-full max-w-[520px]" />
-              </div>
-
-              {/* Specs consolidadas */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Especificaciones
-                </h3>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "SCM", value: `${ship.scm_speed || 0} m/s`, icon: "Gauge", color: "text-blue-400" },
-                    { label: "Max Speed", value: `${ship.max_speed || 0} m/s`, icon: "Gauge", color: "text-blue-300" },
-                    { label: "HP Casco", value: `${(ship.hull_hp || 0).toLocaleString()}`, icon: "Shield", color: "text-emerald-400" },
-                    { label: "HP Escudos", value: `${(ship.shield_hp || 0).toLocaleString()}`, icon: "Shield", color: "text-cyan-400" },
-                    { label: "Tripulación", value: String(ship.crew), icon: "Users", color: "text-red-400" },
-                    { label: "Carga", value: `${ship.cargo_capacity} SCU`, icon: "Fuel", color: "text-amber-400" },
-                    { label: "Masa", value: `${(ship.mass || 0).toLocaleString()} kg`, icon: "Box", color: "text-slate-300" },
-                  ].map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/30"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</div>
-                        <div className={`font-mono font-bold text-sm ${stat.color}`}>{stat.value}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="flex items-center justify-center">
+              <HologramImage ship={ship} className="w-full max-w-[520px]" />
             </div>
           </div>
         </div>
