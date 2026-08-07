@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db/schema";
+import { detectSlotType, extractSize } from "@/lib/db/syncHelpers";
 
 interface ImportData {
   version?: string;
@@ -251,25 +252,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
-
-function detectSlotType(name: string, port: any): string {
-  const lower = name.toLowerCase();
-  const subtype = String(port.type || port.sub_type || "").toLowerCase();
-  if (lower.includes("weapon") || lower.includes("gun") || lower.includes("turret") || subtype.includes("weapon") || subtype.includes("gun"))
-    return "weapon";
-  if (lower.includes("shield") || subtype.includes("shield")) return "shield";
-  if (lower.includes("power") || lower.includes("plant") || subtype.includes("powerplant")) return "power_plant";
-  if (lower.includes("cooler") || subtype.includes("cooler")) return "cooler";
-  if (lower.includes("quantum") || lower.includes("qd") || subtype.includes("quantum")) return "quantum_drive";
-  if (lower.includes("missile") || lower.includes("ordinance") || subtype.includes("missile")) return "missile";
-  if (lower.includes("radar") || subtype.includes("radar")) return "radar";
-  if (lower.includes("thruster") || lower.includes("engine") || subtype.includes("thruster")) return "thruster";
-  if (lower.includes("flir")) return "flir";
-  return "weapon";
-}
-
-function extractSize(name: string): number {
-  const match = name.match(/[Ss](\d+)/);
-  return match ? parseInt(match[1]) : 1;
 }

@@ -2,12 +2,14 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Gauge, Thermometer, Navigation } from "lucide-react";
+import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Gauge, Thermometer, Navigation, GitCompare } from "lucide-react";
 import type { Component, Hardpoint } from "@/lib/types";
 import { sortComponentsForSlot, componentStatSummary } from "@/lib/optimizer/componentSort";
+import { componentDetailRows } from "@/lib/optimizer/componentDetail";
 import ComponentDetailPanel from "./ComponentDetailPanel";
 
 interface ComponentPickerDialogProps {
@@ -63,6 +65,8 @@ function PickerBody({
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
 
   const slotType = slot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
@@ -147,6 +151,12 @@ function PickerBody({
   }, [sorted, safeIndex, handleSelect, expandedId]);
 
   const handleRowClick = (comp: Component) => {
+    if (compareMode) {
+      setCompareIds((prev) =>
+        prev.includes(comp.id) ? prev.filter((id) => id !== comp.id) : prev.length < 3 ? [...prev, comp.id] : prev
+      );
+      return;
+    }
     setExpandedId(expandedId === comp.id ? null : comp.id);
     setActiveIndex(Math.max(0, sorted.findIndex((c) => c.id === comp.id)));
   };
@@ -183,12 +193,18 @@ function PickerBody({
           (mejor primero)
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => { setCompareMode((v) => !v); if (compareMode) setCompareIds([]); }}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
+              compareMode ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <GitCompare className="h-3 w-3" />
+            {compareMode ? `Comparar (${compareIds.length})` : "Comparar"}
+          </button>
           <span className="font-mono text-muted-foreground/80">
             {sorted.length} resultado{sorted.length !== 1 ? "s" : ""}
           </span>
-          <kbd className="hidden sm:inline-flex items-center gap-1 rounded bg-muted/60 border border-border/40 px-1.5 py-0.5 text-[10px] font-mono">
-            ↑↓ Enter
-          </kbd>
         </div>
       </div>
 
@@ -228,6 +244,13 @@ function PickerBody({
                     onClick={() => handleRowClick(comp)}
                   >
                     <div className="flex items-start justify-between gap-2">
+                      {compareMode && (
+                        <div className={`mt-1 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                          compareIds.includes(comp.id) ? "bg-primary border-primary" : "border-muted-foreground/40"
+                        }`}>
+                          {compareIds.includes(comp.id) && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                        </div>
+                      )}
                       <div className="space-y-0.5 min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-bold text-sm text-foreground truncate">{comp.name}</span>
@@ -296,6 +319,96 @@ function PickerBody({
           </div>
         )}
       </ScrollArea>
+
+      {compareMode && compareIds.length >= 2 && (
+        <ComparePanel
+          components={compareIds.map((id) => sorted.find((c) => c.id === id)!).filter(Boolean)}
+          equipped={equippedComponent}
+          onSelect={(comp) => { handleSelect(comp); setCompareMode(false); setCompareIds([]); }}
+        />
+      )}
     </>
+  );
+}
+
+function ComparePanel({
+  components,
+  equipped,
+  onSelect,
+}: {
+  components: Component[];
+  equipped?: Component | null;
+  onSelect: (comp: Component) => void;
+}) {
+  const allRows = useMemo(() => {
+    if (components.length === 0) return [];
+    const base = componentDetailRows(components[0]);
+    return base.map((row) => ({
+      label: row.label,
+      format: row.format,
+      lowerBetter: row.lowerBetter,
+      values: components.map((c) => {
+        const r = componentDetailRows(c).find((r: { label: string }) => r.label === row.label);
+        return r?.format ?? "—";
+      }),
+      nums: components.map((c) => {
+        const r = componentDetailRows(c).find((r: { label: string }) => r.label === row.label);
+        return r?.value ?? 0;
+      }),
+    }));
+  }, [components]);
+
+  const COLORS = ["text-primary", "text-cyan-400", "text-amber-400"];
+
+  return (
+    <div className="glass-panel border border-primary/30 rounded-xl p-3 space-y-2 shrink-0">
+      <h4 className="text-xs font-bold text-primary flex items-center gap-1.5">
+        <GitCompare className="h-3.5 w-3.5" /> Comparacion directa
+      </h4>
+      <div className="rounded-lg border border-border/30 overflow-hidden">
+        <div className={`grid gap-px bg-border/30 text-[10px]`} style={{ gridTemplateColumns: `1fr repeat(${components.length}, 1fr)` }}>
+          <div className="bg-muted/40 px-2 py-1 font-semibold text-muted-foreground">Stat</div>
+          {components.map((c, i) => (
+            <div key={c.id} className="bg-muted/40 px-2 py-1 font-semibold text-center truncate">
+              <span className={COLORS[i]}>{c.name}</span>
+            </div>
+          ))}
+          {allRows.map((row: { label: string; format?: string; lowerBetter?: boolean; values: string[]; nums: number[] }) => {
+            const maxVal = Math.max(...row.nums);
+            const minVal = Math.min(...row.nums.filter((n: number) => n !== 0));
+            return (
+              <div key={row.label} className="contents">
+                <div className="bg-card/40 px-2 py-1 text-foreground/90">{row.label}</div>
+                {row.values.map((val: string, i: number) => {
+                  const num = row.nums[i];
+                  const isBest = row.lowerBetter ? num === minVal && num !== 0 : num === maxVal && num !== 0;
+                  const isWorst = row.lowerBetter ? num === maxVal && num !== minVal : num === minVal && num !== maxVal;
+                  return (
+                    <div key={i} className="bg-card/40 px-2 py-1 font-mono text-center text-foreground">
+                      <span className={isBest ? "text-emerald-400 font-bold" : isWorst ? "text-red-400" : ""}>
+                        {val}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex gap-2">
+        {components.map((c, i) => (
+          <Button
+            key={c.id}
+            size="sm"
+            variant={i === 0 ? "default" : "outline"}
+            className="flex-1 rounded-xl text-xs h-7"
+            onClick={() => onSelect(c)}
+          >
+            Equipar {c.name.slice(0, 12)}
+          </Button>
+        ))}
+      </div>
+    </div>
   );
 }

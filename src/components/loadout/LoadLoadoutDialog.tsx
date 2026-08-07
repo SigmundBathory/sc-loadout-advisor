@@ -14,6 +14,7 @@ import {
   type ImportedLoadout,
 } from "@/lib/loadout/share";
 import { Download, Upload, Link2, Check, FileJson } from "lucide-react";
+import { toast } from "sonner";
 
 interface LoadLoadoutDialogProps {
   open: boolean;
@@ -69,6 +70,11 @@ export default function LoadLoadoutDialog({
       preset: loadout.optimized_preset,
     });
     const ok = await copyShareUrl(url);
+    if (ok) {
+      toast.success("Enlace copiado", { description: "Comparte tu loadout con este enlace" });
+    } else {
+      toast.error("Error", { description: "No se pudo copiar el enlace" });
+    }
     setFeedback(ok ? "¡Enlace copiado al portapapeles!" : "No se pudo copiar el enlace.");
     setError("");
     setTimeout(() => setFeedback(""), 2500);

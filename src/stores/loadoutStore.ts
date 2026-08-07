@@ -150,6 +150,7 @@ export const useLoadoutStore = create<LoadoutStore>()(
       name: "sc-loadout-store",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
+        selectedShip: state.selectedShip,
         slotAssignments: state.slotAssignments,
         loadoutName: state.loadoutName,
         savedLoadouts: state.savedLoadouts,

@@ -8,6 +8,7 @@ import Footer from "@/components/layout/Footer";
 import StarBackground from "@/components/layout/StarBackground";
 import QueryProvider from "@/components/QueryProvider";
 import ThemeInitializer from "@/components/ThemeInitializer";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
               <ThemeInitializer />
               <div className="flex-1 flex flex-col">{children}</div>
               <Footer />
+              <Toaster richColors position="bottom-right" />
             </ThemeProvider>
           </QueryProvider>
         </TooltipProvider>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Check } from "lucide-react";
+import { toast } from "sonner";
 import type { Ship } from "@/lib/types";
 
 interface SaveLoadoutDialogProps {
@@ -24,12 +25,15 @@ export default function SaveLoadoutDialog({ open, onOpenChange, ship, onSave }: 
     setSaving(true);
     try {
       await onSave(name.trim());
+      toast.success("Loadout guardado", { description: `"${name.trim()}" guardado correctamente` });
       setSuccessMsg("¡Loadout guardado correctamente!");
       setTimeout(() => {
         setSuccessMsg("");
         onOpenChange(false);
         setName("");
       }, 1500);
+    } catch {
+      toast.error("Error al guardar", { description: "No se pudo guardar el loadout" });
     } finally {
       setSaving(false);
     }

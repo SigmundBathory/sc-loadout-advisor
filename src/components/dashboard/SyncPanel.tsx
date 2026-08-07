@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Rocket, Download, Upload, ArrowRight, CheckCircle2, Loader2, AlertCircle, Globe, MapPin, ClipboardList } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
 
 type SyncState = "idle" | "syncing" | "done" | "error";
@@ -38,6 +39,7 @@ export default function SyncPanel() {
       if (res.ok) {
         setState("done");
         setMessage(data.message || "Sincronización completa. Recargando...");
+        toast.success("Sincronización completa", { description: data.message || "Datos actualizados correctamente" });
         
         // Update step states based on response
         if (data.steps) {
@@ -52,6 +54,7 @@ export default function SyncPanel() {
       } else {
         setState("error");
         setMessage(data.error || "Error en la sincronización");
+        toast.error("Error en sincronización", { description: data.error || "Error desconocido" });
         setStepStates(prev => prev.map((s, i) => ({
           ...s,
           status: data.steps?.[i]?.status === "error" ? "error" : s.status
