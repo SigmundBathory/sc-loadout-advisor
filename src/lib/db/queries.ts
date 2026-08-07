@@ -451,21 +451,23 @@ export function getDashboardStats() {
 export function getTopShipsByDps(limit: number = 5) {
   const db = getDb();
   const rows = db.prepare(`
-    SELECT s.id, s.name, s.classification, s.image_url, s.mass, s.hull_hp, s.shield_hp,
-           (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'weapon') as weapons,
-           (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'shield') as shields,
-           (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'missile') as missiles
-    FROM ships s
-    WHERE s.hull_hp > 0
-    HAVING weapons > 0
+    SELECT * FROM (
+      SELECT s.id, s.name, s.classification, s.image_url, s.mass, s.hull_hp, s.shield_hp,
+             (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'weapon') as weapons,
+             (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'shield') as shields,
+             (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'missile') as missiles
+      FROM ships s
+      WHERE s.hull_hp > 0
+    ) sub
+    WHERE weapons > 0
     ORDER BY
       CASE
-        WHEN s.mass > 10000000 THEN 1
-        WHEN s.mass > 1000000 THEN 2
-        WHEN s.mass > 100000 THEN 3
+        WHEN mass > 10000000 THEN 1
+        WHEN mass > 1000000 THEN 2
+        WHEN mass > 100000 THEN 3
         ELSE 4
       END,
-      weapons DESC, s.mass DESC
+      weapons DESC, mass DESC
     LIMIT ?
   `).all([limit]) as any[];
   return rows;
