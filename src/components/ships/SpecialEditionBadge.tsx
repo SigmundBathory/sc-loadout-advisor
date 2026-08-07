@@ -45,6 +45,31 @@ const EDITION_CONFIG: Record<SpecialEditionType, {
   },
 };
 
+const VARIANT_LABELS: Record<string, string> = {
+  Stealth: "Stealth",
+  Military: "Military",
+  Industrial: "Industrial",
+  Indust: "Industrial",
+  Mod: "Mod",
+  Competition: "Competition",
+  Medic: "Medic",
+  Milt: "Military",
+  Civet: "Civet",
+  Civilian: "Civilian",
+  Grad02: "Grad",
+};
+
+function getVariantLabel(class_name?: string): string | null {
+  if (!class_name) return null;
+  const cn = class_name.toLowerCase();
+  for (const [key, label] of Object.entries(VARIANT_LABELS)) {
+    if (cn.endsWith(`_${key.toLowerCase()}`) || cn.includes(`_${key.toLowerCase()}_`)) {
+      return label;
+    }
+  }
+  return null;
+}
+
 export function SpecialEditionBadge({
   ship,
   className,
@@ -57,6 +82,7 @@ export function SpecialEditionBadge({
 
   const config = EDITION_CONFIG[editionType];
   const Icon = config.icon;
+  const variant = getVariantLabel(ship.class_name);
 
   return (
     <Badge
@@ -68,7 +94,7 @@ export function SpecialEditionBadge({
       )}
     >
       <Icon className="h-3 w-3" />
-      {config.label}
+      {config.label}{variant ? ` \u2022 ${variant}` : ""}
     </Badge>
   );
 }

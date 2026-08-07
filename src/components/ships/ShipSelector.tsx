@@ -286,11 +286,6 @@ export default function ShipSelector({
                   <div className="relative h-36 w-full bg-muted/20 border-b border-border/30">
                     <ShipImage ship={ship} fill priority={false} alt={ship.name} />
                     <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
-                    {/* Special edition overlay badge */}
-                    <SpecialEditionBadge
-                      ship={ship}
-                      className="absolute top-2 right-2 shadow-lg backdrop-blur-sm"
-                    />
                   </div>
                   <CardContent className="p-5 space-y-3">
                     <div className="flex items-start justify-between gap-2">
@@ -311,6 +306,7 @@ export default function ShipSelector({
                         )}
                       </div>
                     </div>
+                    <SpecialEditionBadge ship={ship} />
 
                     <div className="flex items-center justify-between gap-2">
                       <ClassBadge classification={ship.classification} />
@@ -362,6 +358,7 @@ export default function ShipSelector({
                   <div className="min-w-0">
                     <h3 className="font-bold text-base text-foreground truncate">{ship.name}</h3>
                     <p className="text-xs text-muted-foreground">{ship.manufacturer?.name}</p>
+                    <SpecialEditionBadge ship={ship} className="mt-1" />
                   </div>
                 </div>
 
@@ -377,7 +374,6 @@ export default function ShipSelector({
                 </div>
 
                 <div className="shrink-0 flex items-center gap-3">
-                  <SpecialEditionBadge ship={ship} />
                   <ClassBadge classification={ship.classification} />
                   {optimizedShipIds.has(ship.id) && (
                     <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
