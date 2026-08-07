@@ -80,6 +80,7 @@ export interface ComponentStats {
   range?: number;
   velocity?: number;
   ammo?: number;
+  capacity?: number;
   penetration?: number;
   damage_type?: string;
   // Shields
@@ -87,6 +88,7 @@ export interface ComponentStats {
   max_hp?: number;
   regen_rate?: number;
   regen_delay?: number;
+  regen_time?: number;
   decay_ratio?: number;
   resistance_phys?: number;
   resistance_energy?: number;

@@ -16,6 +16,30 @@ function fmt(v: number, digits = 0): string {
   return v.toLocaleString("es-ES", { maximumFractionDigits: digits });
 }
 
+function pct(v: number): string {
+  return `${(v * 100).toFixed(1)}%`;
+}
+
+/**
+ * Quantum Drive max range formula:
+ * range_gm = (fuel_capacity_scu * fuel_efficiency) / fuel_consumption_scu_per_gm
+ * range_au = range_gm / 149.598  (1 AU = 149.598 Gm)
+ *
+ * fuel_capacity varies per SHIP, not per drive. We show range per 100 SCU as reference.
+ * The actual range = (ship_fuel_capacity * efficiency) / consumption.
+ */
+function calcQdRangePer100Scu(efficiency: number, consumption: number): number {
+  if (consumption <= 0) return 0;
+  return (100 * efficiency) / consumption; // in Gm
+}
+
+function formatGm(gm: number): string {
+  if (gm <= 0) return "—";
+  const au = gm / 149.598;
+  if (au >= 1) return `${fmt(au, 1)} AU`;
+  return `${fmt(gm, 0)} Gm`;
+}
+
 /** Returns the relevant stat rows for a component type, in display order. */
 export function componentDetailRows(comp: Component): StatRow[] {
   const s: ComponentStats = comp.stats;
@@ -23,63 +47,71 @@ export function componentDetailRows(comp: Component): StatRow[] {
     case "Weapon":
       return [
         { label: "DPS", value: n(s.dps), format: fmt(n(s.dps)) },
-        { label: "Alpha (daño/disparo)", value: n(s.alpha), format: fmt(n(s.alpha)) },
-        { label: "Cadencia", value: n(s.fire_rate), format: `${fmt(n(s.fire_rate))}/min` },
+        { label: "Alpha", value: n(s.alpha), format: fmt(n(s.alpha)) },
+        { label: "Cadencia", value: n(s.fire_rate), format: `${fmt(n(s.fire_rate))} RPM` },
         { label: "Alcance", value: n(s.range), format: `${fmt(n(s.range) / 1000, 1)} km` },
-        { label: "Velocidad proyectil", value: n(s.velocity), format: `${fmt(n(s.velocity) / 1000)} m/s` },
-        { label: "Munición", value: n(s.ammo), format: fmt(n(s.ammo)) },
-        { label: "Penetración", value: n(s.penetration), format: `${fmt(n(s.penetration), 1)} m` },
-        { label: "Tipo de daño", value: 0, format: s.damage_type || "—" },
+        { label: "Capacidad", value: n(s.capacity), format: `${fmt(n(s.capacity))} disp.` },
       ];
-    case "Shield":
+    case "Shield": {
+      const res = s.resistance || {};
+      const physRes = res.physical || { min: 0, max: 0 };
+      const energyRes = res.energy || { min: 0, max: 0 };
+      const distortRes = res.distortion || { min: 0, max: 0 };
       return [
         { label: "HP", value: n(s.hp), format: fmt(n(s.hp)) },
         { label: "Regen", value: n(s.regen_rate), format: `${fmt(n(s.regen_rate))}/s` },
-        { label: "Delay de regen", value: n(s.regen_delay), format: `${fmt(n(s.regen_delay), 1)}s`, lowerBetter: true },
-        { label: "Resist. físico", value: n(s.resistance_phys), format: `${fmt(n(s.resistance_phys))}%` },
-        { label: "Resist. energía", value: n(s.resistance_energy), format: `${fmt(n(s.resistance_energy))}%` },
-        { label: "Resist. distorsión", value: n(s.resistance_distort), format: `${fmt(n(s.resistance_distort))}%` },
+        { label: "Delay regen", value: n(s.regen_time), format: `${fmt(n(s.regen_time), 2)}s`, lowerBetter: true },
+        { label: "Decay", value: n(s.decay_ratio), format: pct(n(s.decay_ratio)), lowerBetter: true },
+        { label: "Resist. fisico", value: physRes.max, format: pct(physRes.max) },
+        { label: "Resist. energia", value: energyRes.max, format: pct(energyRes.max) },
+        { label: "Resist. distorsion", value: distortRes.max, format: pct(distortRes.max) },
       ];
+    }
     case "PowerPlant":
       return [
-        { label: "Salida", value: n(s.output), format: `${fmt(n(s.output))} W` },
+        { label: "Segmentos", value: n(s.power_segment_generation), format: `${fmt(n(s.power_segment_generation))} seg/s` },
         { label: "Firma EM", value: n(s.emission_em_max), format: fmt(n(s.emission_em_max)), lowerBetter: true },
         { label: "Firma IR", value: n(s.emission_ir), format: fmt(n(s.emission_ir)), lowerBetter: true },
       ];
     case "Cooler":
       return [
         { label: "Enfriamiento", value: n(s.cooling_rate), format: `${fmt(n(s.cooling_rate))} c/s` },
-        { label: "Supres. IR", value: n(s.suppression_ir), format: fmt(n(s.suppression_ir)) },
-        { label: "Supres. calor", value: n(s.suppression_heat), format: fmt(n(s.suppression_heat)) },
+        { label: "Firma EM", value: n(s.emission_em_max), format: fmt(n(s.emission_em_max)), lowerBetter: true },
+        { label: "Firma IR", value: n(s.emission_ir), format: fmt(n(s.emission_ir)), lowerBetter: true },
       ];
-    case "QuantumDrive":
+    case "QuantumDrive": {
+      const eff = n(s.fuel_efficiency);
+      const consumption = n(s.fuel_consumption_scu_per_gm);
+      const rangePer100 = calcQdRangePer100Scu(eff, consumption);
       return [
-        { label: "Alcance", value: n(s.quantum_fuel_claimed) || n(s.fuel_efficiency) * 1e8, format: formatRange(n(s.quantum_fuel_claimed) || n(s.fuel_efficiency) * 1e8) },
         { label: "Velocidad QT", value: n(s.travel_speed), format: `${fmt(n(s.travel_speed) / 1e6, 1)} Gkm/s` },
-        { label: "Consumo", value: n(s.fuel_consumption_scu_per_gm), format: n(s.fuel_consumption_scu_per_gm) > 0 ? `${fmt(n(s.fuel_consumption_scu_per_gm), 4)} SCU/Gm` : "—", lowerBetter: true },
-        { label: "Fuel rate", value: n(s.fuel_rate), format: `${fmt(n(s.fuel_rate), 2)} SCU/s`, lowerBetter: true },
-        { label: "Spool time", value: n(s.spool_time), format: `${fmt(n(s.spool_time), 1)}s`, lowerBetter: true },
+        { label: "Alcance @100SCU", value: rangePer100, format: formatGm(rangePer100) },
+        { label: "Eficiencia", value: eff, format: fmt(eff, 2) },
+        { label: "Consumo", value: consumption, format: consumption > 0 ? `${fmt(consumption, 4)} SCU/Gm` : "—", lowerBetter: true },
+        { label: "Fuel rate", value: n(s.fuel_rate), format: `${fmt(n(s.fuel_rate) * 1e9, 2)} nSCU/s`, lowerBetter: true },
+        { label: "Spool", value: n(s.spool_time), format: `${fmt(n(s.spool_time), 1)}s`, lowerBetter: true },
         { label: "Cooldown", value: n(s.cooldown), format: `${fmt(n(s.cooldown), 1)}s`, lowerBetter: true },
       ];
+    }
     case "Radar":
       return [
         { label: "Alcance", value: n(s.range), format: `${fmt(n(s.range) / 1000, 1)} km` },
-        { label: "Sens. EM", value: n(s.sensitivity_em), format: `${fmt(n(s.sensitivity_em) * 100)}%` },
-        { label: "Sens. IR", value: n(s.sensitivity_ir), format: `${fmt(n(s.sensitivity_ir) * 100)}%` },
-        { label: "Sens. CS", value: n(s.sensitivity_cs), format: `${fmt(n(s.sensitivity_cs) * 100)}%` },
+        { label: "Sens. EM", value: n(s.sensitivity_em), format: pct(n(s.sensitivity_em)) },
+        { label: "Sens. IR", value: n(s.sensitivity_ir), format: pct(n(s.sensitivity_ir)) },
+        { label: "Sens. CS", value: n(s.sensitivity_cs), format: pct(n(s.sensitivity_cs)) },
       ];
     case "FlightController":
       return [
-        { label: "SCM speed", value: n(s.scm_speed), format: `${fmt(n(s.scm_speed))} m/s` },
-        { label: "Max speed", value: n(s.max_speed), format: `${fmt(n(s.max_speed))} m/s` },
-        { label: "Boost", value: n(s.boost_forward), format: fmt(n(s.boost_forward)) },
-        { label: "Pitch", value: n(s.pitch), format: fmt(n(s.pitch)) },
-        { label: "Yaw", value: n(s.yaw), format: fmt(n(s.yaw)) },
-        { label: "Roll", value: n(s.roll), format: fmt(n(s.roll)) },
+        { label: "SCM", value: n(s.scm_speed), format: `${fmt(n(s.scm_speed))} m/s` },
+        { label: "Max", value: n(s.max_speed), format: `${fmt(n(s.max_speed))} m/s` },
+        { label: "Boost", value: n(s.boost_forward), format: `${fmt(n(s.boost_forward))} m/s` },
+        { label: "Pitch", value: n(s.pitch), format: `${fmt(n(s.pitch))} °/s` },
+        { label: "Yaw", value: n(s.yaw), format: `${fmt(n(s.yaw))} °/s` },
+        { label: "Roll", value: n(s.roll), format: `${fmt(n(s.roll))} °/s` },
       ];
     case "LifeSupport":
       return [
-        { label: "Salida", value: n(s.output), format: `${fmt(n(s.output))} W` },
+        { label: "Grado", value: gradeToNumber(s.grade), format: `G${fmt(gradeToNumber(s.grade))}` },
         { label: "Firma EM", value: n(s.emission_em_max), format: fmt(n(s.emission_em_max)), lowerBetter: true },
       ];
     case "Missile":
@@ -95,15 +127,9 @@ export function componentDetailRows(comp: Component): StatRow[] {
       ];
     default:
       return [
-        { label: "Grado", value: gradeToNumber(s.grade), format: fmt(gradeToNumber(s.grade)) },
+        { label: "Grado", value: gradeToNumber(s.grade), format: `G${fmt(gradeToNumber(s.grade))}` },
         { label: "Salida", value: n(s.output), format: fmt(n(s.output)) },
         { label: "HP", value: n(s.hp), format: fmt(n(s.hp)) },
       ];
   }
-}
-
-function formatRange(v: number): string {
-  if (v >= 1e8) return `${(v / 1e12).toFixed(2)} AU`;
-  if (v >= 100000) return `${(v / 1000000).toFixed(2)}M km`;
-  return v.toFixed(1);
 }

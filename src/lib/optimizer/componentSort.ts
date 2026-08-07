@@ -30,18 +30,22 @@ const gradeToNumber = (g: Component["stats"]["grade"]): number =>
 
 export const SORT_CONFIGS: Record<string, SortConfig> = {
   QuantumDrive: {
-    primary: (s) => n(s.quantum_fuel_claimed) || (s.fuel_efficiency ? s.fuel_efficiency * 1e8 : 0),
-    primaryLabel: "Alcance",
+    primary: (s) => {
+      const eff = n(s.fuel_efficiency);
+      const consumption = n(s.fuel_consumption_scu_per_gm);
+      return consumption > 0 ? (100 * eff) / consumption : eff * 1e8;
+    },
+    primaryLabel: "Alcance @100SCU",
     formatPrimary: (v) => {
-      if (v >= 1e8) return `${(v / 1e12).toFixed(2)} AU`;
-      if (v >= 100000) return `${(v / 1000000).toFixed(2)}M km`;
-      return v.toFixed(1);
+      const au = v / 149.598;
+      if (au >= 1) return `${au.toFixed(1)} AU`;
+      return `${v.toFixed(0)} Gm`;
     },
     tradeoffs: [
-      { label: "Velocidad", value: (s) => n(s.travel_speed), format: (v) => `${(v / 1000000).toFixed(1)} Gkm/s` },
+      { label: "Velocidad", value: (s) => n(s.travel_speed), format: (v) => `${(v / 1e6).toFixed(1)} Gkm/s` },
       { label: "Consumo", value: (s) => n(s.fuel_consumption_scu_per_gm), format: (v) => (v > 0 ? `${v.toFixed(4)} SCU/Gm` : "—"), lowerBetter: true },
       { label: "Spool", value: (s) => n(s.spool_time), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
-      { label: "Enfriado", value: (s) => n(s.cooldown), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
+      { label: "Cooldown", value: (s) => n(s.cooldown), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
     ],
   },
   Weapon: {
@@ -49,9 +53,8 @@ export const SORT_CONFIGS: Record<string, SortConfig> = {
     primaryLabel: "DPS",
     tradeoffs: [
       { label: "Alpha", value: (s) => n(s.alpha), format: (v) => v.toFixed(0) },
-      { label: "Cadencia", value: (s) => n(s.fire_rate), format: (v) => `${v.toFixed(0)}/m` },
+      { label: "Cadencia", value: (s) => n(s.fire_rate), format: (v) => `${v.toFixed(0)} RPM` },
       { label: "Alcance", value: (s) => n(s.range), format: (v) => `${(v / 1000).toFixed(1)} km` },
-      { label: "Veloc. proyectil", value: (s) => n(s.velocity), format: (v) => `${(v / 1000).toFixed(0)} m/s` },
     ],
   },
   Shield: {
@@ -59,14 +62,14 @@ export const SORT_CONFIGS: Record<string, SortConfig> = {
     primaryLabel: "HP",
     tradeoffs: [
       { label: "Regen", value: (s) => n(s.regen_rate), format: (v) => `${v.toFixed(0)}/s` },
-      { label: "Regen delay", value: (s) => n(s.regen_delay), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
+      { label: "Delay", value: (s) => n(s.regen_time), format: (v) => `${v.toFixed(2)}s`, lowerBetter: true },
       { label: "Grado", value: (s) => gradeToNumber(s.grade) },
     ],
   },
   PowerPlant: {
-    primary: (s) => n(s.output) || n(s.power_segment_generation),
-    primaryLabel: "Salida",
-    formatPrimary: (v) => `${v.toLocaleString()} W`,
+    primary: (s) => n(s.power_segment_generation),
+    primaryLabel: "Segmentos",
+    formatPrimary: (v) => `${v} seg/s`,
     tradeoffs: [
       { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
     ],
@@ -99,10 +102,12 @@ export const SORT_CONFIGS: Record<string, SortConfig> = {
     ],
   },
   LifeSupport: {
-    primary: (s) => n(s.output),
-    primaryLabel: "Salida",
-    formatPrimary: (v) => `${v.toLocaleString()} W`,
-    tradeoffs: [],
+    primary: (s) => gradeToNumber(s.grade),
+    primaryLabel: "Grado",
+    formatPrimary: (v) => `G${v}`,
+    tradeoffs: [
+      { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
+    ],
   },
   Missile: {
     primary: (s) => n(s.alpha),
