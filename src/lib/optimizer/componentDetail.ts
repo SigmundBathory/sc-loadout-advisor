@@ -61,6 +61,8 @@ export function componentDetailRows(comp: Component): StatRow[] {
         { label: "HP", value: n(s.hp), format: fmt(n(s.hp)) },
         { label: "Regen", value: n(s.regen_rate), format: `${fmt(n(s.regen_rate))}/s` },
         { label: "Delay regen", value: n(s.regen_time), format: `${fmt(n(s.regen_time), 2)}s`, lowerBetter: true },
+        { label: "Delay downed", value: n(s.regen_delay_downed), format: `${fmt(n(s.regen_delay_downed), 1)}s`, lowerBetter: true },
+        { label: "Delay damage", value: n(s.regen_delay_damage), format: `${fmt(n(s.regen_delay_damage), 1)}s`, lowerBetter: true },
         { label: "Decay", value: n(s.decay_ratio), format: pct(n(s.decay_ratio)), lowerBetter: true },
         { label: "Resist. fisico", value: physRes.max, format: pct(physRes.max) },
         { label: "Resist. energia", value: energyRes.max, format: pct(energyRes.max) },
@@ -72,6 +74,8 @@ export function componentDetailRows(comp: Component): StatRow[] {
         { label: "Segmentos", value: n(s.power_segment_generation), format: `${fmt(n(s.power_segment_generation))} seg/s` },
         { label: "Firma EM", value: n(s.emission_em_max), format: fmt(n(s.emission_em_max)), lowerBetter: true },
         { label: "Firma IR", value: n(s.emission_ir), format: fmt(n(s.emission_ir)), lowerBetter: true },
+        { label: "Overheat", value: n(s.overheat_threshold), format: `${fmt(n(s.overheat_threshold), 0)}°C` },
+        { label: "HP componente", value: n(s.component_hp), format: fmt(n(s.component_hp)) },
       ];
     case "Cooler":
       return [
@@ -86,6 +90,8 @@ export function componentDetailRows(comp: Component): StatRow[] {
       return [
         { label: "Velocidad QT", value: n(s.travel_speed), format: `${fmt(n(s.travel_speed) / 1e6, 1)} Gkm/s` },
         { label: "Alcance @100SCU", value: rangePer100, format: formatGm(rangePer100) },
+        { label: "Tiempo 10GM", value: n(s.travel_time_10gm), format: n(s.travel_time_10gm) > 0 ? `${fmt(n(s.travel_time_10gm))}s` : "—" },
+        { label: "Disconnect", value: n(s.disconnect_range), format: n(s.disconnect_range) > 0 ? `${fmt(n(s.disconnect_range))} km` : "—" },
         { label: "Eficiencia", value: eff, format: fmt(eff, 2) },
         { label: "Consumo", value: consumption, format: consumption > 0 ? `${fmt(consumption, 4)} SCU/Gm` : "—", lowerBetter: true },
         { label: "Fuel rate", value: n(s.fuel_rate), format: `${fmt(n(s.fuel_rate) * 1e9, 2)} nSCU/s`, lowerBetter: true },
@@ -95,7 +101,7 @@ export function componentDetailRows(comp: Component): StatRow[] {
     }
     case "Radar":
       return [
-        { label: "Alcance", value: n(s.range), format: `${fmt(n(s.range) / 1000, 1)} km` },
+        { label: "Alcance", value: n(s.detection_range) || n(s.range), format: `${fmt((n(s.detection_range) || n(s.range)) / 1000, 1)} km` },
         { label: "Sens. EM", value: n(s.sensitivity_em), format: pct(n(s.sensitivity_em)) },
         { label: "Sens. IR", value: n(s.sensitivity_ir), format: pct(n(s.sensitivity_ir)) },
         { label: "Sens. CS", value: n(s.sensitivity_cs), format: pct(n(s.sensitivity_cs)) },
@@ -112,6 +118,7 @@ export function componentDetailRows(comp: Component): StatRow[] {
     case "LifeSupport":
       return [
         { label: "Grado", value: gradeToNumber(s.grade), format: `G${fmt(gradeToNumber(s.grade))}` },
+        { label: "Salida", value: n(s.output), format: `${fmt(n(s.output))} u/s` },
         { label: "Firma EM", value: n(s.emission_em_max), format: fmt(n(s.emission_em_max)), lowerBetter: true },
       ];
     case "Missile":

@@ -132,15 +132,18 @@ export function syncWeapons(db: Database, weapons: any[]): number {
         const rpm = Number(vw.rpm) || 0;
         dps = rpm > 0 ? Math.round((alpha * rpm) / 60) : 0;
       }
+      const grade = normalizeGrade(weapon.grade || 3);
       const stats = {
+        grade,
         dps, alpha: Number(vw.damage_per_shot) || 0, fire_rate: Number(vw.rpm) || 0,
         range: Number(vw.range) || 0, capacity: Number(vw.capacity) || 0,
       };
       const wepId = String(weapon.uuid || weapon.class_name || `weapon_${count}`);
       const image = (weapon.images?.[0]?.thumbnail_url || weapon.images?.[0]?.original_url) || "";
+      const weaponClass = weapon.class || weapon.sub_type || "";
       insertComponent.run([
         wepId, String(weapon.name || "Unknown Weapon"), String(weapon.class_name || weapon.name || "Unknown"),
-        String(mfg.code || ""), "Weapon", Number(weapon.size) || 1, String(weapon.sub_type || ""),
+        String(mfg.code || ""), "Weapon", Number(weapon.size) || 1, String(weaponClass),
         JSON.stringify(stats), String(image)
       ]);
       count++;
@@ -191,8 +194,19 @@ export function extractPortComponents(vehicles: any[]): Map<string, any> {
   return map;
 }
 
+export function normalizeGrade(grade: any): number {
+  if (typeof grade === "number") return grade;
+  const g = String(grade || "").toUpperCase().trim();
+  if (g === "A" || g === "1") return 1;
+  if (g === "B" || g === "2") return 2;
+  if (g === "C" || g === "3") return 3;
+  if (g === "D" || g === "4") return 4;
+  return 3;
+}
+
 export function extractWikiStats(compType: string, wikiItem: any): Record<string, any> {
   const stats: Record<string, any> = {};
+
   if (compType === "Shield" && wikiItem.shield) {
     const s = wikiItem.shield;
     stats.hp = s.max_health || 0;
@@ -202,12 +216,29 @@ export function extractWikiStats(compType: string, wikiItem: any): Record<string
     stats.decay_ratio = s.decay_ratio || 0;
     if (s.absorption) stats.absorption = s.absorption;
     if (s.resistance) stats.resistance = s.resistance;
+    if (s.regen_delay) {
+      stats.regen_delay_downed = s.regen_delay.downed || 0;
+      stats.regen_delay_damage = s.regen_delay.damage || 0;
+    }
+    if (s.reserve_pool) {
+      stats.reserve_regen_rate = s.reserve_pool.regen_rate || 0;
+      stats.reserve_regen_time = s.reserve_pool.regen_time || 0;
+    }
   } else if (compType === "Shield" && wikiItem.durability) {
     stats.hp = wikiItem.durability.health || 0;
   } else if (compType === "PowerPlant" && wikiItem.power_plant) {
     const pp = wikiItem.power_plant;
     stats.output = pp.power_output || 0;
     stats.power_segment_generation = pp.power_segment_generation || 0;
+    if (wikiItem.temperature) {
+      stats.overheat_threshold = wikiItem.temperature.overheat_threshold || 0;
+    }
+    if (wikiItem.durability) {
+      stats.component_hp = wikiItem.durability.health || 0;
+      if (wikiItem.durability.resistance) {
+        stats.resistance = wikiItem.durability.resistance;
+      }
+    }
   } else if (compType === "Cooler") {
     const c = wikiItem.cooler || {};
     stats.cooling_rate = c.cooling_rate || c.coolant_segment_generation || 0;
@@ -222,6 +253,12 @@ export function extractWikiStats(compType: string, wikiItem: any): Record<string
     stats.fuel_efficiency = qd.fuel_efficiency || 0;
     stats.fuel_rate = qd.fuel_rate || 0;
     stats.fuel_consumption_scu_per_gm = qd.fuel_consumption_scu_per_gm || 0;
+    stats.disconnect_range = qd.disconnect_range || 0;
+    stats.travel_time_10gm = qd.travel_time_10gm?.seconds || 0;
+    stats.accel_rate = sj.stage_two_accel_rate || 0;
+    if (qd.spline_jump) {
+      stats.spline_speed = qd.spline_jump.drive_speed || 0;
+    }
     const jumpRange = Number(qd.jump_range);
     if (Number.isFinite(jumpRange) && jumpRange > 0 && jumpRange < 1e30) {
       stats.quantum_fuel_claimed = jumpRange;
@@ -265,6 +302,9 @@ export function extractWikiStats(compType: string, wikiItem: any): Record<string
     stats.emission_ir = wikiItem.emission.ir || 0;
     stats.emission_em_min = wikiItem.emission.em_min || 0;
     stats.emission_em_max = wikiItem.emission.em_max || 0;
+  }
+  if (wikiItem.durability && compType !== "Shield" && compType !== "PowerPlant") {
+    stats.component_hp = wikiItem.durability.health || 0;
   }
   return stats;
 }
@@ -337,12 +377,12 @@ export function syncComponentsFromPorts(
       const compId = String(comp.class_name);
       const compType = comp.type === "LifeSupportGenerator" ? "LifeSupport" : comp.type;
       const size = Number(comp.size) || 1;
-      const grade = Number(comp.grade) || 3;
 
       const wikiItem = wikiItemMap.get(comp.class_name.toLowerCase());
-      const stats: Record<string, any> = { grade };
+      const stats: Record<string, any> = {};
       let price = 0;
       let imageUrl = "";
+      let componentClass = comp.sub_type || "";
 
       if (wikiItem) {
         Object.assign(stats, extractWikiStats(compType, wikiItem));
@@ -356,20 +396,23 @@ export function syncComponentsFromPorts(
           imageUrl = wikiItem.images?.[0]?.thumbnail_url || wikiItem.images?.[0]?.original_url || "";
         }
         if (wikiItem.name) comp.name = wikiItem.name;
-        if (wikiItem.grade) stats.grade = wikiItem.grade;
+        if (wikiItem.class) componentClass = String(wikiItem.class);
       }
+
+      const grade = normalizeGrade(wikiItem?.grade || comp.grade || 3);
+      stats.grade = grade;
 
       applyFallbackEstimates(stats, compType, size, grade);
 
       insertComponent.run([
         compId, String(comp.name), String(comp.class_name), String(comp.manufacturer_name || ""),
-        compType, size, String(comp.sub_type || ""), JSON.stringify(stats), imageUrl
+        compType, size, componentClass, JSON.stringify(stats), imageUrl
       ]);
 
       if (price > 0) {
         updatePrice.run([compId, price]);
       } else {
-        updatePrice.run([compId, computeEstimatedPrice(compType, size, stats.grade || 3)]);
+        updatePrice.run([compId, computeEstimatedPrice(compType, size, grade)]);
       }
       count++;
     } catch (e) {

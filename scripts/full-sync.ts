@@ -106,13 +106,15 @@ async function main() {
   const startTime = Date.now();
   console.log("=== FULL SYNC START ===\n");
 
+  const force = process.argv.includes("--force");
+
   // 1. Wiki API + UEX sync
   console.log("--- Step 1: Wiki API + UEX Sync ---");
   await syncGameVersions();
   const vc = await checkVersionAndSync();
   console.log(`Wiki version: ${vc.currentVersion}`);
   if (vc.currentVersion) {
-    await syncDataForVersion(vc.currentVersion, (step: string, p: number) => console.log(`[${p}%] ${step}`));
+    await syncDataForVersion(vc.currentVersion, (step: string, p: number) => console.log(`[${p}%] ${step}`), { force });
   }
 
   // 2. Ship buy/rent/earn locations

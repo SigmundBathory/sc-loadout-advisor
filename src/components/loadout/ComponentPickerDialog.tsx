@@ -6,11 +6,20 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Gauge, Thermometer, Navigation, GitCompare, ShoppingCart, X } from "lucide-react";
+import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Gauge, Thermometer, Navigation, GitCompare, ShoppingCart, X, Filter } from "lucide-react";
 import type { Component, Hardpoint } from "@/lib/types";
 import { sortComponentsForSlot, componentStatSummary, type BuildProfile, PROFILE_LABELS } from "@/lib/optimizer/componentSort";
 import { componentDetailRows } from "@/lib/optimizer/componentDetail";
 import ComponentDetailPanel from "./ComponentDetailPanel";
+
+const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  Military: { bg: "bg-red-500/15", text: "text-red-400", border: "border-red-500/30" },
+  Civilian: { bg: "bg-sky-500/15", text: "text-sky-400", border: "border-sky-500/30" },
+  Stealth: { bg: "bg-purple-500/15", text: "text-purple-400", border: "border-purple-500/30" },
+  Industrial: { bg: "bg-orange-500/15", text: "text-orange-400", border: "border-orange-500/30" },
+  Competition: { bg: "bg-yellow-500/15", text: "text-yellow-400", border: "border-yellow-500/30" },
+};
+const TIER_ORDER = ["Military", "Stealth", "Competition", "Industrial", "Civilian"];
 
 interface ComponentPickerDialogProps {
   slot: Hardpoint | null;
@@ -69,6 +78,7 @@ function PickerBody({
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [profile, setProfile] = useState<BuildProfile>("balanced");
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [tierFilter, setTierFilter] = useState<string[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
 
   const slotType = slot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
@@ -101,8 +111,11 @@ function PickerBody({
     if (availableOnly) {
       filtered = filtered.filter((c) => c.buy_locations && c.buy_locations.length > 0);
     }
+    if (tierFilter.length > 0) {
+      filtered = filtered.filter((c) => c.class && tierFilter.includes(c.class));
+    }
     return sortComponentsForSlot(filtered, componentType, equippedId, profile);
-  }, [components, componentType, equippedId, search, profile, availableOnly]);
+  }, [components, componentType, equippedId, search, profile, availableOnly, tierFilter]);
 
   const equippedComponent = useMemo(
     () => components.find((c) => c.id === equippedId) || null,
@@ -206,6 +219,32 @@ function PickerBody({
         ))}
       </div>
 
+      {TIER_ORDER.filter((t) => components.some((c) => c.class === t)).length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground shrink-0">
+          <span className="px-1">Tier:</span>
+          {TIER_ORDER.filter((t) => components.some((c) => c.class === t)).map((tier) => {
+            const colors = TIER_COLORS[tier] || { bg: "bg-muted/60", text: "text-muted-foreground", border: "border-border/30" };
+            const isActive = tierFilter.includes(tier);
+            return (
+              <button
+                key={tier}
+                onClick={() => {
+                  setTierFilter((prev) => prev.includes(tier) ? prev.filter((x) => x !== tier) : [...prev, tier]);
+                  setActiveIndex(0);
+                }}
+                className={`flex items-center gap-0.5 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                  isActive
+                    ? `${colors.bg} ${colors.text} ${colors.border} shadow-sm`
+                    : "bg-muted/40 hover:bg-muted/60"
+                }`}
+              >
+                {tier}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground shrink-0">
         <div className="flex items-center gap-1.5">
           <ArrowUpDown className="h-3 w-3" />
@@ -303,6 +342,13 @@ function PickerBody({
                           ) : (
                             <Badge className="bg-muted/60 text-muted-foreground border-border/30 text-[9px] gap-0.5 px-1 py-0">
                               <X className="h-2.5 w-2.5" /> No disponible
+                            </Badge>
+                          )}
+                          {comp.class && TIER_COLORS[comp.class] && (
+                            <Badge
+                              className={`${TIER_COLORS[comp.class].bg} ${TIER_COLORS[comp.class].text} ${TIER_COLORS[comp.class].border} text-[9px] gap-0.5 px-1 py-0`}
+                            >
+                              {comp.class}
                             </Badge>
                           )}
                         </div>

@@ -7,6 +7,14 @@ import { X, MapPin, DollarSign, ShoppingBag, Check, Shield, Zap, Gauge, Thermome
 import type { Component } from "@/lib/types";
 import { componentDetailRows } from "@/lib/optimizer/componentDetail";
 
+const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  Military: { bg: "bg-red-500/15", text: "text-red-400", border: "border-red-500/30" },
+  Civilian: { bg: "bg-sky-500/15", text: "text-sky-400", border: "border-sky-500/30" },
+  Stealth: { bg: "bg-purple-500/15", text: "text-purple-400", border: "border-purple-500/30" },
+  Industrial: { bg: "bg-orange-500/15", text: "text-orange-400", border: "border-orange-500/30" },
+  Competition: { bg: "bg-yellow-500/15", text: "text-yellow-400", border: "border-yellow-500/30" },
+};
+
 interface ComponentDetailPanelProps {
   component: Component;
   equipped?: Component | null;
@@ -40,6 +48,11 @@ export default function ComponentDetailPanel({
           <div className="flex items-center gap-1.5">
             {TYPE_ICONS[component.type]}
             <h4 className="font-bold text-sm text-foreground truncate">{component.name}</h4>
+            {component.class && TIER_COLORS[component.class] && (
+              <Badge className={`${TIER_COLORS[component.class].bg} ${TIER_COLORS[component.class].text} ${TIER_COLORS[component.class].border} text-[9px] gap-0.5 px-1 py-0`}>
+                {component.class}
+              </Badge>
+            )}
             {isEquipped && (
               <Badge className="bg-primary/20 text-primary border-primary/40 text-[9px] gap-0.5 px-1 py-0">
                 <Check className="h-2.5 w-2.5" /> Equipado
@@ -47,7 +60,7 @@ export default function ComponentDetailPanel({
             )}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {component.manufacturer.name || "?"} · {component.class || "—"} · G{component.stats.grade ?? "?"} · T{component.size}
+            {component.manufacturer.name || "?"} · G{component.stats.grade ?? "?"} · T{component.size}
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">

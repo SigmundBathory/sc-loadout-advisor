@@ -36,6 +36,21 @@ const gradeToNumber = (g: Component["stats"]["grade"]): number =>
   typeof g === "string" ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[g.toUpperCase()] || 3 : g ?? 3;
 
 /** Profile-specific sort configs. Key = component type, value = profile → config */
+const calcRange = (s: Component["stats"]): number => {
+  const eff = n(s.fuel_efficiency);
+  const c = n(s.fuel_consumption_scu_per_gm);
+  return c > 0 ? (100 * eff) / c : 0;
+};
+const fmtRange = (v: number): string => { const au = v / 149.598; return au >= 1 ? `${au.toFixed(1)} AU` : `${v.toFixed(0)} Gm`; };
+
+const QD_SPEED_RANGE_SCORE = (s: Component["stats"]): number => {
+  const speed = n(s.travel_speed);
+  const range = calcRange(s);
+  const speedNorm = speed / 400e6;
+  const rangeNorm = range / 50000;
+  return speedNorm * 50 + rangeNorm * 50;
+};
+
 const PROFILE_CONFIGS: Record<string, Partial<Record<BuildProfile, SortConfig>>> = {
   Weapon: {
     power: {
@@ -149,34 +164,36 @@ const PROFILE_CONFIGS: Record<string, Partial<Record<BuildProfile, SortConfig>>>
   },
   QuantumDrive: {
     power: {
-      primary: (s) => {
-        const eff = n(s.fuel_efficiency);
-        const consumption = n(s.fuel_consumption_scu_per_gm);
-        return consumption > 0 ? (100 * eff) / consumption : eff * 1e8;
-      },
-      primaryLabel: "Alcance @100SCU",
-      formatPrimary: (v) => { const au = v / 149.598; return au >= 1 ? `${au.toFixed(1)} AU` : `${v.toFixed(0)} Gm`; },
+      primary: QD_SPEED_RANGE_SCORE,
+      primaryLabel: "Vel + Alcance",
+      formatPrimary: (v) => `${v.toFixed(0)} pts`,
       tradeoffs: [
         { label: "Velocidad", value: (s) => n(s.travel_speed), format: (v) => `${(v / 1e6).toFixed(1)} Gkm/s` },
+        { label: "Alcance", value: calcRange, format: fmtRange },
+        { label: "Disconnect", value: (s) => n(s.disconnect_range), format: (v) => v > 0 ? `${v.toFixed(0)} km` : "—" },
         { label: "Spool", value: (s) => n(s.spool_time), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
       ],
     },
     stealth: {
-      primary: (s) => n(s.travel_speed),
-      primaryLabel: "Velocidad QT",
-      formatPrimary: (v) => `${(v / 1e6).toFixed(1)} Gkm/s`,
+      primary: QD_SPEED_RANGE_SCORE,
+      primaryLabel: "Vel + Alcance",
+      formatPrimary: (v) => `${v.toFixed(0)} pts`,
       tradeoffs: [
-        { label: "Alcance", value: (s) => { const eff = n(s.fuel_efficiency); const c = n(s.fuel_consumption_scu_per_gm); return c > 0 ? (100 * eff) / c : 0; }, format: (v) => { const au = v / 149.598; return au >= 1 ? `${au.toFixed(1)} AU` : `${v.toFixed(0)} Gm`; } },
+        { label: "Velocidad", value: (s) => n(s.travel_speed), format: (v) => `${(v / 1e6).toFixed(1)} Gkm/s` },
+        { label: "Alcance", value: calcRange, format: fmtRange },
+        { label: "EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
         { label: "Spool", value: (s) => n(s.spool_time), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
       ],
     },
     balanced: {
-      primary: (s) => n(s.travel_speed),
-      primaryLabel: "Velocidad QT",
-      formatPrimary: (v) => `${(v / 1e6).toFixed(1)} Gkm/s`,
+      primary: QD_SPEED_RANGE_SCORE,
+      primaryLabel: "Vel + Alcance",
+      formatPrimary: (v) => `${v.toFixed(0)} pts`,
       tradeoffs: [
-        { label: "Alcance", value: (s) => { const eff = n(s.fuel_efficiency); const c = n(s.fuel_consumption_scu_per_gm); return c > 0 ? (100 * eff) / c : 0; }, format: (v) => { const au = v / 149.598; return au >= 1 ? `${au.toFixed(1)} AU` : `${v.toFixed(0)} Gm`; } },
+        { label: "Velocidad", value: (s) => n(s.travel_speed), format: (v) => `${(v / 1e6).toFixed(1)} Gkm/s` },
+        { label: "Alcance", value: calcRange, format: fmtRange },
         { label: "Consumo", value: (s) => n(s.fuel_consumption_scu_per_gm), format: (v) => v > 0 ? `${v.toFixed(4)} SCU/Gm` : "—", lowerBetter: true },
+        { label: "Spool", value: (s) => n(s.spool_time), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
       ],
     },
   },

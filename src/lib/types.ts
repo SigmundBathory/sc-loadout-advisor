@@ -73,6 +73,7 @@ export type ComponentType =
 export interface ComponentStats {
   // Common
   grade?: number | string;
+  component_hp?: number;
   // Weapons
   dps?: number;
   alpha?: number;
@@ -89,6 +90,10 @@ export interface ComponentStats {
   regen_rate?: number;
   regen_delay?: number;
   regen_time?: number;
+  regen_delay_downed?: number;
+  regen_delay_damage?: number;
+  reserve_regen_rate?: number;
+  reserve_regen_time?: number;
   decay_ratio?: number;
   resistance_phys?: number;
   resistance_energy?: number;
@@ -98,6 +103,7 @@ export interface ComponentStats {
   // Power Plants
   output?: number;
   power_segment_generation?: number;
+  overheat_threshold?: number;
   // Coolers
   cooling_rate?: number;
   suppression_ir?: number;
@@ -111,10 +117,15 @@ export interface ComponentStats {
   fuel_efficiency?: number;
   fuel_rate?: number;
   fuel_consumption_scu_per_gm?: number;
+  disconnect_range?: number;
+  travel_time_10gm?: number;
+  accel_rate?: number;
+  spline_speed?: number;
   // Radars
   sensitivity_ir?: number;
   sensitivity_cs?: number;
   sensitivity_em?: number;
+  detection_range?: number;
   // Flight Controllers
   scm_speed?: number;
   max_speed?: number;
