@@ -16,9 +16,10 @@ export interface ImageFallbackChain {
   placeholder: string;
 }
 
-// Erkul.games image CDN base
+// Erkul.games image paths
+// IMPORTANT: /ships/ is an SPA route returning HTML. Real images are at /ship-renders/
 const ERKUL_BASE = "https://erkul.games";
-const ERKUL_SHIPS = `${ERKUL_BASE}/ships`;
+const ERKUL_SHIPS = `${ERKUL_BASE}/ship-renders`;
 const ERKUL_COMPONENTS = `${ERKUL_BASE}/components`;
 
 // Special edition patterns to detect variant ships
@@ -128,13 +129,11 @@ export function getShipImageSources(ship: {
     fallbacks.push(ship.image_url);
   }
 
-  // 2. Erkul.games - try by class_name
+  // 2. Erkul.games - try by class_name (only .jpg available at /ship-renders/)
   if (ship.class_name) {
     const erkulName = ship.class_name
       .replace(/[_\s]+/g, '_')
       .toLowerCase();
-    fallbacks.push(`${ERKUL_SHIPS}/${erkulName}.webp`);
-    fallbacks.push(`${ERKUL_SHIPS}/${erkulName}.png`);
     fallbacks.push(`${ERKUL_SHIPS}/${erkulName}.jpg`);
   }
 
@@ -145,8 +144,7 @@ export function getShipImageSources(ship: {
       const baseErkulName = baseClassName
         .replace(/[_\s]+/g, '_')
         .toLowerCase();
-      fallbacks.push(`${ERKUL_SHIPS}/${baseErkulName}.webp`);
-      fallbacks.push(`${ERKUL_SHIPS}/${baseErkulName}.png`);
+      fallbacks.push(`${ERKUL_SHIPS}/${baseErkulName}.jpg`);
     }
   }
 
@@ -154,8 +152,7 @@ export function getShipImageSources(ship: {
   if (ship.manufacturer?.code && ship.name) {
     const mfg = ship.manufacturer.code.toLowerCase();
     const name = ship.name.toLowerCase().replace(/[_\s]+/g, '_');
-    fallbacks.push(`${ERKUL_SHIPS}/${mfg}_${name}.webp`);
-    fallbacks.push(`${ERKUL_SHIPS}/${mfg}_${name}.png`);
+    fallbacks.push(`${ERKUL_SHIPS}/${mfg}_${name}.jpg`);
   }
 
   // 5. Placeholder
@@ -196,8 +193,6 @@ export function getComponentImageSources(comp: {
     const erkulName = comp.class_name
       .replace(/[_\s]+/g, '_')
       .toLowerCase();
-    fallbacks.push(`${ERKUL_COMPONENTS}/${erkulName}.webp`);
-    fallbacks.push(`${ERKUL_COMPONENTS}/${erkulName}.png`);
     fallbacks.push(`${ERKUL_COMPONENTS}/${erkulName}.jpg`);
   }
 

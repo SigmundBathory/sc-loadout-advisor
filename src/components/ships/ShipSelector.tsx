@@ -303,7 +303,6 @@ export default function ShipSelector({
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <SpecialEditionBadge ship={ship} />
                         {optimizedShipIds.has(ship.id) && (
                           <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
                             <Wand2 className="h-3 w-3" />

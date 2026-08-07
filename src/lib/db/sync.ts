@@ -473,6 +473,43 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
     // Seed in-game shops + prices for components missing them
     seedMissingPricesAndLocations(db);
 
+    // --- Post-sync: copy base ship images to special editions ---
+    onProgress?.("Copiando imágenes de modelos base a ediciones especiales...", 92);
+    const shipsMissingImages = db.prepare(
+      "SELECT id, name, class_name FROM ships WHERE (image_url IS NULL OR image_url = '')"
+    ).all() as any[];
+    const baseImageStmt = db.prepare(
+      "SELECT image_url FROM ships WHERE class_name = ? AND image_url IS NOT NULL AND image_url != '' LIMIT 1"
+    );
+    let imgCopied = 0;
+    for (const ship of shipsMissingImages) {
+      const cn = ship.class_name || '';
+      // Strip variant suffixes to get base class_name
+      let base = cn
+        .replace(/_Collector_\w+$/i, '')
+        .replace(/_Exec_\w+$/i, '')
+        .replace(/_BTALA$/i, '')
+        .replace(/_Showdown$/i, '')
+        .replace(/_Military$/i, '')
+        .replace(/_Industrial$/i, '')
+        .replace(/_Stealth$/i, '')
+        .replace(/_Medic$/i, '')
+        .replace(/_Mod$/i, '')
+        .replace(/_Competition$/i, '')
+        .replace(/_Grad02$/i, '')
+        .replace(/_Indust$/i, '')
+        .replace(/_Milt$/i, '')
+        .replace(/_Civet$/i, '')
+        .replace(/_Civilian$/i, '');
+      if (base === cn || base.length < 4) continue;
+      const baseRow = baseImageStmt.get(base) as any;
+      if (baseRow?.image_url) {
+        db.prepare("UPDATE ships SET image_url = ? WHERE id = ?").run(baseRow.image_url, ship.id);
+        imgCopied++;
+      }
+    }
+    console.log(`Copied base images to ${imgCopied} special edition ships`);
+
     // --- Sync metadata ---
     onProgress?.("Finalizando...", 95);
     db.prepare(`
@@ -1147,6 +1184,42 @@ console.log(`Synced ${componentCount} components (${portComponentMap.size} from 
 
     // Seed in-game shops + prices for components missing them
     seedMissingPricesAndLocations(db);
+
+    // --- Post-sync: copy base ship images to special editions ---
+    onProgress?.("Copiando imágenes de modelos base a ediciones especiales...", 92);
+    const shipsMissingImages2 = db.prepare(
+      "SELECT id, name, class_name FROM ships WHERE (image_url IS NULL OR image_url = '')"
+    ).all() as any[];
+    const baseImageStmt2 = db.prepare(
+      "SELECT image_url FROM ships WHERE class_name = ? AND image_url IS NOT NULL AND image_url != '' LIMIT 1"
+    );
+    let imgCopied2 = 0;
+    for (const ship of shipsMissingImages2) {
+      const cn = ship.class_name || '';
+      let base = cn
+        .replace(/_Collector_\w+$/i, '')
+        .replace(/_Exec_\w+$/i, '')
+        .replace(/_BTALA$/i, '')
+        .replace(/_Showdown$/i, '')
+        .replace(/_Military$/i, '')
+        .replace(/_Industrial$/i, '')
+        .replace(/_Stealth$/i, '')
+        .replace(/_Medic$/i, '')
+        .replace(/_Mod$/i, '')
+        .replace(/_Competition$/i, '')
+        .replace(/_Grad02$/i, '')
+        .replace(/_Indust$/i, '')
+        .replace(/_Milt$/i, '')
+        .replace(/_Civet$/i, '')
+        .replace(/_Civilian$/i, '');
+      if (base === cn || base.length < 4) continue;
+      const baseRow = baseImageStmt2.get(base) as any;
+      if (baseRow?.image_url) {
+        db.prepare("UPDATE ships SET image_url = ? WHERE id = ?").run(baseRow.image_url, ship.id);
+        imgCopied2++;
+      }
+    }
+    console.log(`Copied base images to ${imgCopied2} special edition ships`);
 
     // --- Sync metadata ---
     onProgress?.("Finalizando...", 95);
