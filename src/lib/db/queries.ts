@@ -456,7 +456,8 @@ export function getTopShipsByDps(limit: number = 5) {
            (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'shield') as shields,
            (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'missile') as missiles
     FROM ships s
-    WHERE s.hull_hp > 0 AND s.weapons > 0
+    WHERE s.hull_hp > 0
+    HAVING weapons > 0
     ORDER BY
       CASE
         WHEN s.mass > 10000000 THEN 1
