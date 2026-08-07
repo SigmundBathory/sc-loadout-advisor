@@ -24,7 +24,7 @@ export default function ComponentPickerDialog({ slot, components, loading, equip
   return (
     <Dialog open={!!slot} onOpenChange={() => onClose()}>
       {slot && (
-        <DialogContent key={slot.id} className="glass-panel max-w-3xl max-h-[85vh] flex flex-col border-border/40">
+        <DialogContent key={slot.id} className="glass-panel max-w-3xl border-border/40">
           <PickerBody
             slot={slot}
             components={components}
@@ -172,7 +172,7 @@ function PickerBody({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 max-h-[52vh] pr-2">
+      <ScrollArea className="min-h-0 flex-1 max-h-[60vh] pr-2">
         {loading ? (
           <div className="p-8 text-center text-muted-foreground space-y-2">
             <Wand2 className="h-8 w-8 mx-auto animate-spin text-primary opacity-60" />
