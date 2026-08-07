@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Gauge, Thermometer, Navigation, GitCompare } from "lucide-react";
+import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Gauge, Thermometer, Navigation, GitCompare, ShoppingCart, X } from "lucide-react";
 import type { Component, Hardpoint } from "@/lib/types";
-import { sortComponentsForSlot, componentStatSummary } from "@/lib/optimizer/componentSort";
+import { sortComponentsForSlot, componentStatSummary, type BuildProfile, PROFILE_LABELS } from "@/lib/optimizer/componentSort";
 import { componentDetailRows } from "@/lib/optimizer/componentDetail";
 import ComponentDetailPanel from "./ComponentDetailPanel";
 
@@ -67,6 +67,8 @@ function PickerBody({
   const [activeIndex, setActiveIndex] = useState(0);
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [profile, setProfile] = useState<BuildProfile>("balanced");
+  const [availableOnly, setAvailableOnly] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   const slotType = slot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
@@ -90,14 +92,17 @@ function PickerBody({
       : "";
 
   const sorted = useMemo(() => {
-    const filtered = components.filter(
+    let filtered = components.filter(
       (c) =>
         !search ||
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         c.manufacturer.name.toLowerCase().includes(search.toLowerCase())
     );
-    return sortComponentsForSlot(filtered, componentType, equippedId);
-  }, [components, componentType, equippedId, search]);
+    if (availableOnly) {
+      filtered = filtered.filter((c) => c.buy_locations && c.buy_locations.length > 0);
+    }
+    return sortComponentsForSlot(filtered, componentType, equippedId, profile);
+  }, [components, componentType, equippedId, search, profile, availableOnly]);
 
   const equippedComponent = useMemo(
     () => components.find((c) => c.id === equippedId) || null,
@@ -184,15 +189,41 @@ function PickerBody({
         />
       </div>
 
+      <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-0.5 shrink-0">
+        {(Object.keys(PROFILE_LABELS) as BuildProfile[]).map((p) => (
+          <button
+            key={p}
+            onClick={() => { setProfile(p); setActiveIndex(0); }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+              profile === p
+                ? "bg-primary/20 text-primary shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span>{PROFILE_LABELS[p].icon}</span>
+            {PROFILE_LABELS[p].label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground shrink-0">
         <div className="flex items-center gap-1.5">
           <ArrowUpDown className="h-3 w-3" />
           <span className="font-semibold text-foreground">
-            {sorted.length > 0 ? componentStatSummary(sorted[0]).primaryLabel : "stat"}
+            {sorted.length > 0 ? componentStatSummary(sorted[0], profile).primaryLabel : "stat"}
           </span>{" "}
           (mejor primero)
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => { setAvailableOnly((v) => !v); setActiveIndex(0); }}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
+              availableOnly ? "bg-emerald-500/20 text-emerald-400" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ShoppingCart className="h-3 w-3" />
+            {availableOnly ? "Solo disponibles" : "Disponibles"}
+          </button>
           <button
             onClick={() => { setCompareMode((v) => !v); if (compareMode) setCompareIds([]); }}
             className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
@@ -222,11 +253,12 @@ function PickerBody({
         ) : (
           <div ref={listRef} className="space-y-1.5 pr-1">
             {sorted.map((comp, idx) => {
-              const summary = componentStatSummary(comp);
+              const summary = componentStatSummary(comp, profile);
               const isExpanded = expandedId === comp.id;
               const isActive = idx === safeIndex;
               const isBest = comp.id === bestComponent?.id && comp.id !== equippedId;
               const isEquipped = comp.id === equippedId;
+              const isAvailable = comp.buy_locations && comp.buy_locations.length > 0;
 
               return (
                 <div key={comp.id} className="space-y-1">
@@ -262,6 +294,15 @@ function PickerBody({
                           {isBest && (
                             <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[9px] gap-0.5 px-1 py-0">
                               <Crown className="h-2.5 w-2.5" /> Mejor
+                            </Badge>
+                          )}
+                          {isAvailable ? (
+                            <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[9px] gap-0.5 px-1 py-0">
+                              <ShoppingCart className="h-2.5 w-2.5" /> Disponible
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-muted/60 text-muted-foreground border-border/30 text-[9px] gap-0.5 px-1 py-0">
+                              <X className="h-2.5 w-2.5" /> No disponible
                             </Badge>
                           )}
                         </div>

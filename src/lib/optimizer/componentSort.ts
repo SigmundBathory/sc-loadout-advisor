@@ -1,88 +1,189 @@
 import type { Component } from "../types";
 
+export type BuildProfile = "power" | "stealth" | "balanced";
+
+export const PROFILE_LABELS: Record<BuildProfile, { label: string; icon: string; description: string }> = {
+  power: { label: "Potencia", icon: "⚡", description: "Maximizar daño y rendimiento bruto" },
+  stealth: { label: "Stealth", icon: "🔇", description: "Minimizar firmas EM/IR, ser invisible" },
+  balanced: { label: "Balanceado", icon: "⚖️", description: "Equilibrio entre potencia y sigilo" },
+};
+
 /**
  * Defines how components of each type are sorted in the picker, and which
- * trade-off stats are surfaced so the user can compare (e.g. a quantum drive
- * with more range vs. more speed at higher fuel consumption).
+ * trade-off stats are surfaced so the user can compare.
  */
 interface SortConfig {
-  /** Primary stat used for sorting (higher = first) */
+  /** Primary stat used for sorting (higher = first, unless lowerBetter) */
   primary: (s: Component["stats"]) => number;
   /** Short label for the primary stat */
   primaryLabel: string;
   /** Returns a human-friendly summary of the primary stat */
   formatPrimary?: (v: number) => string;
-  /** Secondary stats shown as trade-off info: [label, value] */
+  /** true = sort ascending (lower values first) */
+  lowerBetter?: boolean;
+  /** Secondary stats shown as trade-off info */
   tradeoffs: {
     label: string;
     value: (s: Component["stats"]) => number;
     format?: (v: number) => string;
-    /** true = lower is better (green when lower) */
     lowerBetter?: boolean;
   }[];
 }
 
 const n = (v: number | undefined): number => v ?? 0;
 
-/** Normalize a component grade to a numeric value (A/B/C/D letters → 1-4). */
 const gradeToNumber = (g: Component["stats"]["grade"]): number =>
   typeof g === "string" ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[g.toUpperCase()] || 3 : g ?? 3;
 
-export const SORT_CONFIGS: Record<string, SortConfig> = {
-  QuantumDrive: {
-    primary: (s) => {
-      const eff = n(s.fuel_efficiency);
-      const consumption = n(s.fuel_consumption_scu_per_gm);
-      return consumption > 0 ? (100 * eff) / consumption : eff * 1e8;
-    },
-    primaryLabel: "Alcance @100SCU",
-    formatPrimary: (v) => {
-      const au = v / 149.598;
-      if (au >= 1) return `${au.toFixed(1)} AU`;
-      return `${v.toFixed(0)} Gm`;
-    },
-    tradeoffs: [
-      { label: "Velocidad", value: (s) => n(s.travel_speed), format: (v) => `${(v / 1e6).toFixed(1)} Gkm/s` },
-      { label: "Consumo", value: (s) => n(s.fuel_consumption_scu_per_gm), format: (v) => (v > 0 ? `${v.toFixed(4)} SCU/Gm` : "—"), lowerBetter: true },
-      { label: "Spool", value: (s) => n(s.spool_time), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
-      { label: "Cooldown", value: (s) => n(s.cooldown), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
-    ],
-  },
+/** Profile-specific sort configs. Key = component type, value = profile → config */
+const PROFILE_CONFIGS: Record<string, Partial<Record<BuildProfile, SortConfig>>> = {
   Weapon: {
-    primary: (s) => n(s.dps),
-    primaryLabel: "DPS",
-    tradeoffs: [
-      { label: "Alpha", value: (s) => n(s.alpha), format: (v) => v.toFixed(0) },
-      { label: "Cadencia", value: (s) => n(s.fire_rate), format: (v) => `${v.toFixed(0)} RPM` },
-      { label: "Alcance", value: (s) => n(s.range), format: (v) => `${(v / 1000).toFixed(1)} km` },
-    ],
+    power: {
+      primary: (s) => n(s.dps),
+      primaryLabel: "DPS",
+      tradeoffs: [
+        { label: "Alpha", value: (s) => n(s.alpha), format: (v) => v.toFixed(0) },
+        { label: "Cadencia", value: (s) => n(s.fire_rate), format: (v) => `${v.toFixed(0)} RPM` },
+        { label: "Alcance", value: (s) => n(s.range), format: (v) => `${(v / 1000).toFixed(1)} km` },
+      ],
+    },
+    stealth: {
+      primary: (s) => n(s.emission_em_max) || 99999,
+      primaryLabel: "Firma EM",
+      lowerBetter: true,
+      tradeoffs: [
+        { label: "DPS", value: (s) => n(s.dps), format: (v) => v.toFixed(0) },
+        { label: "Alpha", value: (s) => n(s.alpha), format: (v) => v.toFixed(0) },
+        { label: "Alcance", value: (s) => n(s.range), format: (v) => `${(v / 1000).toFixed(1)} km` },
+      ],
+    },
+    balanced: {
+      primary: (s) => n(s.dps),
+      primaryLabel: "DPS",
+      tradeoffs: [
+        { label: "Alpha", value: (s) => n(s.alpha), format: (v) => v.toFixed(0) },
+        { label: "Alcance", value: (s) => n(s.range), format: (v) => `${(v / 1000).toFixed(1)} km` },
+      ],
+    },
   },
   Shield: {
-    primary: (s) => n(s.hp),
-    primaryLabel: "HP",
-    tradeoffs: [
-      { label: "Regen", value: (s) => n(s.regen_rate), format: (v) => `${v.toFixed(0)}/s` },
-      { label: "Delay", value: (s) => n(s.regen_time), format: (v) => `${v.toFixed(2)}s`, lowerBetter: true },
-      { label: "Grado", value: (s) => gradeToNumber(s.grade) },
-    ],
+    power: {
+      primary: (s) => n(s.hp),
+      primaryLabel: "HP",
+      tradeoffs: [
+        { label: "Regen", value: (s) => n(s.regen_rate), format: (v) => `${v.toFixed(0)}/s` },
+        { label: "Delay", value: (s) => n(s.regen_time), format: (v) => `${v.toFixed(2)}s`, lowerBetter: true },
+      ],
+    },
+    stealth: {
+      primary: (s) => n(s.emission_em_max) || 99999,
+      primaryLabel: "Firma EM",
+      lowerBetter: true,
+      tradeoffs: [
+        { label: "HP", value: (s) => n(s.hp), format: (v) => v.toLocaleString() },
+        { label: "Regen", value: (s) => n(s.regen_rate), format: (v) => `${v.toFixed(0)}/s` },
+      ],
+    },
+    balanced: {
+      primary: (s) => n(s.hp),
+      primaryLabel: "HP",
+      tradeoffs: [
+        { label: "Regen", value: (s) => n(s.regen_rate), format: (v) => `${v.toFixed(0)}/s` },
+        { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
+      ],
+    },
   },
   PowerPlant: {
-    primary: (s) => n(s.power_segment_generation),
-    primaryLabel: "Segmentos",
-    formatPrimary: (v) => `${v} seg/s`,
-    tradeoffs: [
-      { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
-    ],
+    power: {
+      primary: (s) => n(s.power_segment_generation),
+      primaryLabel: "Segmentos",
+      formatPrimary: (v) => `${v} seg/s`,
+      tradeoffs: [
+        { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
+      ],
+    },
+    stealth: {
+      primary: (s) => n(s.emission_em_max) || 99999,
+      primaryLabel: "Firma EM",
+      lowerBetter: true,
+      tradeoffs: [
+        { label: "Segmentos", value: (s) => n(s.power_segment_generation), format: (v) => `${v} seg/s` },
+      ],
+    },
+    balanced: {
+      primary: (s) => n(s.power_segment_generation),
+      primaryLabel: "Segmentos",
+      formatPrimary: (v) => `${v} seg/s`,
+      tradeoffs: [
+        { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
+      ],
+    },
   },
   Cooler: {
-    primary: (s) => n(s.cooling_rate),
-    primaryLabel: "Enfriamiento",
-    formatPrimary: (v) => `${v.toLocaleString()} c/s`,
-    tradeoffs: [
-      { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
-      { label: "Firma IR", value: (s) => n(s.emission_ir), format: (v) => v.toLocaleString(), lowerBetter: true },
-    ],
+    power: {
+      primary: (s) => n(s.cooling_rate),
+      primaryLabel: "Enfriamiento",
+      formatPrimary: (v) => `${v.toLocaleString()} c/s`,
+      tradeoffs: [
+        { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
+        { label: "Firma IR", value: (s) => n(s.emission_ir), format: (v) => v.toLocaleString(), lowerBetter: true },
+      ],
+    },
+    stealth: {
+      primary: (s) => n(s.emission_em_max) || 99999,
+      primaryLabel: "Firma EM",
+      lowerBetter: true,
+      tradeoffs: [
+        { label: "Enfriamiento", value: (s) => n(s.cooling_rate), format: (v) => v.toLocaleString() },
+        { label: "Firma IR", value: (s) => n(s.emission_ir), format: (v) => v.toLocaleString(), lowerBetter: true },
+      ],
+    },
+    balanced: {
+      primary: (s) => n(s.cooling_rate),
+      primaryLabel: "Enfriamiento",
+      formatPrimary: (v) => `${v.toLocaleString()} c/s`,
+      tradeoffs: [
+        { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
+      ],
+    },
   },
+  QuantumDrive: {
+    power: {
+      primary: (s) => {
+        const eff = n(s.fuel_efficiency);
+        const consumption = n(s.fuel_consumption_scu_per_gm);
+        return consumption > 0 ? (100 * eff) / consumption : eff * 1e8;
+      },
+      primaryLabel: "Alcance @100SCU",
+      formatPrimary: (v) => { const au = v / 149.598; return au >= 1 ? `${au.toFixed(1)} AU` : `${v.toFixed(0)} Gm`; },
+      tradeoffs: [
+        { label: "Velocidad", value: (s) => n(s.travel_speed), format: (v) => `${(v / 1e6).toFixed(1)} Gkm/s` },
+        { label: "Spool", value: (s) => n(s.spool_time), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
+      ],
+    },
+    stealth: {
+      primary: (s) => n(s.travel_speed),
+      primaryLabel: "Velocidad QT",
+      formatPrimary: (v) => `${(v / 1e6).toFixed(1)} Gkm/s`,
+      tradeoffs: [
+        { label: "Alcance", value: (s) => { const eff = n(s.fuel_efficiency); const c = n(s.fuel_consumption_scu_per_gm); return c > 0 ? (100 * eff) / c : 0; }, format: (v) => { const au = v / 149.598; return au >= 1 ? `${au.toFixed(1)} AU` : `${v.toFixed(0)} Gm`; } },
+        { label: "Spool", value: (s) => n(s.spool_time), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
+      ],
+    },
+    balanced: {
+      primary: (s) => n(s.travel_speed),
+      primaryLabel: "Velocidad QT",
+      formatPrimary: (v) => `${(v / 1e6).toFixed(1)} Gkm/s`,
+      tradeoffs: [
+        { label: "Alcance", value: (s) => { const eff = n(s.fuel_efficiency); const c = n(s.fuel_consumption_scu_per_gm); return c > 0 ? (100 * eff) / c : 0; }, format: (v) => { const au = v / 149.598; return au >= 1 ? `${au.toFixed(1)} AU` : `${v.toFixed(0)} Gm`; } },
+        { label: "Consumo", value: (s) => n(s.fuel_consumption_scu_per_gm), format: (v) => v > 0 ? `${v.toFixed(4)} SCU/Gm` : "—", lowerBetter: true },
+      ],
+    },
+  },
+};
+
+/** Default configs for types without profile variations */
+const DEFAULT_CONFIGS: Record<string, SortConfig> = {
   Radar: {
     primary: (s) => n(s.range),
     primaryLabel: "Alcance",
@@ -98,7 +199,6 @@ export const SORT_CONFIGS: Record<string, SortConfig> = {
     tradeoffs: [
       { label: "Boost", value: (s) => n(s.boost_forward), format: (v) => v.toFixed(0) },
       { label: "Pitch", value: (s) => n(s.pitch), format: (v) => v.toFixed(0) },
-      { label: "Yaw", value: (s) => n(s.yaw), format: (v) => v.toFixed(0) },
     ],
   },
   LifeSupport: {
@@ -121,33 +221,24 @@ export const SORT_CONFIGS: Record<string, SortConfig> = {
   },
 };
 
-/**
- * Returns the sort config for a component type (falls back to a generic one).
- */
-export function getSortConfig(type: string): SortConfig {
-  return (
-    SORT_CONFIGS[type] || {
-      primary: (s) => n(s.dps) || n(s.output) || n(s.hp) || 0,
-      primaryLabel: "Stat",
-      tradeoffs: [],
-    }
-  );
+export function getSortConfig(type: string, profile: BuildProfile = "balanced"): SortConfig {
+  const profileConfigs = PROFILE_CONFIGS[type];
+  if (profileConfigs?.[profile]) return profileConfigs[profile];
+  if (profileConfigs?.balanced) return profileConfigs.balanced;
+  return DEFAULT_CONFIGS[type] || { primary: (s) => n(s.dps) || n(s.hp) || 0, primaryLabel: "Stat", tradeoffs: [] };
 }
 
-/**
- * Sorts a list of compatible components by their primary stat (descending).
- * When a currently-equipped component is provided, it is moved to the top and
- * marked, so the user can see it and the immediately-next options right below.
- */
 export function sortComponentsForSlot(
   components: Component[],
   type: string,
-  equippedId?: string | null
+  equippedId?: string | null,
+  profile: BuildProfile = "balanced"
 ): Component[] {
-  const config = getSortConfig(type);
-  const sorted = [...components].sort(
-    (a, b) => config.primary(b.stats) - config.primary(a.stats)
-  );
+  const config = getSortConfig(type, profile);
+  const sorted = [...components].sort((a, b) => {
+    const diff = config.primary(b.stats) - config.primary(a.stats);
+    return config.lowerBetter ? -diff : diff;
+  });
   if (equippedId) {
     const idx = sorted.findIndex((c) => c.id === equippedId);
     if (idx > 0) {
@@ -168,13 +259,13 @@ export interface TradeoffStat {
 /**
  * Builds the primary stat value + the trade-off stats shown for a component.
  */
-export function componentStatSummary(comp: Component): {
+export function componentStatSummary(comp: Component, profile: BuildProfile = "balanced"): {
   primary: number;
   primaryLabel: string;
   primaryFormatted: string;
   tradeoffs: TradeoffStat[];
 } {
-  const config = getSortConfig(comp.type);
+  const config = getSortConfig(comp.type, profile);
   const primary = config.primary(comp.stats);
   return {
     primary,
