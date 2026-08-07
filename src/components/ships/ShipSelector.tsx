@@ -5,18 +5,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign, Wand2, AlertTriangle } from "lucide-react";
+import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign, Wand2, AlertTriangle, ArrowUpDown, ShoppingBag } from "lucide-react";
 import type { Ship } from "@/lib/types";
 import Link from "next/link";
 import { useShips, useOptimizedShipIds } from "@/lib/api/client";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { ShipImage } from "@/components/ui/ProgressiveImage";
+import { ClassBadge } from "@/components/ships/ClassBadge";
 
 interface ShipSelectorProps {
   initialShips?: Ship[];
   manufacturers?: { code: string; name: string }[];
   classifications?: string[];
 }
+
+type SortKey = "name" | "dps" | "hull" | "price";
 
 export default function ShipSelector({
   initialShips = [],
@@ -27,8 +30,11 @@ export default function ShipSelector({
   const [selectedManufacturer, setSelectedManufacturer] = useState("");
   const [selectedClassification, setSelectedClassification] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [buyableOnly, setBuyableOnly] = useState(false);
 
-  const { data, isLoading, isError, refetch } = useShips(false);
+  // Request withDps so we can sort by combat power.
+  const { data, isLoading, isError, refetch } = useShips(true);
   const optimizedShipIds = useOptimizedShipIds();
 
   const allShips = useMemo(
@@ -59,8 +65,28 @@ export default function ShipSelector({
         (s) => s.classification === selectedClassification
       );
     }
-    return filtered;
-  }, [allShips, search, selectedManufacturer, selectedClassification]);
+    if (buyableOnly) {
+      filtered = filtered.filter((s) => s.is_buyable || s.price_auec);
+    }
+
+    const sorted = [...filtered];
+    sorted.sort((a, b) => {
+      switch (sortKey) {
+        case "dps":
+          return (b.dps || 0) - (a.dps || 0);
+        case "hull":
+          return (b.hull_hp || 0) - (a.hull_hp || 0);
+        case "price":
+          // ships without price go last
+          const pa = a.price_auec || Infinity;
+          const pb = b.price_auec || Infinity;
+          return pa - pb;
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+    return sorted;
+  }, [allShips, search, selectedManufacturer, selectedClassification, buyableOnly, sortKey]);
 
   const uniqueManufacturers =
     manufacturers.length > 0
@@ -78,25 +104,12 @@ export default function ShipSelector({
           new Set(allShips.map((s) => s.classification).filter(Boolean))
         ).sort();
 
-  function getClassificationBadge(classification: string) {
-    const cls = (classification || "").toLowerCase();
-    if (cls.includes("fighter") || cls.includes("combat") || cls.includes("interceptor")) {
-      return <Badge className="bg-red-500/20 text-red-300 border-red-500/30">{classification}</Badge>;
-    }
-    if (cls.includes("freight") || cls.includes("cargo") || cls.includes("transport")) {
-      return <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30">{classification}</Badge>;
-    }
-    if (cls.includes("exploration") || cls.includes("expedition") || cls.includes("pathfinder")) {
-      return <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30">{classification}</Badge>;
-    }
-    if (cls.includes("stealth") || cls.includes("recon")) {
-      return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">{classification}</Badge>;
-    }
-    if (cls.includes("mining") || cls.includes("salvage") || cls.includes("industrial")) {
-      return <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">{classification}</Badge>;
-    }
-    return <Badge variant="secondary">{classification || "General"}</Badge>;
-  }
+  const sortOptions: { key: SortKey; label: string }[] = [
+    { key: "name", label: "Nombre" },
+    { key: "dps", label: "DPS" },
+    { key: "hull", label: "Casco" },
+    { key: "price", label: "Precio" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -125,7 +138,7 @@ export default function ShipSelector({
             <select
               value={selectedManufacturer}
               onChange={(e) => setSelectedManufacturer(e.target.value)}
-              className="native-select px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs flex-1 md:w-48"
+              className="native-select px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs flex-1 md:w-44"
             >
               <option value="" className="bg-card">Todos los Fabricantes</option>
               {uniqueManufacturers.map((m) => (
@@ -138,7 +151,7 @@ export default function ShipSelector({
             <select
               value={selectedClassification}
               onChange={(e) => setSelectedClassification(e.target.value)}
-              className="native-select px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs flex-1 md:w-48"
+              className="native-select px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-foreground text-xs flex-1 md:w-44"
             >
               <option value="" className="bg-card">Todas las Clasificaciones</option>
               {uniqueClassifications.map((c) => (
@@ -169,12 +182,48 @@ export default function ShipSelector({
           </div>
         </div>
 
-        {/* Filter Badges indicator */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-          <span className="font-medium">
-            Mostrando <span className="text-primary font-mono font-bold">{ships.length}</span> naves
+        {/* Secondary row: sort + buyable toggle + count */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              <span>Ordenar:</span>
+            </div>
+            <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-0.5 border border-border/40">
+              {sortOptions.map((o) => (
+                <button
+                  key={o.key}
+                  onClick={() => setSortKey(o.key)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                    sortKey === o.key
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setBuyableOnly((v) => !v)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                buyableOnly
+                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                  : "text-muted-foreground border-border/40 hover:text-foreground"
+              }`}
+            >
+              <ShoppingBag className="h-3.5 w-3.5" />
+              Comprables
+            </button>
+          </div>
+
+          <span className="text-xs text-muted-foreground font-medium">
+            <span className="text-primary font-mono font-bold">{ships.length}</span> naves
           </span>
-          {(search || selectedManufacturer || selectedClassification) && (
+        </div>
+
+        {(search || selectedManufacturer || selectedClassification || buyableOnly) && (
+          <div className="flex justify-end">
             <Button
               variant="ghost"
               size="sm"
@@ -182,13 +231,14 @@ export default function ShipSelector({
                 setSearch("");
                 setSelectedManufacturer("");
                 setSelectedClassification("");
+                setBuyableOnly(false);
               }}
               className="h-6 text-xs text-muted-foreground hover:text-foreground"
             >
               Limpiar Filtros
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Grid or List Display */}
@@ -232,55 +282,63 @@ export default function ShipSelector({
             <StaggerItem key={ship.id}>
               <Link href={`/ships/${ship.id}`} className="block h-full">
                 <Card className="glass-panel glass-panel-hover border-border/40 cursor-pointer h-full group flex flex-col justify-between overflow-hidden hover:shadow-xl hover:shadow-primary/10 hover:border-primary/40 transition-all duration-300">
-                <div className="relative h-36 w-full bg-muted/20 border-b border-border/30">
-                  <ShipImage ship={ship} fill priority={false} alt={ship.name} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
-                </div>
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
-                        {ship.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground font-medium">
-                        {ship.manufacturer?.name || "Unknown Manufacturer"}
-                      </p>
-                    </div>
-                    {getClassificationBadge(ship.classification)}
-                    {optimizedShipIds.has(ship.id) && (
-                      <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
-                        <Wand2 className="h-3 w-3" />
-                        Optimizada
-                      </Badge>
-                    )}
+                  <div className="relative h-36 w-full bg-muted/20 border-b border-border/30">
+                    <ShipImage ship={ship} fill priority={false} alt={ship.name} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                      <span>Tripulación: {ship.crew}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                      <span>SCM: {ship.scm_speed} m/s</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Shield className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                      <span>Casco: {ship.hull_hp ? ship.hull_hp.toLocaleString() : "0"} HP</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Rocket className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-                      <span>Carga: {ship.cargo_capacity} SCU</span>
-                    </div>
-                    {ship.price_auec ? (
-                      <div className="flex items-center gap-1.5">
-                        <DollarSign className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                        <span className="text-emerald-400 font-semibold">{ship.price_auec.toLocaleString()} aUEC</span>
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors truncate">
+                          {ship.name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground font-medium">
+                          {ship.manufacturer?.name || "Unknown Manufacturer"}
+                        </p>
                       </div>
-                    ) : null}
-                  </div>
-                </CardContent>
-              </Card>
+                      {optimizedShipIds.has(ship.id) && (
+                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1 shrink-0">
+                          <Wand2 className="h-3 w-3" />
+                          Optimizada
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <ClassBadge classification={ship.classification} />
+                      {ship.price_auec ? (
+                        <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold font-mono">
+                          <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                          {ship.price_auec.toLocaleString()}
+                        </span>
+                      ) : ship.is_buyable ? (
+                        <span className="flex items-center gap-1 text-xs text-amber-400 font-medium">
+                          <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
+                          Disponible
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                        <span>Tripulación: {ship.crew}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                        <span>SCM: {ship.scm_speed} m/s</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Shield className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                        <span>Casco: {ship.hull_hp ? ship.hull_hp.toLocaleString() : "0"} HP</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Rocket className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                        <span>Carga: {ship.cargo_capacity} SCU</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </Link>
             </StaggerItem>
           ))}
@@ -311,7 +369,7 @@ export default function ShipSelector({
                 </div>
 
                 <div className="shrink-0 flex items-center gap-3">
-                  {getClassificationBadge(ship.classification)}
+                  <ClassBadge classification={ship.classification} />
                   {optimizedShipIds.has(ship.id) && (
                     <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1">
                       <Wand2 className="h-3 w-3" />

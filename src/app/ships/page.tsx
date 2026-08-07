@@ -1,20 +1,17 @@
 import ShipSelector from "@/components/ships/ShipSelector";
-import ClientHeader from "@/components/layout/ClientHeader";
-import Breadcrumb from "@/components/Breadcrumb";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Rocket } from "lucide-react";
 
 export default function ShipsPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <ClientHeader 
-        title="Naves" 
-        backHref="/" 
-        backLabel="SC Loadout Advisor" 
+    <PageContainer>
+      <PageHeader
+        title="Explorador de Naves"
+        subtitle="Filtra, ordena y compara la flota del Verse"
+        icon={<Rocket className="h-5 w-5" />}
       />
-
-      <main className="container mx-auto px-4 py-8 space-y-6">
-        <Breadcrumb items={[{ label: "Naves" }]} />
-        <ShipSelector />
-      </main>
-    </div>
+      <ShipSelector />
+    </PageContainer>
   );
 }
