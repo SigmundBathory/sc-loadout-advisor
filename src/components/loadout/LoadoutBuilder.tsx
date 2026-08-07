@@ -166,6 +166,8 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
   const loadComponentPicker = useCallback(() => {
     if (!selectedSlot) return null;
 
+    const slotMaxSize = selectedSlot.max_size || selectedSlot.size;
+
     const compsForSlot = components.filter((c) => {
       const slotTypeMap: Record<string, string[]> = {
         weapon: ["Weapon"],
@@ -184,7 +186,9 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
       };
       const slotKey = selectedSlot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
       const validTypes = slotTypeMap[slotKey] || [selectedSlot.slot_type];
-      return validTypes.some(t => t.toLowerCase() === c.type.toLowerCase());
+      const typeMatch = validTypes.some(t => t.toLowerCase() === c.type.toLowerCase());
+      const sizeMatch = c.size <= slotMaxSize;
+      return typeMatch && sizeMatch;
     });
 
     return compsForSlot;
