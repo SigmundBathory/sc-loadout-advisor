@@ -208,7 +208,7 @@ function PickerBody({
         </div>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1" style={{ maxHeight: "calc(85vh - 200px)" }}>
+      <ScrollArea className="min-h-0 flex-1">
         {loading ? (
           <div className="p-8 text-center text-muted-foreground space-y-2">
             <div className="h-8 w-8 mx-auto border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
