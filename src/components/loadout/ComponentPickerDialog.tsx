@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Stagger, StaggerItem } from "@/components/motion/Stagger";
-import { Search, Wand2, Info, ShoppingBag, Check, ArrowUpDown, ChevronDown } from "lucide-react";
+import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Gauge, Thermometer, Navigation } from "lucide-react";
 import type { Component, Hardpoint } from "@/lib/types";
 import { sortComponentsForSlot, componentStatSummary } from "@/lib/optimizer/componentSort";
 import ComponentDetailPanel from "./ComponentDetailPanel";
@@ -20,11 +19,21 @@ interface ComponentPickerDialogProps {
   onClose: () => void;
 }
 
+const SLOT_ICONS: Record<string, React.ReactNode> = {
+  Weapon: <Zap className="h-3.5 w-3.5" />,
+  Shield: <Shield className="h-3.5 w-3.5" />,
+  PowerPlant: <Zap className="h-3.5 w-3.5" />,
+  Cooler: <Thermometer className="h-3.5 w-3.5" />,
+  QuantumDrive: <Navigation className="h-3.5 w-3.5" />,
+  Radar: <Gauge className="h-3.5 w-3.5" />,
+  FlightController: <Gauge className="h-3.5 w-3.5" />,
+};
+
 export default function ComponentPickerDialog({ slot, components, loading, equippedId, onSelect, onClose }: ComponentPickerDialogProps) {
   return (
     <Dialog open={!!slot} onOpenChange={() => onClose()}>
       {slot && (
-        <DialogContent key={slot.id} className="glass-panel max-w-3xl border-border/40">
+        <DialogContent key={slot.id} className="glass-panel max-w-2xl border-border/40 flex flex-col max-h-[85vh]">
           <PickerBody
             slot={slot}
             components={components}
@@ -54,6 +63,7 @@ function PickerBody({
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const slotType = slot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
   const componentType =
@@ -90,12 +100,16 @@ function PickerBody({
     [components, equippedId]
   );
 
-  // Clamp the active index so keyboard navigation stays valid when the list shrinks.
+  // Find the "best in slot" component (first in sorted = highest primary stat)
+  const bestComponent = sorted.length > 0 ? sorted[0] : null;
+
   const safeIndex = Math.min(activeIndex, Math.max(0, sorted.length - 1));
 
   const activeRef = useCallback(
     (el: HTMLDivElement | null) => {
-      if (el && safeIndex >= 0) el.scrollIntoView({ block: "nearest" });
+      if (el && safeIndex >= 0) {
+        el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
     },
     [safeIndex]
   );
@@ -121,11 +135,16 @@ function PickerBody({
         e.preventDefault();
         const comp = sorted[safeIndex];
         if (comp) handleSelect(comp);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        if (expandedId) {
+          setExpandedId(null);
+        }
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [sorted, safeIndex, handleSelect]);
+  }, [sorted, safeIndex, handleSelect, expandedId]);
 
   const handleRowClick = (comp: Component) => {
     setExpandedId(expandedId === comp.id ? null : comp.id);
@@ -134,14 +153,17 @@ function PickerBody({
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle className="text-lg flex items-center gap-2">
-          <span>Seleccionar Componente para {slot.name}</span>
-          <Badge variant="outline" className="font-mono">S{slot.size}</Badge>
+      <DialogHeader className="shrink-0">
+        <DialogTitle className="text-base flex items-center gap-2">
+          <span className="flex items-center gap-1.5">
+            {SLOT_ICONS[componentType] || <Zap className="h-3.5 w-3.5" />}
+            Seleccionar para {slot.name}
+          </span>
+          <Badge variant="outline" className="font-mono text-[10px]">S{slot.size}</Badge>
         </DialogTitle>
       </DialogHeader>
 
-      <div className="relative my-2">
+      <div className="relative shrink-0">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Buscar por nombre o fabricante..."
@@ -152,131 +174,125 @@ function PickerBody({
         />
       </div>
 
-      {/* Sort hint */}
-      <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground mb-1 flex-wrap">
+      <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground shrink-0">
         <div className="flex items-center gap-1.5">
           <ArrowUpDown className="h-3 w-3" />
-          Ordenado por{" "}
           <span className="font-semibold text-foreground">
-            {sorted.length > 0 ? componentStatSummary(sorted[0]).primaryLabel : "stat principal"}
+            {sorted.length > 0 ? componentStatSummary(sorted[0]).primaryLabel : "stat"}
           </span>{" "}
-          (mejor primero). El equipado va arriba.
+          (mejor primero)
         </div>
         <div className="flex items-center gap-3">
           <span className="font-mono text-muted-foreground/80">
             {sorted.length} resultado{sorted.length !== 1 ? "s" : ""}
           </span>
           <kbd className="hidden sm:inline-flex items-center gap-1 rounded bg-muted/60 border border-border/40 px-1.5 py-0.5 text-[10px] font-mono">
-            ↑↓ + Enter
+            ↑↓ Enter
           </kbd>
         </div>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1 max-h-[60vh] pr-2">
+      <ScrollArea className="min-h-0 flex-1" style={{ maxHeight: "calc(85vh - 200px)" }}>
         {loading ? (
           <div className="p-8 text-center text-muted-foreground space-y-2">
-            <Wand2 className="h-8 w-8 mx-auto animate-spin text-primary opacity-60" />
+            <div className="h-8 w-8 mx-auto border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
             <p className="text-sm">Buscando componentes compatibles...</p>
           </div>
         ) : sorted.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground space-y-2">
             <Info className="h-8 w-8 mx-auto opacity-40" />
-            <p className="text-sm">No hay componentes que coincidan con la búsqueda.</p>
+            <p className="text-sm">No hay componentes que coincidan.</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            <Stagger className="space-y-2">
-              {sorted.map((comp, idx) => {
-                const summary = componentStatSummary(comp);
-                const isExpanded = expandedId === comp.id;
-                const isActive = idx === safeIndex;
-                return (
-                  <StaggerItem key={comp.id}>
-                    <div className="space-y-1.5">
-                      <div
-                        ref={isActive ? activeRef : undefined}
-                        className={`glass-panel glass-panel-hover p-3 rounded-xl border cursor-pointer transition-all ${
-                          isActive ? "ring-1 ring-primary/60 border-primary/60" : ""
-                        } ${
-                          comp.id === equippedId
-                            ? "border-primary/60 bg-primary/5"
-                            : idx === 0
-                            ? "border-emerald-500/40"
-                            : "border-border/30"
-                        }`}
-                        onClick={() => handleRowClick(comp)}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm text-foreground truncate">{comp.name}</span>
-                              {comp.id === equippedId && (
-                                <Badge className="bg-primary/20 text-primary border-primary/40 text-[10px] gap-1">
-                                  <Check className="h-2.5 w-2.5" /> Equipado
-                                </Badge>
-                              )}
-                              {idx === 0 && comp.id !== equippedId && (
-                                <Badge variant="secondary" className="text-[10px]">Mejor en {summary.primaryLabel}</Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {comp.manufacturer.name || "Desconocido"} • {comp.class || "General"} • Grado {comp.stats.grade ?? "—"}
-                            </div>
-                            {/* Trade-off stats */}
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 pt-1.5 text-[11px] font-mono">
-                              <span className="text-primary font-semibold">
-                                {summary.primaryLabel}: {summary.primaryFormatted}
-                              </span>
-                              {summary.tradeoffs.map((t) => (
-                                <span key={t.label} className="text-muted-foreground">
-                                  {t.label}: <span className="text-foreground/80">{t.format}</span>
-                                </span>
-                              ))}
-                            </div>
-                          </div>
+          <div ref={listRef} className="space-y-1.5 pr-1">
+            {sorted.map((comp, idx) => {
+              const summary = componentStatSummary(comp);
+              const isExpanded = expandedId === comp.id;
+              const isActive = idx === safeIndex;
+              const isBest = comp.id === bestComponent?.id && comp.id !== equippedId;
+              const isEquipped = comp.id === equippedId;
 
-                          <div className="text-right text-xs font-mono space-y-1 shrink-0">
-                            {comp.price_auec ? (
-                              <div className="text-amber-300 font-semibold flex items-center gap-1 justify-end">
-                                {comp.price_auec.toLocaleString()} aUEC
-                                {comp.buy_locations && comp.buy_locations.length > 0 && (
-                                  <ShoppingBag className="h-3 w-3 opacity-50" />
-                                )}
-                              </div>
-                            ) : null}
-                            {comp.buy_locations && comp.buy_locations.length > 0 && (
-                              <div className="text-muted-foreground/70 text-[10px] space-y-0.5">
-                                {comp.buy_locations.slice(0, 1).map((loc, i) => (
-                                  <div key={i} className="flex items-center gap-1 justify-end">
-                                    <span>{loc.shop_name}</span>
-                                    {loc.planet_moon && <span className="opacity-60">({loc.planet_moon})</span>}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1 justify-end text-[10px] text-primary">
-                              <ChevronDown
-                                className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                              />
-                              {isExpanded ? "Ocultar detalle" : "Ver detalle"}
-                            </div>
-                          </div>
+              return (
+                <div key={comp.id} className="space-y-1">
+                  <div
+                    ref={isActive ? activeRef : undefined}
+                    className={`p-2.5 rounded-xl border cursor-pointer transition-all duration-150 ${
+                      isActive ? "ring-1 ring-primary/60 border-primary/60" : ""
+                    } ${
+                      isEquipped
+                        ? "border-primary/60 bg-primary/5"
+                        : isBest
+                        ? "border-emerald-500/40 bg-emerald-500/5"
+                        : "border-border/30 hover:border-border/60"
+                    }`}
+                    onClick={() => handleRowClick(comp)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-sm text-foreground truncate">{comp.name}</span>
+                          {isEquipped && (
+                            <Badge className="bg-primary/20 text-primary border-primary/40 text-[9px] gap-0.5 px-1 py-0">
+                              <Check className="h-2.5 w-2.5" /> Equipado
+                            </Badge>
+                          )}
+                          {isBest && (
+                            <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[9px] gap-0.5 px-1 py-0">
+                              <Crown className="h-2.5 w-2.5" /> Mejor
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {comp.manufacturer.name || "?"} · {comp.class || "—"} · G{comp.stats.grade ?? "?"} · S{comp.size}
+                        </div>
+                        <div className="flex flex-wrap gap-x-2.5 gap-y-0 pt-1 text-[10px] font-mono">
+                          <span className="text-primary font-semibold">
+                            {summary.primaryLabel}: {summary.primaryFormatted}
+                          </span>
+                          {summary.tradeoffs.slice(0, 2).map((t) => (
+                            <span key={t.label} className="text-muted-foreground">
+                              {t.label}: <span className="text-foreground/80">{t.format}</span>
+                            </span>
+                          ))}
                         </div>
                       </div>
 
-                      {isExpanded && (
-                        <ComponentDetailPanel
-                          component={comp}
-                          equipped={equippedComponent}
-                          onSelect={() => handleSelect(comp)}
-                          onClose={() => setExpandedId(null)}
-                        />
-                      )}
+                      <div className="text-right text-[11px] font-mono space-y-0.5 shrink-0">
+                        {comp.price_auec ? (
+                          <div className="text-amber-300 font-semibold">
+                            {comp.price_auec.toLocaleString()} aUEC
+                          </div>
+                        ) : null}
+                        {comp.buy_locations && comp.buy_locations.length > 0 && (
+                          <div className="text-muted-foreground/70 text-[9px]">
+                            <span>{comp.buy_locations[0].shop_name}</span>
+                            {comp.buy_locations[0].planet_moon && (
+                              <span className="opacity-60"> ({comp.buy_locations[0].planet_moon})</span>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-0.5 justify-end text-[9px] text-primary">
+                          <ChevronDown
+                            className={`h-3 w-3 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </StaggerItem>
-                );
-              })}
-            </Stagger>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="ml-1">
+                      <ComponentDetailPanel
+                        component={comp}
+                        equipped={equippedComponent}
+                        onSelect={() => handleSelect(comp)}
+                        onClose={() => setExpandedId(null)}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </ScrollArea>

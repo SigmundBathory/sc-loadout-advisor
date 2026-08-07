@@ -1,32 +1,72 @@
 "use client";
 
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DollarSign, ArrowRight, ShoppingBag } from "lucide-react";
+import { DollarSign, ArrowRight, ShoppingBag, Crown } from "lucide-react";
 import { translateSlotTypeEs } from "@/lib/utils";
+import { sortComponentsForSlot } from "@/lib/optimizer/componentSort";
 import type { Ship, Component, Hardpoint } from "@/lib/types";
 
 interface SlotListProps {
   ship: Ship;
   slotAssignments: Record<string, string>;
   componentMap: Map<string, Component>;
+  allComponents: Component[];
   onSlotClick: (hardpoint: Hardpoint) => void;
   onClearSlot: (hardpointId: string) => void;
 }
 
-export default function SlotList({ ship, slotAssignments, componentMap, onSlotClick, onClearSlot }: SlotListProps) {
+export default function SlotList({ ship, slotAssignments, componentMap, allComponents, onSlotClick, onClearSlot }: SlotListProps) {
+  const bestPerSlot = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const hp of ship.hardpoints) {
+      const slotType = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+      const compType =
+        slotType === "weapon" || slotType === "turret" || slotType === "missile" ? "Weapon"
+        : slotType === "shield" ? "Shield"
+        : slotType === "power_plant" || slotType === "powerplant" ? "PowerPlant"
+        : slotType === "cooler" ? "Cooler"
+        : slotType === "quantum_drive" || slotType === "quantumdrive" ? "QuantumDrive"
+        : slotType === "radar" ? "Radar"
+        : slotType === "thruster" || slotType === "flight_controller" ? "FlightController"
+        : slotType === "life_support" || slotType === "lifesupport" ? "LifeSupport"
+        : "";
+      const compatible = allComponents.filter((c) => {
+        const validTypes: Record<string, string[]> = {
+          weapon: ["Weapon"], turret: ["Weapon"], shield: ["Shield"],
+          power_plant: ["PowerPlant"], powerplant: ["PowerPlant"],
+          cooler: ["Cooler"], quantum_drive: ["QuantumDrive"], quantumdrive: ["QuantumDrive"],
+          radar: ["Radar"], thruster: ["FlightController"], flight_controller: ["FlightController"],
+          life_support: ["LifeSupport"], lifesupport: ["LifeSupport"],
+        };
+        const types = validTypes[slotType] || [];
+        return types.some(t => t.toLowerCase() === c.type.toLowerCase()) && c.size <= hp.max_size;
+      });
+      if (compatible.length > 0) {
+        const sorted = sortComponentsForSlot(compatible, compType);
+        map.set(hp.id, sorted[0].id);
+      }
+    }
+    return map;
+  }, [ship.hardpoints, allComponents]);
+
   return (
     <ScrollArea className="h-[620px] pr-2">
       <div className="space-y-3">
         {ship.hardpoints.map((hp) => {
           const assignedId = slotAssignments[hp.id];
           const comp = assignedId ? componentMap.get(assignedId) : null;
+          const bestId = bestPerSlot.get(hp.id);
+          const isBest = assignedId && bestId && assignedId === bestId;
 
           return (
             <div
               key={hp.id}
-              className="glass-panel glass-panel-hover p-4 rounded-xl border border-border/40 hover:border-primary/50 transition-all cursor-pointer flex items-center justify-between group"
+              className={`glass-panel glass-panel-hover p-4 rounded-xl border hover:border-primary/50 transition-all cursor-pointer flex items-center justify-between group ${
+                isBest ? "border-emerald-500/40 bg-emerald-500/5" : "border-border/40"
+              }`}
               onClick={() => onSlotClick(hp)}
             >
               <div className="flex-1 space-y-1">
@@ -40,6 +80,11 @@ export default function SlotList({ ship, slotAssignments, componentMap, onSlotCl
                   <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
                     {translateSlotTypeEs(hp.slot_type)}
                   </Badge>
+                  {isBest && (
+                    <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[9px] gap-0.5 px-1 py-0">
+                      <Crown className="h-2.5 w-2.5" /> Mejor
+                    </Badge>
+                  )}
                 </div>
 
                 {comp ? (
@@ -84,7 +129,7 @@ export default function SlotList({ ship, slotAssignments, componentMap, onSlotCl
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground/70 italic pt-0.5">
-                    Slot vacio — Haz click para equipar un componente
+                    Slot vacío — Haz click para equipar
                   </p>
                 )}
               </div>

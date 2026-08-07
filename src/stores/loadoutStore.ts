@@ -48,6 +48,37 @@ interface LoadoutStore {
   setSyncProgress: (progress: string) => void;
   lastSyncVersion: string;
   setLastSyncVersion: (version: string) => void;
+
+  // Auto-save: track last auto-save timestamp to debounce
+  lastAutoSaveAt: number;
+}
+
+let autoSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function debounceAutoSave(state: {
+  loadedLoadout: Loadout | null;
+  slotAssignments: Record<string, string>;
+  lastOptimizedPreset: string;
+}) {
+  if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+  autoSaveTimeout = setTimeout(async () => {
+    const { loadedLoadout, slotAssignments, lastOptimizedPreset } = state;
+    if (!loadedLoadout?.id || loadedLoadout.id.startsWith("imported_")) return;
+    try {
+      await fetch("/api/loadouts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: loadedLoadout.id,
+          components: slotAssignments,
+          is_optimized: !!lastOptimizedPreset,
+          optimized_preset: lastOptimizedPreset || "",
+        }),
+      });
+    } catch {
+      // silent fail — user can still save manually
+    }
+  }, 2000);
 }
 
 export const useLoadoutStore = create<LoadoutStore>()(
@@ -70,14 +101,18 @@ export const useLoadoutStore = create<LoadoutStore>()(
       setLastOptimizedPreset: (preset) => set({ lastOptimizedPreset: preset }),
 
       slotAssignments: {},
-      setSlotAssignment: (slotId, componentId) =>
-        set((state) => ({
-          slotAssignments: { ...state.slotAssignments, [slotId]: componentId },
-        })),
+      setSlotAssignment: (slotId, componentId) => {
+        set((state) => {
+          const next = { ...state.slotAssignments, [slotId]: componentId };
+          debounceAutoSave({ ...state, slotAssignments: next });
+          return { slotAssignments: next };
+        });
+      },
       clearSlotAssignment: (slotId) =>
         set((state) => {
           const newAssignments = { ...state.slotAssignments };
           delete newAssignments[slotId];
+          debounceAutoSave({ ...state, slotAssignments: newAssignments });
           return { slotAssignments: newAssignments };
         }),
       resetAllSlots: () => set({ slotAssignments: {}, loadoutName: "" }),
@@ -108,6 +143,8 @@ export const useLoadoutStore = create<LoadoutStore>()(
       setSyncProgress: (progress) => set({ syncProgress: progress }),
       lastSyncVersion: "",
       setLastSyncVersion: (version) => set({ lastSyncVersion: version }),
+
+      lastAutoSaveAt: 0,
     }),
     {
       name: "sc-loadout-store",
@@ -117,6 +154,8 @@ export const useLoadoutStore = create<LoadoutStore>()(
         loadoutName: state.loadoutName,
         savedLoadouts: state.savedLoadouts,
         filterWeights: state.filterWeights,
+        loadedLoadout: state.loadedLoadout,
+        lastOptimizedPreset: state.lastOptimizedPreset,
       }),
     }
   )

@@ -200,6 +200,13 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
       bestComponents.forEach((compId, slotId) => {
         setSlotAssignment(slotId, compId);
       });
+      // Update loadedLoadout stats after optimization
+      if (loadedLoadout) {
+        const newAssignments: Record<string, string> = {};
+        bestComponents.forEach((compId, slotId) => { newAssignments[slotId] = compId; });
+        const newStats = calculateLoadoutStats(ship, newAssignments, componentMap);
+        setLoadedLoadout({ ...loadedLoadout, stats: newStats, is_optimized: true, optimized_preset: preset });
+      }
       setOptimizing(false);
     }, 1200);
   };
@@ -215,19 +222,20 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     const isOptimized = !!lastOptimizedPreset || !!loadedLoadout?.is_optimized;
     const loadoutStats = calculateLoadoutStats(ship, slotAssignments, componentMap);
     const newLoadout: Loadout = {
-      id: `loadout_${Date.now()}`,
+      id: loadedLoadout?.id?.startsWith("imported_") ? `loadout_${Date.now()}` : (loadedLoadout?.id || `loadout_${Date.now()}`),
       name,
       ship_id: ship.id,
       components: { ...slotAssignments },
-      created_at: new Date().toISOString(),
+      created_at: loadedLoadout?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      is_favorite: false,
+      is_favorite: loadedLoadout?.is_favorite || false,
       is_optimized: isOptimized,
       optimized_preset: lastOptimizedPreset || loadedLoadout?.optimized_preset || "",
       stats: loadoutStats,
     };
 
     addSavedLoadout(newLoadout);
+    setLoadedLoadout(newLoadout);
 
     try {
       const res = await fetch("/api/loadouts", {
@@ -245,8 +253,9 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
 
       if (res.ok) {
         const data = await res.json();
-        newLoadout.id = data.loadout?.id || newLoadout.id;
-        addSavedLoadout(newLoadout);
+        const saved = { ...newLoadout, id: data.loadout?.id || newLoadout.id };
+        addSavedLoadout(saved);
+        setLoadedLoadout(saved);
       }
     } catch (error) {
       console.error("Error saving loadout:", error);
@@ -294,6 +303,7 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
                 ship={ship}
                 slotAssignments={slotAssignments}
                 componentMap={componentMap}
+                allComponents={components}
                 onSlotClick={setSelectedSlot}
                 onClearSlot={clearSlotAssignment}
               />
