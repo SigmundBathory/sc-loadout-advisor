@@ -18,9 +18,14 @@ export function getAllShips(filters?: {
     LEFT JOIN ship_buy_locations sbl ON (
       sbl.ship_id = s.id OR
       sbl.ship_name = s.name OR
-      (sbl.location_type = 'sale' AND s.name LIKE '%' || sbl.ship_name || '%')
+      (sbl.location_type = 'sale' AND s.name LIKE '%' || sbl.ship_name || '%'
+       AND s.name NOT LIKE '%Wikelo%' AND s.name NOT LIKE '%PYAM%'
+       AND s.name NOT LIKE '%Collector%' AND s.name NOT LIKE '%Executive Edition%'
+       AND s.name NOT LIKE '%Best In Show%' AND s.name NOT LIKE '%CitizenCon%'
+       AND s.name NOT LIKE '%Heartseeker%' AND s.name NOT LIKE '%Teach%'
+       AND s.name NOT LIKE '%IKTI%')
     )
-    WHERE 1=1
+     WHERE 1=1
   `;
   const params: any[] = [];
 
@@ -497,7 +502,12 @@ export function getShipsWithDps(filters?: {
     LEFT JOIN ship_buy_locations sbl ON (
       sbl.ship_id = s.id OR
       sbl.ship_name = s.name OR
-      (sbl.location_type = 'sale' AND s.name LIKE '%' || sbl.ship_name || '%')
+      (sbl.location_type = 'sale' AND s.name LIKE '%' || sbl.ship_name || '%'
+       AND s.name NOT LIKE '%Wikelo%' AND s.name NOT LIKE '%PYAM%'
+       AND s.name NOT LIKE '%Collector%' AND s.name NOT LIKE '%Executive Edition%'
+       AND s.name NOT LIKE '%Best In Show%' AND s.name NOT LIKE '%CitizenCon%'
+       AND s.name NOT LIKE '%Heartseeker%' AND s.name NOT LIKE '%Teach%'
+       AND s.name NOT LIKE '%IKTI%')
     )
     WHERE 1=1
     GROUP BY s.id
