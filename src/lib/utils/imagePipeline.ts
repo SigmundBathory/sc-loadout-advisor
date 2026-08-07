@@ -17,7 +17,7 @@ export interface ImageFallbackChain {
 }
 
 // Erkul.games image CDN base
-const ERKUL_BASE = "https://erkul.games/assets/images";
+const ERKUL_BASE = "https://erkul.games";
 const ERKUL_SHIPS = `${ERKUL_BASE}/ships`;
 const ERKUL_COMPONENTS = `${ERKUL_BASE}/components`;
 
