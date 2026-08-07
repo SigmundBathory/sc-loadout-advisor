@@ -119,6 +119,11 @@ async function main() {
   console.log("\n--- Step 2: Ship Locations (scfocus.org) ---");
   await syncShipLocations();
 
+  // 2b. Link ship_buy_locations.ship_id via fuzzy match
+  console.log("\n--- Step 2b: Link ship prices to ships ---");
+  const { execSync: execSync2 } = await import("child_process");
+  execSync2("node scripts/build-ship-aliases.js --apply", { stdio: "inherit", cwd: process.cwd() });
+
   // 3. Wikelo ship requirements
   console.log("\n--- Step 3: Wikelo Ships (Google Sheets) ---");
   const { execSync } = await import("child_process");

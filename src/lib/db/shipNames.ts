@@ -99,7 +99,7 @@ export function normalizeShipName(name: string): string {
     [/^85x$/, "85x limited"],
     [/^100i$/, "origin 100i"],
     [/^600i$/, "origin 600i"],
-    [/^atls itki$/, "argo atls ikti"],
+    [/^atls ikti$/, "argo atls ikti"],
     [/^atls$/, "atls geo"],
     [/^stv$/, "stv"],
   ];
