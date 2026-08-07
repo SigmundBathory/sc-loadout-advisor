@@ -3,29 +3,45 @@
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import { Sword, Shield, Rocket } from "lucide-react";
 
-interface ShipDps {
+interface ShipCombat {
   id: string;
   name: string;
-  dps: number;
   classification: string;
   image_url: string;
+  mass: number;
+  hull_hp: number;
+  shield_hp: number;
+  weapons: number;
+  shields: number;
+  missiles: number;
 }
 
-const classColors: Record<string, string> = {
-  Fighter: "bg-red-500/20 text-red-400 border-red-500/30",
-  Bomber: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  "Multi Crew": "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  Freight: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  Exploration: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  Stealth: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  Industrial: "bg-green-500/20 text-green-400 border-green-500/30",
-};
+function getMassTier(mass: number): string {
+  if (mass > 10000000) return "Capital";
+  if (mass > 1000000) return "Large";
+  if (mass > 100000) return "Medium";
+  return "Small";
+}
 
-export default function TopDpsTable({ ships }: { ships: ShipDps[] }) {
+function getTierColor(mass: number): string {
+  if (mass > 10000000) return "bg-red-500/20 text-red-400 border-red-500/30";
+  if (mass > 1000000) return "bg-orange-500/20 text-orange-400 border-orange-500/30";
+  if (mass > 100000) return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+  return "bg-green-500/20 text-green-400 border-green-500/30";
+}
+
+function formatMass(mass: number): string {
+  if (mass >= 1000000) return `${(mass / 1000000).toFixed(1)}M`;
+  if (mass >= 1000) return `${(mass / 1000).toFixed(0)}K`;
+  return mass.toFixed(0);
+}
+
+export default function TopDpsTable({ ships }: { ships: ShipCombat[] }) {
   return (
     <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-5">
-      <h3 className="text-sm font-medium text-muted-foreground mb-4">Top 5 DPS</h3>
+      <h3 className="text-sm font-medium text-muted-foreground mb-4">Top 5 Poder de Combate</h3>
       <div className="space-y-3">
         <Stagger className="space-y-3">
           {ships.map((ship, i) => (
@@ -48,16 +64,39 @@ export default function TopDpsTable({ ships }: { ships: ShipDps[] }) {
                   <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
                     {ship.name}
                   </p>
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] px-1.5 py-0 mt-0.5 ${classColors[ship.classification] || ""}`}
-                  >
-                    {ship.classification}
-                  </Badge>
+                  <div className="flex gap-1 mt-0.5">
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-1.5 py-0 ${getTierColor(ship.mass)}`}
+                    >
+                      {getMassTier(ship.mass)}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0 bg-muted/50"
+                    >
+                      {ship.classification}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold font-mono text-primary">{ship.dps.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground">DPS</p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1" title="Armas">
+                    <Sword className="h-3 w-3" />
+                    <span className="font-mono">{ship.weapons}</span>
+                  </div>
+                  <div className="flex items-center gap-1" title="Escudos">
+                    <Shield className="h-3 w-3" />
+                    <span className="font-mono">{ship.shields}</span>
+                  </div>
+                  {ship.missiles > 0 && (
+                    <div className="flex items-center gap-1" title="Misiles">
+                      <Rocket className="h-3 w-3" />
+                      <span className="font-mono">{ship.missiles}</span>
+                    </div>
+                  )}
+                  <div className="text-right min-w-[3rem]" title="Masa">
+                    <span className="font-mono text-[10px]">{formatMass(ship.mass)}</span>
+                  </div>
                 </div>
               </Link>
             </StaggerItem>
