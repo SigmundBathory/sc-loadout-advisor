@@ -714,6 +714,14 @@ export async function syncDataForVersion(
     const vehicles = vehiclesRes.data || [];
 
     // Now safe to clear and re-insert (data was fetched successfully)
+    // Save existing images before wipe (Wiki API doesn't have images for all ships)
+    const existingImages = new Map<string, string>();
+    const savedRows = db.prepare("SELECT id, image_url FROM ships WHERE image_url IS NOT NULL AND image_url != ''").all() as any[];
+    for (const row of savedRows) {
+      existingImages.set(row.id, row.image_url);
+    }
+    console.log(`Saved ${existingImages.size} ship images before sync`);
+
     db.exec("DELETE FROM hardpoints");
     db.exec("DELETE FROM ships");
     db.exec("DELETE FROM components");
@@ -1188,6 +1196,17 @@ console.log(`Synced ${componentCount} components (${portComponentMap.size} from 
 
     // Seed in-game shops + prices for components missing them
     seedMissingPricesAndLocations(db);
+
+    // --- Restore saved images for ships the Wiki API doesn't have images for ---
+    if (existingImages.size > 0) {
+      let restored = 0;
+      const restoreStmt = db.prepare("UPDATE ships SET image_url = ? WHERE id = ? AND (image_url IS NULL OR image_url = '')");
+      for (const [id, imgUrl] of existingImages) {
+        const r = restoreStmt.run(imgUrl, id);
+        if (r.changes > 0) restored++;
+      }
+      console.log(`Restored ${restored} ship images from pre-sync cache`);
+    }
 
     // --- Post-sync: copy base ship images to special editions ---
     onProgress?.("Copiando imágenes de modelos base a ediciones especiales...", 92);
