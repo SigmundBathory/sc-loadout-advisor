@@ -32,11 +32,18 @@ const SPECIAL_EDITION_PATTERNS = [
   /Heartseeker/i,          // Heartseeker editions
   /_Military$/i,           // Military variants (often Wikelo)
   /_Industrial$/i,         // Industrial variants (often Wikelo)
+  /_Indust$/i,             // Industrial short
   /_Stealth$/i,            // Stealth variants
   /_Medic$/i,              // Medic variants
   /_Mod$/i,                // Modified variants
   /_Competition$/i,        // Competition variants
   /_Grad02$/i,             // Grad variants (ATLS Orange Line)
+  /_IKTI_ARGOS$/i,        // IKTI Argos variants
+  /_IKTI$/i,              // IKTI variants
+  /_Argos$/i,             // Argos variants
+  /_Milt$/i,              // Military short
+  /_Civet$/i,             // Civet variants
+  /_Civilian$/i,          // Civilian variants
 ];
 
 export type SpecialEditionType = 'wikelo' | 'pyam' | 'alliance' | 'bis' | 'citizencon' | 'heartseeker' | 'other';
@@ -85,7 +92,7 @@ export function resolveBaseShipClassName(className: string): string | null {
     const secondLast = parts[parts.length - 2].toLowerCase();
     
     // Known suffix patterns
-    const suffixes = ['military', 'industrial', 'stealth', 'medic', 'mod', 'competition', 'grad02', 'exec', 'collector', 'btala', 'showdown'];
+    const suffixes = ['military', 'industrial', 'stealth', 'medic', 'mod', 'competition', 'grad02', 'exec', 'collector', 'btala', 'showdown', 'ikti', 'argos', 'civet', 'civilian', 'milt', 'indust'];
     if (suffixes.some(s => last.includes(s) || secondLast.includes(s))) {
       // Remove last 1-2 parts
       const trimmed = parts.slice(0, -1).join('_');

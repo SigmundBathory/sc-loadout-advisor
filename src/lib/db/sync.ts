@@ -500,7 +500,11 @@ export async function syncAllData(onProgress?: (step: string, progress: number) 
         .replace(/_Indust$/i, '')
         .replace(/_Milt$/i, '')
         .replace(/_Civet$/i, '')
-        .replace(/_Civilian$/i, '');
+        .replace(/_Civilian$/i, '')
+        .replace(/_IKTI_ARGOS$/i, '')
+        .replace(/_IKTI$/i, '')
+        .replace(/_Argos$/i, '')
+        .replace(/CitizenCon\d+$/i, '');
       if (base === cn || base.length < 4) continue;
       const baseRow = baseImageStmt.get(base) as any;
       if (baseRow?.image_url) {
@@ -1211,7 +1215,11 @@ console.log(`Synced ${componentCount} components (${portComponentMap.size} from 
         .replace(/_Indust$/i, '')
         .replace(/_Milt$/i, '')
         .replace(/_Civet$/i, '')
-        .replace(/_Civilian$/i, '');
+        .replace(/_Civilian$/i, '')
+        .replace(/_IKTI_ARGOS$/i, '')
+        .replace(/_IKTI$/i, '')
+        .replace(/_Argos$/i, '')
+        .replace(/CitizenCon\d+$/i, '');
       if (base === cn || base.length < 4) continue;
       const baseRow = baseImageStmt2.get(base) as any;
       if (baseRow?.image_url) {
