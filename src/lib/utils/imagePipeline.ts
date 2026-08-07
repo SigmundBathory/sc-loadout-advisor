@@ -64,6 +64,7 @@ export function detectSpecialEdition(ship: {
   if (name.includes('Best In Show') || className.includes('_Showdown')) return 'bis';
   if (name.includes('CitizenCon')) return 'citizencon';
   if (name.includes('Heartseeker')) return 'heartseeker';
+  if (className.includes('_IKTI') || name.includes('IKTI')) return 'wikelo';
   
   return null;
 }

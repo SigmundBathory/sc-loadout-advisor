@@ -57,6 +57,8 @@ const VARIANT_LABELS: Record<string, string> = {
   Civet: "Civet",
   Civilian: "Civilian",
   Grad02: "Grad",
+  IKTI: "IKTI",
+  Argos: "Argos",
 };
 
 function getVariantLabel(class_name?: string): string | null {
