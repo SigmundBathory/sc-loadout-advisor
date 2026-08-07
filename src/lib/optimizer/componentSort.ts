@@ -79,8 +79,8 @@ export const SORT_CONFIGS: Record<string, SortConfig> = {
     primaryLabel: "Enfriamiento",
     formatPrimary: (v) => `${v.toLocaleString()} c/s`,
     tradeoffs: [
-      { label: "Supres. IR", value: (s) => n(s.suppression_ir), format: (v) => v.toLocaleString() },
-      { label: "Supres. calor", value: (s) => n(s.suppression_heat), format: (v) => v.toLocaleString() },
+      { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
+      { label: "Firma IR", value: (s) => n(s.emission_ir), format: (v) => v.toLocaleString(), lowerBetter: true },
     ],
   },
   Radar: {
