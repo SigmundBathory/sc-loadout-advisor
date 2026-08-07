@@ -485,10 +485,14 @@ export function getShipsWithDps(filters?: {
   // Calculate DPS based on weapon slot count only (simpler and more accurate)
   let query = `
     SELECT s.*, m.name as manufacturer_name, m.code as manufacturer_code,
-           (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'weapon') * 800 as dps
+           (SELECT COUNT(*) FROM hardpoints WHERE ship_id = s.id AND slot_type = 'weapon') * 800 as dps,
+           MIN(CASE WHEN sbl.location_type = 'sale' THEN sbl.price_auec END) as price_auec,
+           MAX(CASE WHEN sbl.ship_name IS NOT NULL THEN 1 ELSE 0 END) as is_buyable
     FROM ships s
     LEFT JOIN manufacturers m ON s.manufacturer_code = m.code
+    LEFT JOIN ship_buy_locations sbl ON (sbl.ship_id = s.id OR (sbl.ship_id = '' AND sbl.ship_name = s.name))
     WHERE 1=1
+    GROUP BY s.id
   `;
   const params: any[] = [];
 
