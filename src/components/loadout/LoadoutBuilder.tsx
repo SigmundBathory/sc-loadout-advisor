@@ -72,10 +72,10 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
       const comp = componentMap.get(compId);
       if (comp) {
         totalDps += comp.stats.dps || 0;
-        shieldHp += comp.stats.hp || 0;
-        shieldRegen += comp.stats.regen_rate || 0;
+        shieldHp += Math.min(comp.stats.hp || 0, 15000);
+        shieldRegen += Math.min(comp.stats.regen_rate || 0, 2500);
         powerOutput += comp.stats.output || comp.stats.power_segment_generation || 0;
-        coolingRate += comp.stats.cooling_rate || 0;
+        coolingRate += Math.min(comp.stats.cooling_rate || 0, 50);
         quantumSpeed = Math.max(quantumSpeed, comp.stats.travel_speed || 0);
         totalCost += comp.price_auec || 0;
         emissionEm += comp.stats.emission_em_max || 0;
@@ -355,7 +355,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
                     shieldHp: stats.shieldHp,
                     shieldRegen: stats.shieldRegen,
                     hullHp: ship.hull_hp || 0,
-                    powerOutput: stats.powerOutput,
+                    coolingRate: stats.coolingRate,
                   }}
                 />
               </CardContent>

@@ -207,7 +207,7 @@ export default function OptimizerPage() {
                             shieldHp: result.stats?.shield_hp || 0,
                             shieldRegen: result.stats?.shield_regen || 0,
                             hullHp: result.ship?.hull_hp || 0,
-                            powerOutput: result.stats?.power_output || 0,
+                            coolingRate: result.stats?.cooling_rate || 0,
                           }}
                         />
                       </CardContent>

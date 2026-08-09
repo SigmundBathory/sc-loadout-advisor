@@ -17,16 +17,16 @@ interface LoadoutRadarChartProps {
     shieldHp: number;
     shieldRegen: number;
     hullHp: number;
-    powerOutput: number;
+    coolingRate: number;
   };
 }
 
 const MAX_VALUES = {
-  dps: 6000,
-  shield: 40000,
+  dps: 18000,
+  shield: 30000,
   regen: 5000,
-  hull: 80000,
-  power: 30000,
+  hull: 200000,
+  cooling: 100,
 };
 
 export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
@@ -35,7 +35,7 @@ export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
       {
         stat: "DPS",
         value: Math.min(100, Math.round((stats.totalDps / MAX_VALUES.dps) * 100)),
-        raw: `${stats.totalDps.toFixed(0)} DPS`,
+        raw: `${stats.totalDps.toLocaleString()} DPS`,
       },
       {
         stat: "Escudos",
@@ -53,15 +53,15 @@ export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
         raw: `${stats.hullHp.toLocaleString()} HP`,
       },
       {
-        stat: "Energía",
-        value: Math.min(100, Math.round((stats.powerOutput / MAX_VALUES.power) * 100)),
-        raw: `${stats.powerOutput.toLocaleString()} W`,
+        stat: "Enfriamiento",
+        value: Math.min(100, Math.round((stats.coolingRate / MAX_VALUES.cooling) * 100)),
+        raw: `${stats.coolingRate.toLocaleString()} c/s`,
       },
     ],
-    [stats.totalDps, stats.shieldHp, stats.shieldRegen, stats.hullHp, stats.powerOutput]
+    [stats.totalDps, stats.shieldHp, stats.shieldRegen, stats.hullHp, stats.coolingRate]
   );
 
-  const chartKey = `${stats.totalDps}-${stats.shieldHp}-${stats.shieldRegen}-${stats.hullHp}-${stats.powerOutput}`;
+  const chartKey = `${stats.totalDps}-${stats.shieldHp}-${stats.shieldRegen}-${stats.hullHp}-${stats.coolingRate}`;
 
   return (
     <div className="w-full space-y-1">
