@@ -357,6 +357,8 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
                     hullHp: ship.hull_hp || 0,
                     coolingRate: stats.coolingRate,
                   }}
+                  shipShieldHp={ship.shield_hp || 1000}
+                  shipHullHp={ship.hull_hp || 1000}
                 />
               </CardContent>
             </Card>

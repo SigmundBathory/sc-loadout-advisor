@@ -209,6 +209,8 @@ export default function OptimizerPage() {
                             hullHp: result.ship?.hull_hp || 0,
                             coolingRate: result.stats?.cooling_rate || 0,
                           }}
+                          shipShieldHp={result.ship?.shield_hp || 1000}
+                          shipHullHp={result.ship?.hull_hp || 1000}
                         />
                       </CardContent>
                     </Card>

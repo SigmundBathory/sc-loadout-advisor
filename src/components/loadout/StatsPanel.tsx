@@ -43,11 +43,11 @@ export default function StatsPanel({ stats, assignedCount, totalSlots, baseline 
         </Badge>
       </CardHeader>
       <CardContent className="p-4 space-y-3">
-        <StatBar label="DPS Potencial Armas" value={stats.totalDps} max={25000} unit="DPS" color="from-red-500 to-amber-500" baseline={baseline?.totalDps} />
-        <StatBar label="HP Total Escudos" value={stats.shieldHp} max={120000} unit="HP" color="from-emerald-500 to-teal-400" baseline={baseline?.shieldHp} />
-        <StatBar label="Regen Escudos" value={stats.shieldRegen} max={25000} unit="/s" color="from-cyan-500 to-blue-400" baseline={baseline?.shieldRegen} />
+        <StatBar label="DPS Potencial Armas" value={stats.totalDps} max={8000} unit="DPS" color="from-red-500 to-amber-500" baseline={baseline?.totalDps} />
+        <StatBar label="HP Total Escudos" value={stats.shieldHp} max={15000} unit="HP" color="from-emerald-500 to-teal-400" baseline={baseline?.shieldHp} />
+        <StatBar label="Regen Escudos" value={stats.shieldRegen} max={3000} unit="/s" color="from-cyan-500 to-blue-400" baseline={baseline?.shieldRegen} />
         <StatBar label="Salida Energía" value={stats.powerOutput} max={30} unit="W" color="from-amber-500 to-yellow-400" baseline={baseline?.powerOutput} />
-        <StatBar label="Enfriamiento" value={stats.coolingRate} max={150} unit="c/s" color="from-sky-500 to-cyan-400" baseline={baseline?.coolingRate} />
+        <StatBar label="Enfriamiento" value={stats.coolingRate} max={80} unit="c/s" color="from-sky-500 to-cyan-400" baseline={baseline?.coolingRate} />
         {stats.quantumSpeed > 0 && (
           <StatBar label="Velocidad Quantum" value={stats.quantumSpeed / 1000000} max={300} unit="G km/s" color="from-violet-500 to-purple-400" baseline={baseline ? baseline.quantumSpeed / 1000000 : undefined} />
         )}

@@ -18,17 +18,11 @@ interface LoadoutRadarChartProps {
     hullHp: number;
     coolingRate: number;
   };
+  shipShieldHp: number;
+  shipHullHp: number;
 }
 
-const MAX_VALUES = {
-  dps: 25000,
-  shield: 120000,
-  regen: 25000,
-  hull: 200000,
-  cooling: 150,
-};
-
-export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
+export default function LoadoutRadarChart({ stats, shipShieldHp, shipHullHp }: LoadoutRadarChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -45,30 +39,38 @@ export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
     return () => observer.disconnect();
   }, []);
 
+  const maxValues = useMemo(() => ({
+    dps: Math.max(3000, stats.totalDps * 1.5),
+    shield: Math.max(1000, shipShieldHp * 1.5),
+    regen: Math.max(500, stats.shieldRegen * 1.5 || 1000),
+    hull: Math.max(1000, shipHullHp * 1.2),
+    cooling: Math.max(20, stats.coolingRate * 1.5 || 50),
+  }), [stats.totalDps, stats.shieldRegen, stats.coolingRate, shipShieldHp, shipHullHp]);
+
   const data = [
     {
       stat: "DPS",
-      value: Math.min(100, Math.round((stats.totalDps / MAX_VALUES.dps) * 100)),
+      value: Math.min(100, Math.round((stats.totalDps / maxValues.dps) * 100)),
       raw: `${stats.totalDps.toLocaleString()} DPS`,
     },
     {
       stat: "Escudos",
-      value: Math.min(100, Math.round((stats.shieldHp / MAX_VALUES.shield) * 100)),
+      value: Math.min(100, Math.round((stats.shieldHp / maxValues.shield) * 100)),
       raw: `${stats.shieldHp.toLocaleString()} HP`,
     },
     {
       stat: "Regen",
-      value: Math.min(100, Math.round((stats.shieldRegen / MAX_VALUES.regen) * 100)),
+      value: Math.min(100, Math.round((stats.shieldRegen / maxValues.regen) * 100)),
       raw: `${stats.shieldRegen.toLocaleString()} /s`,
     },
     {
       stat: "Casco",
-      value: Math.min(100, Math.round((stats.hullHp / MAX_VALUES.hull) * 100)),
+      value: Math.min(100, Math.round((stats.hullHp / maxValues.hull) * 100)),
       raw: `${stats.hullHp.toLocaleString()} HP`,
     },
     {
       stat: "Enfriamiento",
-      value: Math.min(100, Math.round((stats.coolingRate / MAX_VALUES.cooling) * 100)),
+      value: Math.min(100, Math.round((stats.coolingRate / maxValues.cooling) * 100)),
       raw: `${stats.coolingRate.toLocaleString()} c/s`,
     },
   ];
