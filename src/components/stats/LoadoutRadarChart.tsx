@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   RadarChart,
   PolarGrid,
@@ -29,33 +30,38 @@ const MAX_VALUES = {
 };
 
 export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
-  const data = [
-    {
-      stat: "DPS",
-      value: Math.min(100, Math.round((stats.totalDps / MAX_VALUES.dps) * 100)),
-      raw: `${stats.totalDps.toFixed(0)} DPS`,
-    },
-    {
-      stat: "Escudos",
-      value: Math.min(100, Math.round((stats.shieldHp / MAX_VALUES.shield) * 100)),
-      raw: `${stats.shieldHp.toLocaleString()} HP`,
-    },
-    {
-      stat: "Regen",
-      value: Math.min(100, Math.round((stats.shieldRegen / MAX_VALUES.regen) * 100)),
-      raw: `${stats.shieldRegen.toLocaleString()} /s`,
-    },
-    {
-      stat: "Casco",
-      value: Math.min(100, Math.round((stats.hullHp / MAX_VALUES.hull) * 100)),
-      raw: `${stats.hullHp.toLocaleString()} HP`,
-    },
-    {
-      stat: "Energía",
-      value: Math.min(100, Math.round((stats.powerOutput / MAX_VALUES.power) * 100)),
-      raw: `${stats.powerOutput.toLocaleString()} W`,
-    },
-  ];
+  const data = useMemo(
+    () => [
+      {
+        stat: "DPS",
+        value: Math.min(100, Math.round((stats.totalDps / MAX_VALUES.dps) * 100)),
+        raw: `${stats.totalDps.toFixed(0)} DPS`,
+      },
+      {
+        stat: "Escudos",
+        value: Math.min(100, Math.round((stats.shieldHp / MAX_VALUES.shield) * 100)),
+        raw: `${stats.shieldHp.toLocaleString()} HP`,
+      },
+      {
+        stat: "Regen",
+        value: Math.min(100, Math.round((stats.shieldRegen / MAX_VALUES.regen) * 100)),
+        raw: `${stats.shieldRegen.toLocaleString()} /s`,
+      },
+      {
+        stat: "Casco",
+        value: Math.min(100, Math.round((stats.hullHp / MAX_VALUES.hull) * 100)),
+        raw: `${stats.hullHp.toLocaleString()} HP`,
+      },
+      {
+        stat: "Energía",
+        value: Math.min(100, Math.round((stats.powerOutput / MAX_VALUES.power) * 100)),
+        raw: `${stats.powerOutput.toLocaleString()} W`,
+      },
+    ],
+    [stats.totalDps, stats.shieldHp, stats.shieldRegen, stats.hullHp, stats.powerOutput]
+  );
+
+  const chartKey = `${stats.totalDps}-${stats.shieldHp}-${stats.shieldRegen}-${stats.hullHp}-${stats.powerOutput}`;
 
   return (
     <div className="w-full space-y-1">
@@ -63,7 +69,7 @@ export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
         Radar de Balance de Nave
       </h4>
       <div className="h-[220px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer key={chartKey} width="100%" height="100%">
           <RadarChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
             <defs>
               <radialGradient id="radarFill" cx="50%" cy="50%" r="65%">
