@@ -355,14 +355,11 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
                     shieldHp: stats.shieldHp,
                     hullHp: ship.hull_hp || 0,
                     powerOutput: stats.powerOutput,
-                    coolingRate: stats.coolingRate,
                   }}
                   shipStats={{
                     hull_hp: ship.hull_hp || 0,
                     scm_speed: ship.scm_speed || 0,
                     max_speed: ship.max_speed || 0,
-                    shield_hp: stats.shieldHp,
-                    totalDps: stats.totalDps,
                   }}
                 />
               </CardContent>

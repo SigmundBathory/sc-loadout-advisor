@@ -16,24 +16,21 @@ interface LoadoutRadarChartProps {
     shieldHp: number;
     hullHp: number;
     powerOutput: number;
-    coolingRate: number;
   };
   shipStats: {
     hull_hp: number;
     scm_speed: number;
     max_speed: number;
-    shield_hp: number;
-    totalDps: number;
   };
 }
 
 export default function LoadoutRadarChart({ stats, shipStats }: LoadoutRadarChartProps) {
   const maxValues = {
-    dps: Math.max(3000, stats.totalDps * 1.3, shipStats.totalDps * 1.3),
-    shield: Math.max(20000, stats.shieldHp * 1.3, shipStats.shield_hp * 1.3),
-    hull: Math.max(30000, stats.hullHp * 1.3),
-    speed: Math.max(800, shipStats.max_speed * 1.2),
-    power: Math.max(15000, stats.powerOutput * 1.3),
+    dps: 12000,
+    shield: 120000,
+    hull: 150000,
+    speed: 1200,
+    power: 25000,
   };
 
   const data = [

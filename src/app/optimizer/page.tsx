@@ -207,14 +207,11 @@ export default function OptimizerPage() {
                             shieldHp: result.stats?.shield_hp || 0,
                             hullHp: result.ship?.hull_hp || 0,
                             powerOutput: result.stats?.power_output || 0,
-                            coolingRate: result.stats?.cooling_rate || 0,
                           }}
                           shipStats={{
                             hull_hp: result.ship?.hull_hp || 0,
                             scm_speed: result.ship?.scm_speed || 0,
                             max_speed: result.ship?.max_speed || 0,
-                            shield_hp: result.stats?.shield_hp || 0,
-                            totalDps: result.stats?.total_dps || 0,
                           }}
                         />
                       </CardContent>
