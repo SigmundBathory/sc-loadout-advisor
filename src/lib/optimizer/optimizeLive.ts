@@ -151,8 +151,9 @@ export function optimizeAssignments(
   ship.hardpoints.forEach((hp) => {
     const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
     const types = SLOT_TYPE_MAP[slotKey] || [hp.slot_type.toLowerCase()];
+    const maxSize = hp.max_size || hp.size;
     const compatible = availableComponents.filter(
-      (c) => types.includes(c.type.toLowerCase()) && !usedComponentIds.has(c.id)
+      (c) => types.includes(c.type.toLowerCase()) && c.size <= maxSize && !usedComponentIds.has(c.id)
     );
 
     if (compatible.length > 0) {
