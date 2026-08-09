@@ -14,49 +14,45 @@ interface LoadoutRadarChartProps {
   stats: {
     totalDps: number;
     shieldHp: number;
+    shieldRegen: number;
     hullHp: number;
     powerOutput: number;
   };
-  shipStats: {
-    hull_hp: number;
-    scm_speed: number;
-    max_speed: number;
-  };
 }
 
-export default function LoadoutRadarChart({ stats, shipStats }: LoadoutRadarChartProps) {
-  const maxValues = {
-    dps: 12000,
-    shield: 120000,
-    hull: 150000,
-    speed: 1200,
-    power: 25000,
-  };
+const MAX_VALUES = {
+  dps: 6000,
+  shield: 40000,
+  regen: 5000,
+  hull: 80000,
+  power: 30000,
+};
 
+export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
   const data = [
     {
       stat: "DPS",
-      value: Math.min(100, Math.round((stats.totalDps / maxValues.dps) * 100)),
+      value: Math.min(100, Math.round((stats.totalDps / MAX_VALUES.dps) * 100)),
       raw: `${stats.totalDps.toFixed(0)} DPS`,
     },
     {
       stat: "Escudos",
-      value: Math.min(100, Math.round((stats.shieldHp / maxValues.shield) * 100)),
+      value: Math.min(100, Math.round((stats.shieldHp / MAX_VALUES.shield) * 100)),
       raw: `${stats.shieldHp.toLocaleString()} HP`,
     },
     {
+      stat: "Regen",
+      value: Math.min(100, Math.round((stats.shieldRegen / MAX_VALUES.regen) * 100)),
+      raw: `${stats.shieldRegen.toLocaleString()} /s`,
+    },
+    {
       stat: "Casco",
-      value: Math.min(100, Math.round((stats.hullHp / maxValues.hull) * 100)),
+      value: Math.min(100, Math.round((stats.hullHp / MAX_VALUES.hull) * 100)),
       raw: `${stats.hullHp.toLocaleString()} HP`,
     },
     {
-      stat: "Velocidad",
-      value: Math.min(100, Math.round((shipStats.scm_speed / maxValues.speed) * 100)),
-      raw: `${shipStats.scm_speed} m/s`,
-    },
-    {
       stat: "Energía",
-      value: Math.min(100, Math.round((stats.powerOutput / maxValues.power) * 100)),
+      value: Math.min(100, Math.round((stats.powerOutput / MAX_VALUES.power) * 100)),
       raw: `${stats.powerOutput.toLocaleString()} W`,
     },
   ];
@@ -87,6 +83,7 @@ export default function LoadoutRadarChart({ stats, shipStats }: LoadoutRadarChar
               strokeWidth={2}
               fill="url(#radarFill)"
               fillOpacity={1}
+              isAnimationActive={false}
             />
             <Tooltip
               content={({ active, payload }) => {
