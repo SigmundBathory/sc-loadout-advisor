@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import {
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
   Radar,
-  ResponsiveContainer,
   Tooltip,
 } from "recharts";
 import { CHART_COLOR } from "@/lib/chartColors";
@@ -30,47 +29,58 @@ const MAX_VALUES = {
 };
 
 export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
-  const data = useMemo(
-    () => [
-      {
-        stat: "DPS",
-        value: Math.min(100, Math.round((stats.totalDps / MAX_VALUES.dps) * 100)),
-        raw: `${stats.totalDps.toLocaleString()} DPS`,
-      },
-      {
-        stat: "Escudos",
-        value: Math.min(100, Math.round((stats.shieldHp / MAX_VALUES.shield) * 100)),
-        raw: `${stats.shieldHp.toLocaleString()} HP`,
-      },
-      {
-        stat: "Regen",
-        value: Math.min(100, Math.round((stats.shieldRegen / MAX_VALUES.regen) * 100)),
-        raw: `${stats.shieldRegen.toLocaleString()} /s`,
-      },
-      {
-        stat: "Casco",
-        value: Math.min(100, Math.round((stats.hullHp / MAX_VALUES.hull) * 100)),
-        raw: `${stats.hullHp.toLocaleString()} HP`,
-      },
-      {
-        stat: "Enfriamiento",
-        value: Math.min(100, Math.round((stats.coolingRate / MAX_VALUES.cooling) * 100)),
-        raw: `${stats.coolingRate.toLocaleString()} c/s`,
-      },
-    ],
-    [stats.totalDps, stats.shieldHp, stats.shieldRegen, stats.hullHp, stats.coolingRate]
-  );
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
 
-  const chartKey = `${stats.totalDps}-${stats.shieldHp}-${stats.shieldRegen}-${stats.hullHp}-${stats.coolingRate}`;
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const el = containerRef.current;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(el);
+    setWidth(el.clientWidth);
+    return () => observer.disconnect();
+  }, []);
+
+  const data = [
+    {
+      stat: "DPS",
+      value: Math.min(100, Math.round((stats.totalDps / MAX_VALUES.dps) * 100)),
+      raw: `${stats.totalDps.toLocaleString()} DPS`,
+    },
+    {
+      stat: "Escudos",
+      value: Math.min(100, Math.round((stats.shieldHp / MAX_VALUES.shield) * 100)),
+      raw: `${stats.shieldHp.toLocaleString()} HP`,
+    },
+    {
+      stat: "Regen",
+      value: Math.min(100, Math.round((stats.shieldRegen / MAX_VALUES.regen) * 100)),
+      raw: `${stats.shieldRegen.toLocaleString()} /s`,
+    },
+    {
+      stat: "Casco",
+      value: Math.min(100, Math.round((stats.hullHp / MAX_VALUES.hull) * 100)),
+      raw: `${stats.hullHp.toLocaleString()} HP`,
+    },
+    {
+      stat: "Enfriamiento",
+      value: Math.min(100, Math.round((stats.coolingRate / MAX_VALUES.cooling) * 100)),
+      raw: `${stats.coolingRate.toLocaleString()} c/s`,
+    },
+  ];
 
   return (
     <div className="w-full space-y-1">
       <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">
         Radar de Balance de Nave
       </h4>
-      <div className="h-[220px] w-full">
-        <ResponsiveContainer key={chartKey} width="100%" height="100%">
-          <RadarChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
+      <div ref={containerRef} className="h-[220px] w-full">
+        {width > 0 && (
+          <RadarChart width={width} height={220} data={data} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
             <defs>
               <radialGradient id="radarFill" cx="50%" cy="50%" r="65%">
                 <stop offset="0%" stopColor={CHART_COLOR(0)} stopOpacity={0.5} />
@@ -107,7 +117,7 @@ export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
               }}
             />
           </RadarChart>
-        </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
