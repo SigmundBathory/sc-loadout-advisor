@@ -71,14 +71,16 @@ function getHardpointsByShip(shipId: string): Hardpoint[] {
   const rows = db
     .prepare("SELECT * FROM hardpoints WHERE ship_id = ?")
     .all(shipId) as any[];
-  return rows.map((r: any) => ({
-    id: r.id,
-    name: r.name,
-    slot_type: r.slot_type,
-    size: r.size,
-    max_size: r.max_size,
-    component_id: r.component_id || undefined,
-  }));
+  return rows
+    .filter((r: any) => !r.name.toLowerCase().includes("interdiction"))
+    .map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      slot_type: r.slot_type,
+      size: r.size,
+      max_size: r.max_size,
+      component_id: r.component_id || undefined,
+    }));
 }
 
 function mapShipRow(row: any): Ship {
