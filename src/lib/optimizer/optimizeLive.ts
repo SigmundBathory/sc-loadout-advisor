@@ -36,7 +36,7 @@ export function scoreForPreset(preset: string, comp: Component): number {
   const regen = s.regen_rate || 0;
   const output = s.output || 0;
   const range = s.range || 0;
-  const speed = s.travel_speed || 0;
+  const speed = Math.min(s.travel_speed || 0, 300000000); // Cap at 300M to avoid anomalous data
   const spoolTime = s.spool_time || 0;
   const cooling = s.cooling_rate || 0;
   const suppressionIr = s.suppression_ir || 0;
@@ -158,7 +158,14 @@ export function optimizeAssignments(
 
     if (compatible.length > 0) {
       const scored = compatible
-        .map((comp) => ({ comp, score: scoreForPreset(preset, comp) }))
+        .map((comp) => {
+          const baseScore = scoreForPreset(preset, comp);
+          // Size preference: prefer components that match the slot size
+          // Bonus of 5% per size level (so size 2 in a size 2 slot = +10% vs size 1)
+          const sizeRatio = comp.size / maxSize;
+          const sizeBonus = sizeRatio * 0.1;
+          return { comp, score: baseScore * (1 + sizeBonus) };
+        })
         .sort((a, b) => b.score - a.score);
       bestComponents.set(hp.id, scored[0].comp.id);
       usedComponentIds.add(scored[0].comp.id);
