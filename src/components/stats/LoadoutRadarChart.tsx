@@ -21,11 +21,11 @@ interface LoadoutRadarChartProps {
 }
 
 const MAX_VALUES = {
-  dps: 18000,
-  shield: 30000,
-  regen: 5000,
+  dps: 25000,
+  shield: 120000,
+  regen: 25000,
   hull: 200000,
-  cooling: 100,
+  cooling: 150,
 };
 
 export default function LoadoutRadarChart({ stats }: LoadoutRadarChartProps) {
