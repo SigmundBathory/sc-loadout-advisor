@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useLoadoutStore } from "@/stores/loadoutStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger, TabsIndicator } from "@/components/ui/tabs";
-import { ShoppingCart, Settings, Crosshair, Zap } from "lucide-react";
+import { ShoppingCart, Settings, Crosshair, Zap, MapPin, Gauge } from "lucide-react";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
 import ShoppingList from "@/components/budget/ShoppingList";
+import ShipBuyLocations from "@/components/ships/ShipBuyLocations";
+import ShipStatsVisualizations from "@/components/stats/ShipStatsVisualizations";
 import StatsPanel from "./StatsPanel";
-import SlotList from "./SlotList";
 import HardpointSchematic from "./HardpointSchematic";
 import LoadoutHeader from "./LoadoutHeader";
 import ComponentPickerDialog from "./ComponentPickerDialog";
@@ -17,13 +17,19 @@ import SaveLoadoutDialog from "./SaveLoadoutDialog";
 import LoadLoadoutDialog from "./LoadLoadoutDialog";
 import OptimizerDialog from "./OptimizerDialog";
 import type { Ship, Loadout, Hardpoint } from "@/lib/types";
+import type { ShipBuyLocation, WikeloShip } from "@/lib/db/queries";
 import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
 import { optimizeAssignments } from "@/lib/optimizer/optimizeLive";
 import { useShipComponents, useLoadoutsByShip } from "@/lib/api/client";
 import { decodeLoadoutShare, type ImportedLoadout } from "@/lib/loadout/share";
 
-export default function LoadoutBuilder({ ship }: { ship: Ship }) {
-  const router = useRouter();
+interface LoadoutBuilderProps {
+  ship: Ship;
+  locations: ShipBuyLocation[];
+  wikelo?: WikeloShip | null;
+}
+
+export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuilderProps) {
   const {
     slotAssignments,
     setSlotAssignment,
@@ -108,7 +114,6 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     return Array.from(componentMap.values());
   }, [componentMap]);
 
-  // Auto-load the most recent saved loadout for this ship
   const { data: shipLoadouts } = useLoadoutsByShip(ship.id);
   useEffect(() => {
     const loadouts = shipLoadouts?.loadouts || [];
@@ -124,7 +129,6 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
     }
   }, [shipLoadouts, setLoadedLoadout, setLastOptimizedPreset, setSlotAssignment]);
 
-  // Deep-link support: apply a shared loadout from the URL hash (#loadout=SCLA:...)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash;
@@ -204,7 +208,6 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
       bestComponents.forEach((compId, slotId) => {
         setSlotAssignment(slotId, compId);
       });
-      // Update loadedLoadout stats after optimization
       if (loadedLoadout) {
         const newAssignments: Record<string, string> = {};
         bestComponents.forEach((compId, slotId) => { newAssignments[slotId] = compId; });
@@ -277,141 +280,146 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
   };
 
   return (
-    <div className="space-y-6">
-      <LoadoutHeader
-        shipName={ship.name}
-        loadedLoadout={loadedLoadout}
-        lastOptimizedPreset={lastOptimizedPreset}
-        onBack={() => router.push("/ships")}
-        onLoad={() => setShowLoadDialog(true)}
-        onOptimize={() => setShowOptimizer(true)}
-        onSave={() => setShowSaveDialog(true)}
-        optimizing={optimizing}
-      />
+    <Tabs defaultValue="loadout" className="w-full">
+      <TabsList className="glass-panel border border-border/40 p-1 bg-muted/30 rounded-xl">
+        <TabsIndicator className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-sm" />
+        <TabsTrigger
+          value="loadout"
+          className="relative z-10 rounded-lg font-semibold"
+        >
+          <Settings className="h-4 w-4 mr-1.5" /> Loadout Builder
+        </TabsTrigger>
+        <TabsTrigger
+          value="specs"
+          className="relative z-10 rounded-lg font-semibold"
+        >
+          <Gauge className="h-4 w-4 mr-1.5" /> Especificaciones
+        </TabsTrigger>
+        <TabsTrigger
+          value="locations"
+          className="relative z-10 rounded-lg font-semibold"
+        >
+          <MapPin className="h-4 w-4 mr-1.5" /> Ubicaciones
+        </TabsTrigger>
+      </TabsList>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-3 space-y-6">
-          <StatsPanel stats={stats} assignedCount={assignedCount} totalSlots={totalSlots} baseline={baselineStats} />
+      {/* ===== TAB: LOADOUT BUILDER ===== */}
+      <TabsContent value="loadout" className="mt-4 space-y-6">
+        <LoadoutHeader
+          shipName={ship.name}
+          loadedLoadout={loadedLoadout}
+          lastOptimizedPreset={lastOptimizedPreset}
+          onLoad={() => setShowLoadDialog(true)}
+          onOptimize={() => setShowOptimizer(true)}
+          onSave={() => setShowSaveDialog(true)}
+          optimizing={optimizing}
+        />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-3 space-y-6">
+            <StatsPanel stats={stats} assignedCount={assignedCount} totalSlots={totalSlots} baseline={baselineStats} />
+          </div>
+
+          <div className="lg:col-span-5">
+            <Card className="glass-panel border-border/40">
+              <CardHeader className="p-4 border-b border-border/30 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Crosshair className="h-4 w-4 text-primary" />
+                  Esquema de Hardpoints
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <HardpointSchematic
+                  ship={ship}
+                  slotAssignments={slotAssignments}
+                  componentMap={componentMap}
+                  onSlotClick={setSelectedSlot}
+                  onClearSlot={clearSlotAssignment}
+                  onMoveComponent={handleMoveComponent}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="lg:col-span-4">
+            <Card className="glass-panel border-border/40 h-full">
+              <CardHeader className="p-4 border-b border-border/30">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-primary" />
+                  Métricas del Loadout
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <LoadoutRadarChart
+                  stats={{
+                    totalDps: stats.totalDps,
+                    shieldHp: stats.shieldHp,
+                    hullHp: ship.hull_hp || 0,
+                    powerOutput: stats.powerOutput,
+                    coolingRate: stats.coolingRate,
+                  }}
+                  shipStats={{
+                    hull_hp: ship.hull_hp || 0,
+                    scm_speed: ship.scm_speed || 0,
+                    max_speed: ship.max_speed || 0,
+                    shield_hp: stats.shieldHp,
+                    totalDps: stats.totalDps,
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        <div className="lg:col-span-5 space-y-6">
-          <Card className="glass-panel border-border/40">
-            <CardHeader className="p-4 border-b border-border/30 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Settings className="h-4 w-4 text-primary" />
-                Configuración Actual
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <SlotList
-                ship={ship}
-                slotAssignments={slotAssignments}
-                componentMap={componentMap}
-                allComponents={components}
-                onSlotClick={setSelectedSlot}
-                onClearSlot={clearSlotAssignment}
-              />
-            </CardContent>
-          </Card>
+        {/* Tabs internas: Compra + Shopping List */}
+        <Tabs defaultValue="summary" className="w-full">
+          <TabsList className="glass-panel border border-border/40 p-1 bg-muted/30 rounded-xl">
+            <TabsIndicator className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-sm" />
+            <TabsTrigger value="summary" className="relative z-10 rounded-lg font-semibold">
+              <Zap className="h-4 w-4 mr-1.5" /> Resumen
+            </TabsTrigger>
+            <TabsTrigger value="shopping" className="relative z-10 rounded-lg font-semibold">
+              <ShoppingCart className="h-4 w-4 mr-1.5" /> Comprar
+            </TabsTrigger>
+          </TabsList>
 
-          <Card className="glass-panel border-border/40">
-            <CardHeader className="p-4 border-b border-border/30">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Crosshair className="h-4 w-4 text-primary" />
-                Vista Esquemática
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <HardpointSchematic
-                ship={ship}
-                slotAssignments={slotAssignments}
-                componentMap={componentMap}
-                onSlotClick={setSelectedSlot}
-                onClearSlot={clearSlotAssignment}
-                onMoveComponent={handleMoveComponent}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-4">
-          <Card className="glass-panel border-border/40 h-full">
-            <CardHeader className="p-4 border-b border-border/30">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Zap className="h-4 w-4 text-primary" />
-                Métricas del Loadout
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <LoadoutRadarChart
-                stats={{
-                  totalDps: stats.totalDps,
-                  shieldHp: stats.shieldHp,
-                  hullHp: ship.hull_hp || 0,
-                  powerOutput: stats.powerOutput,
-                  coolingRate: stats.coolingRate,
-                }}
-                shipStats={{
-                  hull_hp: ship.hull_hp || 0,
-                  scm_speed: ship.scm_speed || 0,
-                  max_speed: ship.max_speed || 0,
-                  shield_hp: stats.shieldHp,
-                  totalDps: stats.totalDps,
-                }}
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <Tabs defaultValue="loadout" className="w-full">
-        <TabsList className="glass-panel border border-border/40 p-1 bg-muted/30 rounded-xl">
-          <TabsIndicator className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-sm" />
-          <TabsTrigger
-            value="loadout"
-            className="relative z-10 rounded-lg font-semibold"
-          >
-            <Zap className="h-4 w-4 mr-2" /> Loadout
-          </TabsTrigger>
-          <TabsTrigger
-            value="shopping"
-            className="relative z-10 rounded-lg font-semibold"
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" /> Comprar
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="loadout" className="mt-4">
-          <Card className="glass-panel border-border/40">
-            <CardHeader className="p-4 border-b border-border/30">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4 text-primary" />
-                Compra y Optimización
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold">Resumen de Compra</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Coste Total Loadout</span>
-                    <span className="font-mono font-bold text-amber-400">{stats.totalCost.toLocaleString()} aUEC</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Mejoras Instaladas</span>
-                    <span className="font-mono font-bold">{assignedCount} / {totalSlots}</span>
+          <TabsContent value="summary" className="mt-4">
+            <Card className="glass-panel border-border/40">
+              <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold">Resumen de Compra</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Coste Total Loadout</span>
+                      <span className="font-mono font-bold text-amber-400">{stats.totalCost.toLocaleString()} aUEC</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Mejoras Instaladas</span>
+                      <span className="font-mono font-bold">{assignedCount} / {totalSlots}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="shopping" className="mt-4">
-          <ShoppingList components={equippedComponentList} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="shopping" className="mt-4">
+            <ShoppingList components={equippedComponentList} />
+          </TabsContent>
+        </Tabs>
+      </TabsContent>
 
+      {/* ===== TAB: ESPECIFICACIONES ===== */}
+      <TabsContent value="specs" className="mt-4">
+        <ShipStatsVisualizations ship={ship} />
+      </TabsContent>
+
+      {/* ===== TAB: UBICACIONES ===== */}
+      <TabsContent value="locations" className="mt-4">
+        <ShipBuyLocations locations={locations} wikelo={wikelo} />
+      </TabsContent>
+
+      {/* ===== DIALOGS ===== */}
       <ComponentPickerDialog
         slot={selectedSlot}
         components={pickerComponents}
@@ -448,6 +456,6 @@ export default function LoadoutBuilder({ ship }: { ship: Ship }) {
         onOptimize={handleOptimize}
         optimizing={optimizing}
       />
-    </div>
+    </Tabs>
   );
 }

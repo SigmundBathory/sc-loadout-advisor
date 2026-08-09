@@ -1,14 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Upload, Wand2 } from "lucide-react";
+import { Save, Upload, Wand2 } from "lucide-react";
 import type { Loadout } from "@/lib/types";
 
 interface LoadoutHeaderProps {
   shipName: string;
   loadedLoadout: Loadout | null;
   lastOptimizedPreset: string;
-  onBack: () => void;
   onLoad: () => void;
   onOptimize: () => void;
   onSave: () => void;
@@ -19,7 +18,6 @@ export default function LoadoutHeader({
   shipName,
   loadedLoadout,
   lastOptimizedPreset,
-  onBack,
   onLoad,
   onOptimize,
   onSave,
@@ -27,60 +25,55 @@ export default function LoadoutHeader({
 }: LoadoutHeaderProps) {
   return (
     <div className="flex items-center justify-between">
-      <Button
-        variant="ghost"
-        className="text-muted-foreground hover:text-foreground"
-        onClick={onBack}
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Volver a Naves
-      </Button>
-
-      {(loadedLoadout || lastOptimizedPreset) && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground max-w-[240px] truncate">
-            {loadedLoadout?.name || shipName}
-          </span>
-          {lastOptimizedPreset || loadedLoadout?.is_optimized ? (
-            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 ring-1 ring-emerald-500/30">
-              <Wand2 className="h-3 w-3 mr-1" />
-              Optimizada
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-bold text-foreground">Configuración del Loadout</h2>
+        {(loadedLoadout || lastOptimizedPreset) && (
+          <>
+            <span className="text-xs text-muted-foreground">·</span>
+            <span className="text-xs font-medium text-muted-foreground max-w-[180px] truncate">
+              {loadedLoadout?.name || shipName}
             </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-semibold text-slate-400 ring-1 ring-slate-500/30">
-              Estándar
-            </span>
-          )}
-        </div>
-      )}
+            {lastOptimizedPreset || loadedLoadout?.is_optimized ? (
+              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/30">
+                <Wand2 className="h-2.5 w-2.5 mr-0.5" />
+                Optimizada
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-slate-500/10 px-2 py-0.5 text-[10px] font-semibold text-slate-400 ring-1 ring-slate-500/30">
+                Estándar
+              </span>
+            )}
+          </>
+        )}
+      </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="sm"
-          className="rounded-xl gap-2 border-border/40 text-xs font-medium hover:bg-muted/40"
+          className="rounded-xl gap-1.5 border-border/40 text-xs font-medium hover:bg-muted/40"
           onClick={onLoad}
         >
-          <Upload className="h-4 w-4" />
+          <Upload className="h-3.5 w-3.5" />
           Cargar
         </Button>
         <Button
           variant="outline"
           size="sm"
-          className="rounded-xl gap-2 border-border/40 text-xs font-medium hover:bg-muted/40"
+          className="rounded-xl gap-1.5 border-border/40 text-xs font-medium hover:bg-muted/40"
           onClick={onOptimize}
           disabled={optimizing}
         >
-          <Wand2 className="h-4 w-4" />
+          <Wand2 className="h-3.5 w-3.5" />
           {optimizing ? "Optimizando..." : "Optimizar"}
         </Button>
         <Button
           variant="outline"
           size="sm"
-          className="rounded-xl gap-2 border-border/40 text-xs font-medium hover:bg-muted/40"
+          className="rounded-xl gap-1.5 border-border/40 text-xs font-medium hover:bg-muted/40"
           onClick={onSave}
         >
-          <Save className="h-4 w-4" />
+          <Save className="h-3.5 w-3.5" />
           Guardar
         </Button>
       </div>
