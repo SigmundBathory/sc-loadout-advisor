@@ -35,6 +35,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
     slotAssignments,
     setSlotAssignment,
     clearSlotAssignment,
+    resetAllSlots,
     savedLoadouts,
     addSavedLoadout,
     loadedLoadout,
@@ -115,10 +116,52 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
     return Array.from(componentMap.values());
   }, [componentMap]);
 
+  const maxStats = useMemo(() => {
+    if (!components || components.length === 0) return undefined;
+
+    let maxDps = 0;
+    let maxShieldHp = 0;
+    let maxShieldRegen = 0;
+    let maxCoolingRate = 0;
+
+    ship.hardpoints.forEach((hp) => {
+      const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+      const hpSize = hp.max_size || hp.size;
+
+      if (slotKey === "weapon" || slotKey === "turret") {
+        const best = components
+          .filter((c) => c.type === "Weapon" && c.size <= hpSize)
+          .reduce((max, c) => Math.max(max, c.stats.dps || 0), 0);
+        maxDps += best;
+      } else if (slotKey === "shield") {
+        const bestHp = components
+          .filter((c) => c.type === "Shield" && c.size <= hpSize)
+          .reduce((max, c) => Math.max(max, c.stats.hp || 0), 0);
+        const bestRegen = components
+          .filter((c) => c.type === "Shield" && c.size <= hpSize)
+          .reduce((max, c) => Math.max(max, c.stats.regen_rate || 0), 0);
+        maxShieldHp += bestHp;
+        maxShieldRegen += bestRegen;
+      } else if (slotKey === "cooler") {
+        const bestCooling = components
+          .filter((c) => c.type === "Cooler" && c.size <= hpSize)
+          .reduce((max, c) => Math.max(max, c.stats.cooling_rate || 0), 0);
+        maxCoolingRate += bestCooling;
+      }
+    });
+
+    return {
+      maxDps: maxDps || 4000,
+      maxShieldHp: maxShieldHp || (ship.shield_hp ? ship.shield_hp * 1.5 : 2000),
+      maxShieldRegen: maxShieldRegen || 1000,
+      maxCoolingRate: maxCoolingRate || 200,
+    };
+  }, [ship, components]);
+
   const { data: shipLoadouts } = useLoadoutsByShip(ship.id);
   useEffect(() => {
     const loadouts = shipLoadouts?.loadouts || [];
-    if (loadouts.length > 0) {
+    if (loadouts.length > 0 && !loadedLoadout && assignedCount === 0) {
       const latest = loadouts[0];
       setLoadedLoadout(latest);
       setLastOptimizedPreset(latest.optimized_preset || "");
@@ -128,7 +171,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
         });
       }
     }
-  }, [shipLoadouts, setLoadedLoadout, setLastOptimizedPreset, setSlotAssignment]);
+  }, [shipLoadouts, loadedLoadout, assignedCount, setLoadedLoadout, setLastOptimizedPreset, setSlotAssignment]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -266,6 +309,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
   };
 
   const handleLoadPreset = (loadout: Loadout) => {
+    resetAllSlots();
     if (loadout.components) {
       Object.entries(loadout.components).forEach(([slotId, compId]) => {
         setSlotAssignment(slotId, compId);
@@ -359,6 +403,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
                   }}
                   shipShieldHp={ship.shield_hp || 1000}
                   shipHullHp={ship.hull_hp || 1000}
+                  maxStats={maxStats}
                 />
               </CardContent>
             </Card>

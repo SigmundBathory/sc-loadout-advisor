@@ -20,9 +20,15 @@ interface LoadoutRadarChartProps {
   };
   shipShieldHp: number;
   shipHullHp: number;
+  maxStats?: {
+    maxDps?: number;
+    maxShieldHp?: number;
+    maxShieldRegen?: number;
+    maxCoolingRate?: number;
+  };
 }
 
-export default function LoadoutRadarChart({ stats, shipShieldHp, shipHullHp }: LoadoutRadarChartProps) {
+export default function LoadoutRadarChart({ stats, shipShieldHp, shipHullHp, maxStats }: LoadoutRadarChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -39,13 +45,21 @@ export default function LoadoutRadarChart({ stats, shipShieldHp, shipHullHp }: L
     return () => observer.disconnect();
   }, []);
 
-  const maxValues = useMemo(() => ({
-    dps: Math.max(3000, stats.totalDps * 1.5),
-    shield: Math.max(1000, shipShieldHp * 1.5),
-    regen: Math.max(500, stats.shieldRegen * 1.5 || 1000),
-    hull: Math.max(1000, shipHullHp * 1.2),
-    cooling: Math.max(20, stats.coolingRate * 1.5 || 50),
-  }), [stats.totalDps, stats.shieldRegen, stats.coolingRate, shipShieldHp, shipHullHp]);
+  const maxValues = useMemo(() => {
+    const dpsMax = maxStats?.maxDps || Math.max(3000, stats.totalDps * 1.2);
+    const shieldMax = maxStats?.maxShieldHp || Math.max(1000, shipShieldHp * 1.3, stats.shieldHp);
+    const regenMax = maxStats?.maxShieldRegen || Math.max(500, stats.shieldRegen * 1.2);
+    const hullMax = Math.max(1000, shipHullHp * 1.2);
+    const coolingMax = maxStats?.maxCoolingRate || Math.max(50, stats.coolingRate * 1.2);
+
+    return {
+      dps: Math.max(dpsMax, 1),
+      shield: Math.max(shieldMax, 1),
+      regen: Math.max(regenMax, 1),
+      hull: Math.max(hullMax, 1),
+      cooling: Math.max(coolingMax, 1),
+    };
+  }, [stats, shipShieldHp, shipHullHp, maxStats]);
 
   const data = [
     {
@@ -101,7 +115,7 @@ export default function LoadoutRadarChart({ stats, shipShieldHp, shipHullHp }: L
               strokeWidth={2}
               fill="url(#radarFill)"
               fillOpacity={1}
-              isAnimationActive={false}
+              isAnimationActive={true}
             />
             <Tooltip
               content={({ active, payload }) => {
