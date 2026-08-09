@@ -146,17 +146,21 @@ export function optimizeAssignments(
   preset: string
 ): Map<string, string> {
   const bestComponents = new Map<string, string>();
+  const usedComponentIds = new Set<string>();
 
   ship.hardpoints.forEach((hp) => {
     const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
     const types = SLOT_TYPE_MAP[slotKey] || [hp.slot_type.toLowerCase()];
-    const compatible = availableComponents.filter((c) => types.includes(c.type.toLowerCase()));
+    const compatible = availableComponents.filter(
+      (c) => types.includes(c.type.toLowerCase()) && !usedComponentIds.has(c.id)
+    );
 
     if (compatible.length > 0) {
       const scored = compatible
         .map((comp) => ({ comp, score: scoreForPreset(preset, comp) }))
         .sort((a, b) => b.score - a.score);
       bestComponents.set(hp.id, scored[0].comp.id);
+      usedComponentIds.add(scored[0].comp.id);
     }
   });
 

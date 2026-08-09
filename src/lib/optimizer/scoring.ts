@@ -141,6 +141,7 @@ export function optimizeLoadout(
   const selected: { slotId: string; component: Component; score: number }[] = [];
   const explanation: string[] = [];
   let totalCost = 0;
+  const usedComponentIds = new Set<string>();
 
   // Group hardpoints by slot type
   const slotGroups = new Map<string, typeof ship.hardpoints>();
@@ -157,7 +158,8 @@ export function optimizeLoadout(
   // Process each slot type
   for (const [slotType, slots] of slotGroups) {
     for (const slot of slots) {
-      const compatible = getCompatibleComponents(ship.id, slotType, slot.max_size || slot.size);
+      const compatible = getCompatibleComponents(ship.id, slotType, slot.max_size || slot.size)
+        .filter((c) => !usedComponentIds.has(c.id));
 
       if (compatible.length === 0) {
         explanation.push(`${slot.name}: Sin componentes compatibles disponibles`);
@@ -191,6 +193,7 @@ export function optimizeLoadout(
 
       const price = best.component.price_auec || 0;
       totalCost += price;
+      usedComponentIds.add(best.component.id);
 
       selected.push({
         slotId: slot.id,
