@@ -31,14 +31,16 @@ export function gradeBonus(comp: Component): number {
 export function scoreForPreset(preset: string, comp: Component): number {
   const s = comp.stats;
   const dps = s.dps || 0;
-  const hp = Math.min(s.hp || 0, 100000); // Cap at 100k to avoid anomalous data (Mauler Shield = 1M)
-  const maxHp = Math.min(s.max_hp || hp, 100000);
-  const regen = Math.min(s.regen_rate || 0, 5000); // Cap regen (Mauler Shield = 77k)
+  // Cap stats to reasonable ranges based on actual data distribution
+  // Size 2 shields max: hp=10560, regen=2323; Size 3: hp=105600, regen=23232
+  const hp = Math.min(s.hp || 0, 15000); // Cap at 15k (slightly above max size 2)
+  const maxHp = Math.min(s.max_hp || hp, 15000);
+  const regen = Math.min(s.regen_rate || 0, 2500); // Cap at 2500 (slightly above max size 2)
   const output = s.output || 0;
   const range = s.range || 0;
   const speed = Math.min(s.travel_speed || 0, 300000000); // Cap at 300M to avoid anomalous data
   const spoolTime = s.spool_time || 0;
-  const cooling = Math.min(s.cooling_rate || 0, 100); // Cap cooling (Mauler = 100)
+  const cooling = Math.min(s.cooling_rate || 0, 50); // Cap cooling (normal max ~30-40)
   const suppressionIr = s.suppression_ir || 0;
   const suppressionHeat = s.suppression_heat || 0;
   const sensitivityEm = s.sensitivity_em || 0;
