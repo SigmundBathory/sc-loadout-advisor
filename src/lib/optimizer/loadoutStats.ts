@@ -43,14 +43,14 @@ export function calculateLoadoutStats(
         missile_dps += s.alpha || 0;
         break;
       case "Shield":
-        shield_hp += s.hp || 0;
-        shield_regen += s.regen_rate || 0;
+        shield_hp += Math.min(s.hp || 0, 100000); // Cap at 100k to avoid anomalous data
+        shield_regen += Math.min(s.regen_rate || 0, 5000); // Cap regen
         break;
       case "PowerPlant":
         power_output += s.output || 0;
         break;
       case "Cooler":
-        cooling_rate += s.cooling_rate || 0;
+        cooling_rate += Math.min(s.cooling_rate || 0, 100); // Cap cooling
         break;
       case "QuantumDrive":
         qt_range = s.quantum_fuel_claimed || 0;

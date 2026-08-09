@@ -31,14 +31,14 @@ export function gradeBonus(comp: Component): number {
 export function scoreForPreset(preset: string, comp: Component): number {
   const s = comp.stats;
   const dps = s.dps || 0;
-  const hp = s.hp || 0;
-  const maxHp = s.max_hp || hp;
-  const regen = s.regen_rate || 0;
+  const hp = Math.min(s.hp || 0, 100000); // Cap at 100k to avoid anomalous data (Mauler Shield = 1M)
+  const maxHp = Math.min(s.max_hp || hp, 100000);
+  const regen = Math.min(s.regen_rate || 0, 5000); // Cap regen (Mauler Shield = 77k)
   const output = s.output || 0;
   const range = s.range || 0;
   const speed = Math.min(s.travel_speed || 0, 300000000); // Cap at 300M to avoid anomalous data
   const spoolTime = s.spool_time || 0;
-  const cooling = s.cooling_rate || 0;
+  const cooling = Math.min(s.cooling_rate || 0, 100); // Cap cooling (Mauler = 100)
   const suppressionIr = s.suppression_ir || 0;
   const suppressionHeat = s.suppression_heat || 0;
   const sensitivityEm = s.sensitivity_em || 0;
