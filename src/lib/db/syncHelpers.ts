@@ -1,5 +1,111 @@
 import type Database from "better-sqlite3";
 
+// ==================== COMPONENT VALIDATION ====================
+// Maximum allowed values per component type to filter anomalous data
+
+const VALIDATION_RULES: Record<string, {
+  maxDps?: number;
+  maxAlpha?: number;
+  maxHp?: number;
+  maxRegen?: number;
+  maxCooling?: number;
+  maxSpeed?: number;
+  minSpeed?: number;
+  maxPrice?: number;
+  blockedNames?: RegExp[];
+}> = {
+  Weapon: {
+    maxDps: 30000,    // Normal max ~15k for S12
+    maxAlpha: 100000, // Normal max ~50k
+    blockedNames: [/PLACEHOLDER/i, /test/i],
+  },
+  Shield: {
+    maxHp: 120000,    // Normal max S4 ~105k
+    maxRegen: 25000,  // Normal max S4 ~23k
+    blockedNames: [/PLACEHOLDER/i],
+  },
+  PowerPlant: {
+    maxPrice: 5000000, // Reasonable max
+    blockedNames: [/PLACEHOLDER/i],
+  },
+  Cooler: {
+    maxCooling: 150,  // Normal max S4 ~102
+    blockedNames: [/PLACEHOLDER/i],
+  },
+  QuantumDrive: {
+    maxSpeed: 450000000, // Normal max S4 ~400G
+    minSpeed: 50000000,  // Minimum ~50G
+    blockedNames: [/PLACEHOLDER/i, /TEMP/i],
+  },
+  Radar: {
+    blockedNames: [/PLACEHOLDER/i, /Fake/i, /TEMP/i],
+  },
+};
+
+export function validateComponent(
+  compType: string,
+  name: string,
+  stats: Record<string, any>,
+  price: number
+): { valid: boolean; reason?: string } {
+  const rules = VALIDATION_RULES[compType];
+  if (!rules) return { valid: true }; // No rules = pass
+
+  // Check blocked name patterns
+  if (rules.blockedNames) {
+    for (const pattern of rules.blockedNames) {
+      if (pattern.test(name)) {
+        return { valid: false, reason: `Blocked name pattern: ${pattern.source}` };
+      }
+    }
+  }
+
+  // Check weapon stats
+  if (compType === "Weapon") {
+    if (rules.maxDps && (stats.dps || 0) > rules.maxDps) {
+      return { valid: false, reason: `DPS ${stats.dps} exceeds max ${rules.maxDps}` };
+    }
+    if (rules.maxAlpha && (stats.alpha || 0) > rules.maxAlpha) {
+      return { valid: false, reason: `Alpha ${stats.alpha} exceeds max ${rules.maxAlpha}` };
+    }
+  }
+
+  // Check shield stats
+  if (compType === "Shield") {
+    if (rules.maxHp && (stats.hp || 0) > rules.maxHp) {
+      return { valid: false, reason: `HP ${stats.hp} exceeds max ${rules.maxHp}` };
+    }
+    if (rules.maxRegen && (stats.regen_rate || 0) > rules.maxRegen) {
+      return { valid: false, reason: `Regen ${stats.regen_rate} exceeds max ${rules.maxRegen}` };
+    }
+  }
+
+  // Check cooler stats
+  if (compType === "Cooler") {
+    if (rules.maxCooling && (stats.cooling_rate || 0) > rules.maxCooling) {
+      return { valid: false, reason: `Cooling ${stats.cooling_rate} exceeds max ${rules.maxCooling}` };
+    }
+  }
+
+  // Check QD stats
+  if (compType === "QuantumDrive") {
+    const speed = stats.travel_speed || 0;
+    if (rules.maxSpeed && speed > rules.maxSpeed) {
+      return { valid: false, reason: `Speed ${speed} exceeds max ${rules.maxSpeed}` };
+    }
+    if (rules.minSpeed && speed > 0 && speed < rules.minSpeed) {
+      return { valid: false, reason: `Speed ${speed} below min ${rules.minSpeed}` };
+    }
+  }
+
+  // Check price
+  if (rules.maxPrice && price > rules.maxPrice) {
+    return { valid: false, reason: `Price ${price} exceeds max ${rules.maxPrice}` };
+  }
+
+  return { valid: true };
+}
+
 export function detectSlotType(name: string, port: any): string {
   const lower = name.toLowerCase();
   const subtype = String(port.type || port.sub_type || "").toLowerCase();
@@ -120,6 +226,7 @@ export function syncWeapons(db: Database, weapons: any[]): number {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   let count = 0;
+  let skipped = 0;
   for (const weapon of weapons) {
     try {
       const mfg = weapon.manufacturer || {};
@@ -139,10 +246,20 @@ export function syncWeapons(db: Database, weapons: any[]): number {
         range: Number(vw.range) || 0, capacity: Number(vw.capacity) || 0,
       };
       const wepId = String(weapon.uuid || weapon.class_name || `weapon_${count}`);
+      const weaponName = String(weapon.name || "Unknown Weapon");
       const image = (weapon.images?.[0]?.thumbnail_url || weapon.images?.[0]?.original_url) || "";
       const weaponClass = weapon.class || weapon.sub_type || "";
+
+      // Validate before inserting
+      const validation = validateComponent("Weapon", weaponName, stats, 0);
+      if (!validation.valid) {
+        console.log(`  [SKIP] Weapon "${weaponName}": ${validation.reason}`);
+        skipped++;
+        continue;
+      }
+
       insertComponent.run([
-        wepId, String(weapon.name || "Unknown Weapon"), String(weapon.class_name || weapon.name || "Unknown"),
+        wepId, weaponName, String(weapon.class_name || weapon.name || "Unknown"),
         String(mfg.code || ""), "Weapon", Number(weapon.size) || 1, String(weaponClass),
         JSON.stringify(stats), String(image)
       ]);
@@ -151,6 +268,7 @@ export function syncWeapons(db: Database, weapons: any[]): number {
       console.warn(`Failed to sync weapon ${weapon?.name}:`, e);
     }
   }
+  if (skipped > 0) console.log(`  Skipped ${skipped} invalid weapons`);
   return count;
 }
 
@@ -372,6 +490,7 @@ export function syncComponentsFromPorts(
   `);
 
   let count = 0;
+  let skipped = 0;
   for (const comp of portComponentMap.values()) {
     try {
       const compId = String(comp.class_name);
@@ -404,6 +523,15 @@ export function syncComponentsFromPorts(
 
       applyFallbackEstimates(stats, compType, size, grade);
 
+      // Validate before inserting
+      const compName = String(comp.name || comp.class_name);
+      const validation = validateComponent(compType, compName, stats, price);
+      if (!validation.valid) {
+        console.log(`  [SKIP] ${compType} "${compName}" (S${size}): ${validation.reason}`);
+        skipped++;
+        continue;
+      }
+
       insertComponent.run([
         compId, String(comp.name), String(comp.class_name), String(comp.manufacturer_name || ""),
         compType, size, componentClass, JSON.stringify(stats), imageUrl
@@ -419,6 +547,7 @@ export function syncComponentsFromPorts(
       console.warn(`Failed to sync component ${comp.class_name}:`, e);
     }
   }
+  if (skipped > 0) console.log(`  Skipped ${skipped} invalid components`);
   return count;
 }
 
