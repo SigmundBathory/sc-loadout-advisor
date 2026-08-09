@@ -9,7 +9,6 @@ const SLOT_TYPES = [
   { id: "quantum_drive", label: "Motor Quantum (Salto)" },
   { id: "power_plant", label: "Plantas de Energía" },
   { id: "cooler", label: "Enfriadores" },
-  { id: "missile", label: "Misiles y Racks" },
 ];
 
 interface SlotTypeSelectorProps {

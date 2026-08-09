@@ -40,7 +40,21 @@ export type SlotType =
   | "quantum_drive"
   | "missile"
   | "radar"
-  | "thruster";
+  | "thruster"
+  | "flight_controller"
+  | "life_support";
+
+/** Slot types that allow component upgrades (shown in picker) */
+export const CONFIGURABLE_SLOT_TYPES = new Set([
+  "weapon",
+  "turret",
+  "shield",
+  "power_plant",
+  "powerplant",
+  "cooler",
+  "quantum_drive",
+  "quantumdrive",
+]);
 
 export interface Component {
   id: string;

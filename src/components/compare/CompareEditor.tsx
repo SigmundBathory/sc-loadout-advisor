@@ -98,11 +98,6 @@ export default function CompareEditor({ ship, initialLoadout, onChange }: Compar
       cooler: ["Cooler"],
       quantum_drive: ["QuantumDrive"],
       quantumdrive: ["QuantumDrive"],
-      radar: ["Radar"],
-      thruster: ["FlightController"],
-      flight_controller: ["FlightController"],
-      life_support: ["LifeSupport"],
-      lifesupport: ["LifeSupport"],
     };
     const types = validTypes[slotKey] || [hp.slot_type];
     const filtered = components.filter((c) => types.some((t) => t.toLowerCase() === c.type.toLowerCase()));

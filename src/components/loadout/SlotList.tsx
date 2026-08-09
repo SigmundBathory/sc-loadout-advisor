@@ -8,6 +8,7 @@ import { DollarSign, ArrowRight, ShoppingBag, Crown } from "lucide-react";
 import { translateSlotTypeEs } from "@/lib/utils";
 import { sortComponentsForSlot } from "@/lib/optimizer/componentSort";
 import type { Ship, Component, Hardpoint } from "@/lib/types";
+import { CONFIGURABLE_SLOT_TYPES } from "@/lib/types";
 
 interface SlotListProps {
   ship: Ship;
@@ -24,22 +25,17 @@ export default function SlotList({ ship, slotAssignments, componentMap, allCompo
     for (const hp of ship.hardpoints) {
       const slotType = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
       const compType =
-        slotType === "weapon" || slotType === "turret" || slotType === "missile" ? "Weapon"
+        slotType === "weapon" || slotType === "turret" ? "Weapon"
         : slotType === "shield" ? "Shield"
         : slotType === "power_plant" || slotType === "powerplant" ? "PowerPlant"
         : slotType === "cooler" ? "Cooler"
         : slotType === "quantum_drive" || slotType === "quantumdrive" ? "QuantumDrive"
-        : slotType === "radar" ? "Radar"
-        : slotType === "thruster" || slotType === "flight_controller" ? "FlightController"
-        : slotType === "life_support" || slotType === "lifesupport" ? "LifeSupport"
         : "";
       const compatible = allComponents.filter((c) => {
         const validTypes: Record<string, string[]> = {
           weapon: ["Weapon"], turret: ["Weapon"], shield: ["Shield"],
           power_plant: ["PowerPlant"], powerplant: ["PowerPlant"],
           cooler: ["Cooler"], quantum_drive: ["QuantumDrive"], quantumdrive: ["QuantumDrive"],
-          radar: ["Radar"], thruster: ["FlightController"], flight_controller: ["FlightController"],
-          life_support: ["LifeSupport"], lifesupport: ["LifeSupport"],
         };
         const types = validTypes[slotType] || [];
         return types.some(t => t.toLowerCase() === c.type.toLowerCase()) && c.size <= hp.max_size;
@@ -60,14 +56,16 @@ export default function SlotList({ ship, slotAssignments, componentMap, allCompo
           const comp = assignedId ? componentMap.get(assignedId) : null;
           const bestId = bestPerSlot.get(hp.id);
           const isBest = assignedId && bestId && assignedId === bestId;
+          const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+          const isConfigurable = CONFIGURABLE_SLOT_TYPES.has(slotKey);
 
           return (
             <div
               key={hp.id}
-              className={`glass-panel glass-panel-hover p-4 rounded-xl border hover:border-primary/50 transition-all cursor-pointer flex items-center justify-between group ${
-                isBest ? "border-emerald-500/40 bg-emerald-500/5" : "border-border/40"
-              }`}
-              onClick={() => onSlotClick(hp)}
+              className={`glass-panel p-4 rounded-xl border transition-all flex items-center justify-between group ${
+                isConfigurable ? "glass-panel-hover cursor-pointer hover:border-primary/50" : "opacity-70"
+              } ${isBest ? "border-emerald-500/40 bg-emerald-500/5" : "border-border/40"}`}
+              onClick={() => isConfigurable && onSlotClick(hp)}
             >
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
@@ -80,6 +78,11 @@ export default function SlotList({ ship, slotAssignments, componentMap, allCompo
                   <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
                     {translateSlotTypeEs(hp.slot_type)}
                   </Badge>
+                  {!isConfigurable && (
+                    <Badge className="bg-muted/40 text-muted-foreground border-border/30 text-[9px] px-1.5 py-0">
+                      De serie
+                    </Badge>
+                  )}
                   {isBest && (
                     <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[9px] gap-0.5 px-1 py-0">
                       <Crown className="h-2.5 w-2.5" /> Mejor

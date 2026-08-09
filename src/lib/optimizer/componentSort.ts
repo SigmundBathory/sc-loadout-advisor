@@ -201,31 +201,6 @@ const PROFILE_CONFIGS: Record<string, Partial<Record<BuildProfile, SortConfig>>>
 
 /** Default configs for types without profile variations */
 const DEFAULT_CONFIGS: Record<string, SortConfig> = {
-  Radar: {
-    primary: (s) => n(s.range),
-    primaryLabel: "Alcance",
-    formatPrimary: (v) => `${(v / 1000).toFixed(1)} km`,
-    tradeoffs: [
-      { label: "Sens. EM", value: (s) => n(s.sensitivity_em), format: (v) => `${(v * 100).toFixed(0)}%` },
-      { label: "Sens. IR", value: (s) => n(s.sensitivity_ir), format: (v) => `${(v * 100).toFixed(0)}%` },
-    ],
-  },
-  FlightController: {
-    primary: (s) => n(s.scm_speed),
-    primaryLabel: "SCM Speed",
-    tradeoffs: [
-      { label: "Boost", value: (s) => n(s.boost_forward), format: (v) => v.toFixed(0) },
-      { label: "Pitch", value: (s) => n(s.pitch), format: (v) => v.toFixed(0) },
-    ],
-  },
-  LifeSupport: {
-    primary: (s) => gradeToNumber(s.grade),
-    primaryLabel: "Grado",
-    formatPrimary: (v) => `G${v}`,
-    tradeoffs: [
-      { label: "Firma EM", value: (s) => n(s.emission_em_max), format: (v) => v.toLocaleString(), lowerBetter: true },
-    ],
-  },
   Missile: {
     primary: (s) => n(s.alpha),
     primaryLabel: "Alpha",

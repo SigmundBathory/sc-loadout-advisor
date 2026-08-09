@@ -207,17 +207,11 @@ export function getCompatibleComponents(
     cooler: "Cooler",
     quantum_drive: "QuantumDrive",
     quantumdrive: "QuantumDrive",
-    missile: "Weapon",
-    radar: "Radar",
-    thruster: "FlightController",
-    flight_controller: "FlightController",
-    life_support: "LifeSupport",
-    lifesupport: "LifeSupport",
   };
 
   const componentType = slotTypeMap[slotType.toLowerCase()] || slotType;
-  // Utility / cosmetic slots have no compatible components
-  if (componentType === "utility") return [];
+  // Non-configurable / cosmetic slots have no compatible components
+  if (!slotTypeMap[slotType.toLowerCase()]) return [];
 
   const rows = db
     .prepare(

@@ -9,11 +9,6 @@ const SLOT_TYPE_MAP: Record<string, string[]> = {
   cooler: ["cooler"],
   quantum_drive: ["quantumdrive"],
   quantumdrive: ["quantumdrive"],
-  radar: ["radar"],
-  thruster: ["flightcontroller"],
-  flight_controller: ["flightcontroller"],
-  life_support: ["lifesupport"],
-  lifesupport: ["lifesupport"],
 };
 
 export function gradeValue(comp: Component): number {
@@ -63,8 +58,6 @@ export function scoreForPreset(preset: string, comp: Component): number {
         score = (speed / 100000) * (1 + gb) - (spoolTime || 0) * 2;
       } else if (type === "PowerPlant") {
         score = (output / 1000) * (1 + gb);
-      } else if (type === "FlightController") {
-        score = ((scmSpeed + boostFwd) / 100) * (1 + gb) + (pitch + yaw + roll) / 10;
       } else {
         score = (output / 1000) * (1 + gb) + dps * 0.3;
       }

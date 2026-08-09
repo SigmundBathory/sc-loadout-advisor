@@ -36,8 +36,6 @@ const SLOT_ICONS: Record<string, React.ReactNode> = {
   PowerPlant: <Zap className="h-3.5 w-3.5" />,
   Cooler: <Thermometer className="h-3.5 w-3.5" />,
   QuantumDrive: <Navigation className="h-3.5 w-3.5" />,
-  Radar: <Gauge className="h-3.5 w-3.5" />,
-  FlightController: <Gauge className="h-3.5 w-3.5" />,
 };
 
 export default function ComponentPickerDialog({ slot, components, loading, equippedId, onSelect, onClose }: ComponentPickerDialogProps) {
@@ -83,7 +81,7 @@ function PickerBody({
 
   const slotType = slot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
   const componentType =
-    slotType === "weapon" || slotType === "turret" || slotType === "missile"
+    slotType === "weapon" || slotType === "turret"
       ? "Weapon"
       : slotType === "shield"
       ? "Shield"
@@ -93,12 +91,6 @@ function PickerBody({
       ? "Cooler"
       : slotType === "quantum_drive" || slotType === "quantumdrive"
       ? "QuantumDrive"
-      : slotType === "radar"
-      ? "Radar"
-      : slotType === "thruster" || slotType === "flight_controller"
-      ? "FlightController"
-      : slotType === "life_support" || slotType === "lifesupport"
-      ? "LifeSupport"
       : "";
 
   const sorted = useMemo(() => {

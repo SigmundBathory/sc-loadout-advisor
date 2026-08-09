@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { LayoutList, LayoutGrid, Crosshair, Zap, Shield, Gauge, Radar, Fuel, Activity, Trash2, Crown, DollarSign } from "lucide-react";
 import { translateSlotTypeEs } from "@/lib/utils";
 import { sortComponentsForSlot } from "@/lib/optimizer/componentSort";
+import { CONFIGURABLE_SLOT_TYPES } from "@/lib/types";
 import type { Ship, Component, Hardpoint } from "@/lib/types";
 
 interface HardpointSchematicProps {
@@ -70,22 +71,17 @@ export default function HardpointSchematic({
     for (const hp of ship.hardpoints) {
       const slotType = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
       const compType =
-        slotType === "weapon" || slotType === "turret" || slotType === "missile" ? "Weapon"
+        slotType === "weapon" || slotType === "turret" ? "Weapon"
         : slotType === "shield" ? "Shield"
         : slotType === "power_plant" || slotType === "powerplant" ? "PowerPlant"
         : slotType === "cooler" ? "Cooler"
         : slotType === "quantum_drive" || slotType === "quantumdrive" ? "QuantumDrive"
-        : slotType === "radar" ? "Radar"
-        : slotType === "thruster" || slotType === "flight_controller" ? "FlightController"
-        : slotType === "life_support" || slotType === "lifesupport" ? "LifeSupport"
         : "";
       const compatible = allComponents.filter((c) => {
         const validTypes: Record<string, string[]> = {
           weapon: ["Weapon"], turret: ["Weapon"], shield: ["Shield"],
           power_plant: ["PowerPlant"], powerplant: ["PowerPlant"],
           cooler: ["Cooler"], quantum_drive: ["QuantumDrive"], quantumdrive: ["QuantumDrive"],
-          radar: ["Radar"], thruster: ["FlightController"], flight_controller: ["FlightController"],
-          life_support: ["LifeSupport"], lifesupport: ["LifeSupport"],
         };
         const types = validTypes[slotType] || [];
         return types.some(t => t.toLowerCase() === c.type.toLowerCase()) && c.size <= hp.max_size;
@@ -173,14 +169,16 @@ export default function HardpointSchematic({
             const bestId = bestPerSlot.get(hp.id);
             const isBest = assignedId && bestId && assignedId === bestId;
             const color = SLOT_COLORS[hp.slot_type] || "#64748b";
+            const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+            const isConfigurable = CONFIGURABLE_SLOT_TYPES.has(slotKey);
 
             return (
               <div
                 key={hp.id}
-                className={`glass-panel glass-panel-hover p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between group ${
-                  isBest ? "border-emerald-500/40 bg-emerald-500/5" : "border-border/40 hover:border-primary/50"
-                }`}
-                onClick={() => onSlotClick(hp)}
+                className={`glass-panel p-3 rounded-xl border transition-all flex items-center justify-between group ${
+                  isConfigurable ? "glass-panel-hover cursor-pointer hover:border-primary/50" : "opacity-70"
+                } ${isBest ? "border-emerald-500/40 bg-emerald-500/5" : "border-border/40"}`}
+                onClick={() => isConfigurable && onSlotClick(hp)}
               >
                 <div className="flex-1 space-y-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -193,6 +191,11 @@ export default function HardpointSchematic({
                     <Badge variant="secondary" className="text-[10px] uppercase font-semibold shrink-0">
                       {translateSlotTypeEs(hp.slot_type)}
                     </Badge>
+                    {!isConfigurable && (
+                      <Badge className="bg-muted/40 text-muted-foreground border-border/30 text-[9px] px-1.5 py-0 shrink-0">
+                        De serie
+                      </Badge>
+                    )}
                     {isBest && (
                       <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[9px] gap-0.5 px-1 py-0 shrink-0">
                         <Crown className="h-2.5 w-2.5" /> Mejor
@@ -227,13 +230,13 @@ export default function HardpointSchematic({
                     </div>
                   ) : (
                     <p className="text-[11px] text-muted-foreground/70 italic pt-0.5">
-                      Slot vacío — Click para equipar
+                      {isConfigurable ? "Slot vacío — Click para equipar" : "Componente de serie"}
                     </p>
                   )}
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {comp ? (
+                  {comp && isConfigurable ? (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -303,6 +306,8 @@ export default function HardpointSchematic({
                     const assignedId = slotAssignments[hp.id];
                     const comp = assignedId ? componentMap.get(assignedId) : null;
                     const isEquipped = !!comp;
+                    const hpSlotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+                    const isSlotConfigurable = CONFIGURABLE_SLOT_TYPES.has(hpSlotKey);
 
                     return (
                       <motion.div
@@ -311,15 +316,16 @@ export default function HardpointSchematic({
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.03 }}
                         className={`
-                          relative rounded-lg border p-2.5 cursor-pointer transition-all duration-200
+                          relative rounded-lg border p-2.5 transition-all duration-200
+                          ${isSlotConfigurable ? "cursor-pointer" : "opacity-70"}
                           ${isEquipped
                             ? "bg-primary/5 border-primary/30 hover:border-primary/50"
                             : "bg-muted/20 border-border/30 hover:border-primary/30 hover:bg-muted/30"
                           }
                           ${dragSourceSlotId === hp.id ? "opacity-60 border-dashed" : ""}
                         `}
-                        onClick={() => onSlotClick(hp)}
-                        draggable={isEquipped}
+                        onClick={() => isSlotConfigurable && onSlotClick(hp)}
+                        draggable={isEquipped && isSlotConfigurable}
                         onDragStart={() => handleDragStart(hp.id)}
                         onDragOver={handleDragOver}
                         onDrop={() => handleDrop(hp.id)}
@@ -341,6 +347,11 @@ export default function HardpointSchematic({
                               >
                                 {SIZE_LABELS[hp.size] || `T${hp.size}`}
                               </Badge>
+                              {!isSlotConfigurable && (
+                                <Badge className="bg-muted/40 text-muted-foreground border-border/30 text-[8px] px-1 py-0 shrink-0">
+                                  Serie
+                                </Badge>
+                              )}
                             </div>
 
                             {comp ? (

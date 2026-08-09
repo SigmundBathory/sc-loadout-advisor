@@ -17,6 +17,7 @@ import SaveLoadoutDialog from "./SaveLoadoutDialog";
 import LoadLoadoutDialog from "./LoadLoadoutDialog";
 import OptimizerDialog from "./OptimizerDialog";
 import type { Ship, Loadout, Hardpoint } from "@/lib/types";
+import { CONFIGURABLE_SLOT_TYPES } from "@/lib/types";
 import type { ShipBuyLocation, WikeloShip } from "@/lib/db/queries";
 import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
 import { optimizeAssignments } from "@/lib/optimizer/optimizeLive";
@@ -182,11 +183,6 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
         cooler: ["Cooler"],
         quantum_drive: ["QuantumDrive"],
         quantumdrive: ["QuantumDrive"],
-        radar: ["Radar"],
-        thruster: ["FlightController"],
-        flight_controller: ["FlightController"],
-        life_support: ["LifeSupport"],
-        lifesupport: ["LifeSupport"],
       };
       const slotKey = selectedSlot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
       const validTypes = slotTypeMap[slotKey] || [selectedSlot.slot_type];
@@ -333,7 +329,10 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
                   ship={ship}
                   slotAssignments={slotAssignments}
                   componentMap={componentMap}
-                  onSlotClick={setSelectedSlot}
+                  onSlotClick={(hp) => {
+                    const key = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+                    if (CONFIGURABLE_SLOT_TYPES.has(key)) setSelectedSlot(hp);
+                  }}
                   onClearSlot={clearSlotAssignment}
                   onMoveComponent={handleMoveComponent}
                 />
