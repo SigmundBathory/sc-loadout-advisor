@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign, Wand2, AlertTriangle, ArrowUpDown, ShoppingBag } from "lucide-react";
+import { Search, LayoutGrid, List, Rocket, Users, Shield, Zap, X, DollarSign, Wand2, AlertTriangle, ArrowUpDown, ShoppingBag, Eye } from "lucide-react";
 import type { Ship } from "@/lib/types";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,6 +14,8 @@ import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { ShipImage } from "@/components/ui/ProgressiveImage";
 import { ClassBadge } from "@/components/ships/ClassBadge";
 import { SpecialEditionBadge } from "@/components/ships/SpecialEditionBadge";
+import { TiltCard } from "@/components/ui/TiltCard";
+import ShipQuickLookDialog from "@/components/ships/ShipQuickLookDialog";
 
 interface ShipSelectorProps {
   initialShips?: Ship[];
@@ -38,6 +40,7 @@ export default function ShipSelector({
   const [sortKey, setSortKey] = useState<SortKey>((searchParams.get("sort") as SortKey) || "name");
   const [buyableOnly, setBuyableOnly] = useState(searchParams.get("buyable") === "1");
   const [visibleCount, setVisibleCount] = useState(30);
+  const [quickLookShip, setQuickLookShip] = useState<Ship | null>(null);
 
   const updateUrl = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -301,10 +304,18 @@ export default function ShipSelector({
           {paginatedShips.map((ship) => (
             <StaggerItem key={ship.id}>
               <Link href={`/ships/${ship.id}`} className="block h-full">
+                <TiltCard className="h-full">
                 <Card className="product-card product-card-hover cursor-pointer h-full group flex flex-col justify-between overflow-hidden">
                   <div className="relative h-36 w-full bg-muted/20 border-b border-border/30">
                     <ShipImage ship={ship} fill priority={false} alt={ship.name} />
                     <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setQuickLookShip(ship); }}
+                      className="absolute top-2 right-2 z-10 p-1.5 rounded-lg bg-background/70 backdrop-blur-sm border border-border/40 text-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground"
+                      title="Vista rápida"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                   <CardContent className="p-5 space-y-3">
                     <div className="flex items-start justify-between gap-2">
@@ -362,6 +373,7 @@ export default function ShipSelector({
                     </div>
                   </CardContent>
                 </Card>
+                </TiltCard>
               </Link>
             </StaggerItem>
           ))}
@@ -414,6 +426,8 @@ export default function ShipSelector({
           </Button>
         </div>
       )}
+
+      <ShipQuickLookDialog ship={quickLookShip} onOpenChange={(open) => !open && setQuickLookShip(null)} />
     </div>
   );
 }

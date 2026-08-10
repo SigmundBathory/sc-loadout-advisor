@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { motion } from "motion/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { LayoutList, LayoutGrid, Crosshair, Zap, Shield, Gauge, Radar, Fuel, Activity, Trash2, Crown, DollarSign } from "lucide-react";
+import { LayoutList, LayoutGrid, Orbit, Crosshair, Zap, Shield, Gauge, Radar, Fuel, Activity, Trash2, Crown, DollarSign, Rocket } from "lucide-react";
 import { translateSlotTypeEs } from "@/lib/utils";
 import { sortComponentsForSlot } from "@/lib/optimizer/componentSort";
 import { CONFIGURABLE_SLOT_TYPES } from "@/lib/types";
@@ -49,7 +49,7 @@ const SLOT_COLORS: Record<string, string> = {
 
 const SIZE_LABELS: Record<number, string> = { 1: "S1", 2: "S2", 3: "S3", 4: "S4", 5: "S5" };
 
-type ViewMode = "list" | "grid";
+type ViewMode = "orbit" | "list" | "grid";
 
 export default function HardpointSchematic({
   ship,
@@ -60,8 +60,26 @@ export default function HardpointSchematic({
   onClearSlot,
   onMoveComponent,
 }: HardpointSchematicProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [viewMode, setViewMode] = useState<ViewMode>("orbit");
   const [dragSourceSlotId, setDragSourceSlotId] = useState<string | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  // Briefly highlight a slot right after it receives a new component so the
+  // action of equipping something reads as a clear, satisfying event instead
+  // of a silent state update.
+  const prevAssignmentsRef = useRef<Record<string, string>>(slotAssignments);
+  const [flashSlots, setFlashSlots] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const prev = prevAssignmentsRef.current;
+    const changed = Object.keys(slotAssignments).filter(
+      (key) => slotAssignments[key] && slotAssignments[key] !== prev[key]
+    );
+    prevAssignmentsRef.current = slotAssignments;
+    if (changed.length === 0) return;
+    setFlashSlots(new Set(changed));
+    const timer = setTimeout(() => setFlashSlots(new Set()), 900);
+    return () => clearTimeout(timer);
+  }, [slotAssignments]);
 
   const assignedCount = Object.keys(slotAssignments).filter((k) => slotAssignments[k]).length;
 
@@ -105,6 +123,29 @@ export default function HardpointSchematic({
     return groups;
   }, [ship.hardpoints]);
 
+  // Radial layout for the orbital view: one node per category, evenly spaced
+  // around the hub regardless of how many individual hardpoints it contains
+  // (a capital ship with 40 weapon hardpoints still renders a single node).
+  const categories = useMemo(() => {
+    const keys = Object.keys(grouped);
+    const radius = 36;
+    return keys.map((key, idx) => {
+      const angle = (idx / keys.length) * 2 * Math.PI - Math.PI / 2;
+      const hardpoints = grouped[key];
+      const assigned = hardpoints.filter((h) => slotAssignments[h.id]).length;
+      return {
+        key,
+        icon: SLOT_ICONS[key] || Crosshair,
+        color: SLOT_COLORS[key] || "#64748b",
+        total: hardpoints.length,
+        assigned,
+        isConfigurable: CONFIGURABLE_SLOT_TYPES.has(key.toLowerCase().replace(/[-\s]/g, "_")),
+        x: 50 + radius * Math.cos(angle),
+        y: 50 + radius * Math.sin(angle),
+      };
+    });
+  }, [grouped, slotAssignments]);
+
   const handleDragStart = (slotId: string) => {
     setDragSourceSlotId(slotId);
   };
@@ -138,7 +179,19 @@ export default function HardpointSchematic({
         </div>
         <div className="flex items-center gap-1 bg-muted/30 p-0.5 rounded-lg border border-border/30">
           <button
+            onClick={() => setViewMode("orbit")}
+            title="Vista orbital"
+            className={`p-1.5 rounded-md transition-colors ${
+              viewMode === "orbit"
+                ? "bg-primary/10 text-primary border border-primary/30"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Orbit className="h-3.5 w-3.5" />
+          </button>
+          <button
             onClick={() => setViewMode("list")}
+            title="Vista lista"
             className={`p-1.5 rounded-md transition-colors ${
               viewMode === "list"
                 ? "bg-primary/10 text-primary border border-primary/30"
@@ -149,6 +202,7 @@ export default function HardpointSchematic({
           </button>
           <button
             onClick={() => setViewMode("grid")}
+            title="Vista tarjetas"
             className={`p-1.5 rounded-md transition-colors ${
               viewMode === "grid"
                 ? "bg-primary/10 text-primary border border-primary/30"
@@ -159,6 +213,152 @@ export default function HardpointSchematic({
           </button>
         </div>
       </div>
+
+      {/* Vista Orbital */}
+      {viewMode === "orbit" && (
+        <div className="space-y-3">
+          <div className="relative mx-auto aspect-square w-full max-w-[380px]">
+            <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full pointer-events-none">
+              {categories.map((cat) => (
+                <line
+                  key={`line-${cat.key}`}
+                  x1={50}
+                  y1={50}
+                  x2={cat.x}
+                  y2={cat.y}
+                  stroke={cat.color}
+                  strokeWidth={expandedCategory === cat.key ? 0.7 : 0.3}
+                  strokeOpacity={expandedCategory === cat.key ? 0.85 : 0.25}
+                  strokeDasharray="1.6 1.6"
+                />
+              ))}
+            </svg>
+
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center h-24 w-24 rounded-full glass-panel border-2 border-primary/40 text-center z-10">
+              <Rocket className="h-5 w-5 text-primary mb-0.5" />
+              <span className="text-[9px] font-mono text-muted-foreground">
+                {assignedCount}/{ship.hardpoints.length}
+              </span>
+            </div>
+
+            {categories.map((cat, idx) => {
+              const Icon = cat.icon;
+              const isExpanded = expandedCategory === cat.key;
+              const completion = cat.total > 0 ? cat.assigned / cat.total : 0;
+              const ringLength = 2 * Math.PI * 17;
+              return (
+                <motion.button
+                  key={cat.key}
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.05, type: "spring", stiffness: 260, damping: 20 }}
+                  onClick={() => setExpandedCategory(isExpanded ? null : cat.key)}
+                  className="absolute flex flex-col items-center gap-1 -translate-x-1/2 -translate-y-1/2 group/node"
+                  style={{ left: `${cat.x}%`, top: `${cat.y}%` }}
+                >
+                  <div
+                    className="relative flex items-center justify-center h-14 w-14 rounded-full transition-transform group-hover/node:scale-110"
+                    style={{
+                      background: `color-mix(in oklch, ${cat.color} ${isExpanded ? 22 : 14}%, var(--card))`,
+                      border: `2px solid ${isExpanded ? cat.color : `${cat.color}55`}`,
+                      boxShadow: isExpanded ? `0 0 22px -4px ${cat.color}` : "none",
+                    }}
+                  >
+                    <svg viewBox="0 0 40 40" className="absolute inset-0 h-full w-full -rotate-90">
+                      <circle cx="20" cy="20" r="17" fill="none" stroke={`${cat.color}25`} strokeWidth="2.5" />
+                      <circle
+                        cx="20"
+                        cy="20"
+                        r="17"
+                        fill="none"
+                        stroke={cat.color}
+                        strokeWidth="2.5"
+                        strokeDasharray={ringLength}
+                        strokeDashoffset={ringLength * (1 - completion)}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <Icon className="h-5 w-5" style={{ color: cat.color }} />
+                  </div>
+                  <span className="text-[9px] font-mono font-semibold text-muted-foreground bg-background/70 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-border/30 whitespace-nowrap">
+                    {cat.assigned}/{cat.total}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          <p className="text-center text-[11px] text-muted-foreground">
+            {expandedCategory
+              ? translateSlotTypeEs(expandedCategory)
+              : "Selecciona una categor\u00eda para ver y configurar sus slots"}
+          </p>
+
+          <AnimatePresence>
+            {expandedCategory && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-2 pt-1 max-h-[320px] overflow-y-auto pr-1">
+                  {(grouped[expandedCategory] || []).map((hp) => {
+                    const assignedId = slotAssignments[hp.id];
+                    const comp = assignedId ? componentMap.get(assignedId) : null;
+                    const cat = categories.find((c) => c.key === expandedCategory);
+                    const isSlotConfigurable = cat ? cat.isConfigurable : false;
+                    const justAssigned = flashSlots.has(hp.id);
+                    const color = cat ? cat.color : "#64748b";
+                    return (
+                      <div
+                        key={hp.id}
+                        onClick={() => isSlotConfigurable && onSlotClick(hp)}
+                        className={`flex items-center justify-between gap-2 p-2.5 rounded-xl border transition-all ${
+                          isSlotConfigurable ? "cursor-pointer hover:border-primary/50 glass-panel-hover" : "opacity-70"
+                        } ${comp ? "border-primary/25 bg-primary/5" : "border-border/30 bg-muted/20"} ${
+                          justAssigned ? "slot-assign-flash" : ""
+                        }`}
+                        style={justAssigned ? ({ ["--assign-glow"]: color } as React.CSSProperties) : undefined}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[9px] font-mono px-1 py-0 shrink-0" style={{ borderColor: `${color}60`, color }}>
+                              {SIZE_LABELS[hp.size] || `T${hp.size}`}
+                            </Badge>
+                            <span className="text-xs font-semibold text-foreground truncate">{hp.name}</span>
+                          </div>
+                          <p className="text-[10.5px] text-muted-foreground truncate">
+                            {comp
+                              ? comp.name
+                              : isSlotConfigurable
+                                ? "Vac\u00edo \u2014 clic para equipar"
+                                : "Componente de serie"}
+                          </p>
+                        </div>
+                        {comp && isSlotConfigurable && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onClearSlot(hp.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Vista Lista */}
       {viewMode === "list" && (
@@ -172,12 +372,17 @@ export default function HardpointSchematic({
             const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
             const isConfigurable = CONFIGURABLE_SLOT_TYPES.has(slotKey);
 
+            const justAssigned = flashSlots.has(hp.id);
+
             return (
               <div
                 key={hp.id}
                 className={`glass-panel p-3 rounded-xl border transition-all flex items-center justify-between group ${
                   isConfigurable ? "glass-panel-hover cursor-pointer hover:border-primary/50" : "opacity-70"
-                } ${isBest ? "border-emerald-500/40 bg-emerald-500/5" : "border-border/40"}`}
+                } ${isBest ? "border-emerald-500/40 bg-emerald-500/5" : "border-border/40"} ${
+                  justAssigned ? "slot-assign-flash" : ""
+                }`}
+                style={justAssigned ? ({ ["--assign-glow" as string]: color } as React.CSSProperties) : undefined}
                 onClick={() => isConfigurable && onSlotClick(hp)}
               >
                 <div className="flex-1 space-y-1 min-w-0">
@@ -311,6 +516,7 @@ export default function HardpointSchematic({
                     const isEquipped = !!comp;
                     const hpSlotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
                     const isSlotConfigurable = CONFIGURABLE_SLOT_TYPES.has(hpSlotKey);
+                    const justAssigned = flashSlots.has(hp.id);
 
                     return (
                       <motion.div
@@ -326,7 +532,9 @@ export default function HardpointSchematic({
                             : "bg-muted/20 border-border/30 hover:border-primary/30 hover:bg-muted/30"
                           }
                           ${dragSourceSlotId === hp.id ? "opacity-60 border-dashed" : ""}
+                          ${justAssigned ? "slot-assign-flash" : ""}
                         `}
+                        style={justAssigned ? ({ ["--assign-glow" as string]: color } as React.CSSProperties) : undefined}
                         onClick={() => isSlotConfigurable && onSlotClick(hp)}
                         draggable={isEquipped && isSlotConfigurable}
                         onDragStart={() => handleDragStart(hp.id)}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Rajdhani } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -8,6 +8,7 @@ import Footer from "@/components/layout/Footer";
 import StarBackground from "@/components/layout/StarBackground";
 import QueryProvider from "@/components/QueryProvider";
 import ThemeInitializer from "@/components/ThemeInitializer";
+import PageTransition from "@/components/layout/PageTransition";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -18,6 +19,15 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Sci-fi HUD display font used for headings, stat values and brand text.
+// Rajdhani's geometric, slightly condensed letterforms read like a ship
+// console typeface while remaining highly legible at small sizes.
+const rajdhani = Rajdhani({
+  variable: "--font-rajdhani",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -34,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${rajdhani.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col relative bg-background text-foreground overflow-x-hidden">
         <TooltipProvider>
@@ -43,7 +53,7 @@ export default function RootLayout({
               <StarBackground />
               <Navbar />
               <ThemeInitializer />
-              <div className="flex-1 flex flex-col">{children}</div>
+              <PageTransition>{children}</PageTransition>
               <Footer />
               <Toaster richColors position="bottom-right" />
             </ThemeProvider>

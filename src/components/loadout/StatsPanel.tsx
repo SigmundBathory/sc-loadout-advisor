@@ -1,10 +1,28 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Zap } from "lucide-react";
 import { UNVERIFIED_DATA_LABEL, hasKnownValue } from "@/lib/presentation";
+
+/** Briefly flags a value as "just changed" so swapping a component reads
+ * as an immediate, satisfying update instead of a silent re-render. */
+function useFlashOnChange(value: number) {
+  const prev = useRef(value);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (prev.current !== value) {
+      prev.current = value;
+      setFlash(true);
+      const timer = setTimeout(() => setFlash(false), 650);
+      return () => clearTimeout(timer);
+    }
+    prev.current = value;
+  }, [value]);
+  return flash;
+}
 
 interface StatsPanelProps {
   stats: {
@@ -101,9 +119,10 @@ function StatBar({ label, value, max, unit, color, baseline }: {
   };
 
   const hasValue = hasKnownValue(value);
+  const flash = useFlashOnChange(value);
 
   return (
-    <div className="space-y-1.5">
+    <div className={`space-y-1.5 rounded-lg -m-1 p-1 transition-colors ${flash ? "value-flash bg-primary/5" : ""}`}>
       <div className="flex justify-between text-xs font-medium items-center">
         <span className="text-muted-foreground">{label}</span>
         <span className="flex items-center gap-2">
