@@ -56,6 +56,20 @@ export const CONFIGURABLE_SLOT_TYPES = new Set([
   "quantumdrive",
 ]);
 
+/**
+ * Detects if a hardpoint is a TURRET MOUNT (not a weapon slot).
+ * Turret mounts have size < max_size and names containing turret/base/manned.
+ * The actual guns inside the turret are separate hardpoints with size == max_size.
+ */
+export function isTurretMount(hp: { slot_type: string; size: number; max_size: number; name: string }): boolean {
+  const slotType = hp.slot_type.toLowerCase();
+  const name = hp.name.toLowerCase();
+  const isWeaponOrTurret = slotType === "weapon" || slotType === "turret";
+  const hasSizeRange = hp.max_size > hp.size;
+  const isMountName = /turret|base|manned|remote/.test(name);
+  return isWeaponOrTurret && hasSizeRange && isMountName;
+}
+
 export interface Component {
   id: string;
   name: string;

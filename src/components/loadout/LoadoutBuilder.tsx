@@ -17,7 +17,7 @@ import SaveLoadoutDialog from "./SaveLoadoutDialog";
 import LoadLoadoutDialog from "./LoadLoadoutDialog";
 import OptimizerDialog from "./OptimizerDialog";
 import type { Ship, Loadout, Hardpoint } from "@/lib/types";
-import { CONFIGURABLE_SLOT_TYPES } from "@/lib/types";
+import { CONFIGURABLE_SLOT_TYPES, isTurretMount } from "@/lib/types";
 import type { ShipBuyLocation, WikeloShip } from "@/lib/db/queries";
 import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
 import { optimizeAssignments } from "@/lib/optimizer/optimizeLive";
@@ -399,7 +399,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
                   componentMap={componentMap}
                   onSlotClick={(hp) => {
                     const key = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
-                    if (CONFIGURABLE_SLOT_TYPES.has(key)) setSelectedSlot(hp);
+                    if (CONFIGURABLE_SLOT_TYPES.has(key) && !isTurretMount(hp)) setSelectedSlot(hp);
                   }}
                   onClearSlot={clearSlotAssignment}
                   onMoveComponent={handleMoveComponent}

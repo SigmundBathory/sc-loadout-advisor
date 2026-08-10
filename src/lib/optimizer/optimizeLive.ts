@@ -1,4 +1,5 @@
-import type { Ship, Component } from "../types";
+import type { Ship, Component, Hardpoint } from "../types";
+import { isTurretMount } from "../types";
 
 const SLOT_TYPE_MAP: Record<string, string[]> = {
   weapon: ["weapon"],
@@ -168,6 +169,8 @@ export function optimizeAssignments(
   const bestComponents = new Map<string, string>();
 
   ship.hardpoints.forEach((hp) => {
+    if (isTurretMount(hp)) return; // Skip turret mounts - actual guns are separate hardpoints
+
     const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
     const types = SLOT_TYPE_MAP[slotKey] || [hp.slot_type.toLowerCase()];
     const maxSize = hp.max_size || hp.size;

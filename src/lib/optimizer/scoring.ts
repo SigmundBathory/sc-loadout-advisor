@@ -1,5 +1,6 @@
-import type { Component, FilterWeights, ComponentScore, Ship } from "../types";
+import type { Component, FilterWeights, ComponentScore, Ship, Hardpoint } from "../types";
 import { getCompatibleComponents } from "../db/queries";
+import { isTurretMount } from "../types";
 export { calculateLoadoutStats } from "./loadoutStats";
 
 export const FILTER_PRESETS: { name: string; label: string; weights: FilterWeights }[] = [
@@ -152,6 +153,7 @@ export function optimizeLoadout(
   // Group hardpoints by slot type
   const slotGroups = new Map<string, typeof ship.hardpoints>();
   for (const hp of ship.hardpoints) {
+    if (isTurretMount(hp)) continue; // Skip turret mounts
     if (targetSlotTypes && targetSlotTypes.length > 0 && !targetSlotTypes.includes(hp.slot_type)) {
       continue;
     }
