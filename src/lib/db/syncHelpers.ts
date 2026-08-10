@@ -220,10 +220,61 @@ export function syncShipsAndHardpoints(
   return shipCount;
 }
 
+/**
+ * Extracts the cheapest observed purchase price and the verified buy
+ * locations (shop, station, planet/moon, system) from a Star Citizen Wiki
+ * item's `uex_prices.purchase` list, which is populated for both port
+ * components (via /items) and weapons (via /vehicle-weapons).
+ */
+export function extractWikiPurchaseInfo(wikiItem: any): { price: number | null; locations: Array<{ location_name: string; system: string; planet_moon: string; shop_name: string; price: number }> } {
+  const purchases = (wikiItem?.uex_prices?.purchase || []).filter((p: any) => p.price_buy > 0);
+  if (purchases.length === 0) return { price: null, locations: [] };
+
+  const cheapest = [...purchases].sort((a: any, b: any) => a.price_buy - b.price_buy)[0];
+  const locations: Array<{ location_name: string; system: string; planet_moon: string; shop_name: string; price: number }> = [];
+  const seenTerminals = new Set<string>();
+  for (const purchase of purchases) {
+    const terminalName = String(purchase.terminal_name || "").trim();
+    if (!terminalName || seenTerminals.has(terminalName)) continue;
+    seenTerminals.add(terminalName);
+
+    // UEX terminal names are usually "Shop - Landing Zone" (e.g. "Dumper's
+    // Depot - Area 18"); split so the shop and station render separately.
+    let shopName = terminalName;
+    let stationName = terminalName;
+    if (terminalName.includes(" - ")) {
+      const parts = terminalName.split(" - ");
+      shopName = parts[0].trim();
+      stationName = parts.slice(1).join(" - ").trim();
+    }
+
+    const loc = purchase.starmap_location || {};
+    const system = String(loc.star_system_name || "");
+    const planetMoon = String(loc.parent_name || loc.name || "");
+
+    locations.push({
+      location_name: stationName || loc.name || terminalName,
+      system,
+      planet_moon: planetMoon,
+      shop_name: shopName,
+      price: purchase.price_buy,
+    });
+  }
+  return { price: cheapest.price_buy, locations };
+}
+
 export function syncWeapons(db: Database, weapons: any[]): number {
   const insertComponent = db.prepare(`
     INSERT OR REPLACE INTO components (id, name, class_name, manufacturer_code, type, size, class, stats, image_url)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const updatePrice = db.prepare(`
+    INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at, source)
+    VALUES (?, ?, datetime('now'), 'wiki')
+  `);
+  const insertLocation = db.prepare(`
+    INSERT INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price, source)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'wiki')
   `);
   let count = 0;
   let skipped = 0;
@@ -263,6 +314,15 @@ export function syncWeapons(db: Database, weapons: any[]): number {
         String(mfg.code || ""), "Weapon", Number(weapon.size) || 1, String(weaponClass),
         JSON.stringify(stats), String(image)
       ]);
+
+      const { price, locations } = extractWikiPurchaseInfo(weapon);
+      if (price !== null && price > 0) {
+        updatePrice.run([wepId, price]);
+      }
+      for (const loc of locations) {
+        insertLocation.run([wepId, loc.location_name, loc.system, loc.planet_moon, loc.shop_name, "Terminal", loc.price]);
+      }
+
       count++;
     } catch (e) {
       console.warn(`Failed to sync weapon ${weapon?.name}:`, e);
@@ -485,13 +545,12 @@ export function syncComponentsFromPorts(
       let imageUrl = "";
       let componentClass = comp.sub_type || "";
 
+      let purchaseLocations: ReturnType<typeof extractWikiPurchaseInfo>["locations"] = [];
       if (wikiItem) {
         Object.assign(stats, extractWikiStats(compType, wikiItem));
-        if (wikiItem.uex_prices?.purchase?.length > 0) {
-          const purchases = wikiItem.uex_prices.purchase.filter((p: any) => p.price_buy > 0);
-          const cheapest = [...purchases].sort((a: any, b: any) => a.price_buy - b.price_buy)[0];
-          if (cheapest) price = cheapest.price_buy;
-        }
+        const purchaseInfo = extractWikiPurchaseInfo(wikiItem);
+        price = purchaseInfo.price;
+        purchaseLocations = purchaseInfo.locations;
         if (wikiItem.images?.[0]) {
           imageUrl = wikiItem.images?.[0]?.thumbnail_url || wikiItem.images?.[0]?.original_url || "";
         }
@@ -521,34 +580,10 @@ export function syncComponentsFromPorts(
       if (price !== null && price > 0) {
         updatePrice.run([compId, price]);
       }
-
-      if (wikiItem?.uex_prices?.purchase?.length > 0) {
-        const seenTerminals = new Set<string>();
-        for (const purchase of wikiItem.uex_prices.purchase) {
-          if (!(purchase.price_buy > 0)) continue;
-          const terminalName = String(purchase.terminal_name || "").trim();
-          if (!terminalName || seenTerminals.has(terminalName)) continue;
-          seenTerminals.add(terminalName);
-
-          // UEX terminal names are usually "Shop - Landing Zone" (e.g. "Dumper's
-          // Depot - Area 18"); split so the shop and station render separately.
-          let shopName = terminalName;
-          let stationName = terminalName;
-          if (terminalName.includes(" - ")) {
-            const parts = terminalName.split(" - ");
-            shopName = parts[0].trim();
-            stationName = parts.slice(1).join(" - ").trim();
-          }
-
-          const loc = purchase.starmap_location || {};
-          const system = String(loc.star_system_name || "");
-          const planetMoon = String(loc.parent_name || loc.name || "");
-
-          insertLocation.run([
-            compId, stationName || loc.name || terminalName, system, planetMoon, shopName, "Terminal", purchase.price_buy,
-          ]);
-        }
+      for (const loc of purchaseLocations) {
+        insertLocation.run([compId, loc.location_name, loc.system, loc.planet_moon, loc.shop_name, "Terminal", loc.price]);
       }
+
       count++;
     } catch (e) {
       console.warn(`Failed to sync component ${comp.class_name}:`, e);
