@@ -177,7 +177,7 @@ export function getAllComponents(filters?: {
   const db = getDb();
   let query = `
     SELECT c.*, m.name as manufacturer_name, m.code as manufacturer_code,
-           cp.price_auec
+           cp.price_auec, cp.source as price_source
     FROM components c
     LEFT JOIN manufacturers m ON c.manufacturer_code = m.code
     LEFT JOIN component_prices cp ON c.id = cp.component_id
@@ -216,7 +216,7 @@ export function getComponentById(id: string): Component | null {
   const row = db
     .prepare(
       `SELECT c.*, m.name as manufacturer_name, m.code as manufacturer_code,
-              cp.price_auec
+              cp.price_auec, cp.source as price_source
        FROM components c
        LEFT JOIN manufacturers m ON c.manufacturer_code = m.code
        LEFT JOIN component_prices cp ON c.id = cp.component_id
@@ -238,7 +238,7 @@ export function getComponentsByIds(ids: string[]): Component[] {
   const rows = db
     .prepare(
       `SELECT c.*, m.name as manufacturer_name, m.code as manufacturer_code,
-              cp.price_auec
+              cp.price_auec, cp.source as price_source
        FROM components c
        LEFT JOIN manufacturers m ON c.manufacturer_code = m.code
        LEFT JOIN component_prices cp ON c.id = cp.component_id
@@ -274,7 +274,7 @@ export function getCompatibleComponents(
   const rows = db
     .prepare(
       `SELECT c.*, m.name as manufacturer_name, m.code as manufacturer_code,
-              cp.price_auec
+              cp.price_auec, cp.source as price_source
        FROM components c
        LEFT JOIN manufacturers m ON c.manufacturer_code = m.code
        LEFT JOIN component_prices cp ON c.id = cp.component_id
@@ -307,6 +307,7 @@ export function attachBuyLocations(components: Component[]): Component[] {
       shop_name: r.shop_name,
       shop_type: r.shop_type,
       price: r.price,
+      source: r.source || "legacy_unverified",
     });
     locMap.set(r.component_id, list);
   }
@@ -330,6 +331,7 @@ function getBuyLocationsByComponent(componentId: string): BuyLocation[] {
     shop_name: r.shop_name,
     shop_type: r.shop_type,
     price: r.price,
+    source: r.source || "legacy_unverified",
   }));
 }
 
@@ -352,6 +354,7 @@ function mapComponentRow(row: any): Component {
     class: row.class || "",
     stats,
     price_auec: row.price_auec || undefined,
+    price_source: row.price_source || "legacy_unverified",
     buy_locations: [],
     image_url: row.image_url || undefined,
   };

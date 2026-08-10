@@ -16,7 +16,7 @@ import ComponentPickerDialog from "./ComponentPickerDialog";
 import SaveLoadoutDialog from "./SaveLoadoutDialog";
 import LoadLoadoutDialog from "./LoadLoadoutDialog";
 import OptimizerDialog from "./OptimizerDialog";
-import type { Ship, Loadout, Hardpoint } from "@/lib/types";
+import type { Ship, Loadout, Hardpoint, Component } from "@/lib/types";
 import { CONFIGURABLE_SLOT_TYPES, isTurretMount } from "@/lib/types";
 import type { ShipBuyLocation, WikeloShip } from "@/lib/db/queries";
 import { calculateLoadoutStats } from "@/lib/optimizer/loadoutStats";
@@ -137,8 +137,13 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
   }, [loadedLoadout, ship]);
 
   const equippedComponentList = useMemo(() => {
-    return Array.from(componentMap.values());
-  }, [componentMap]);
+    const equipped = new Map<string, Component>();
+    for (const componentId of Object.values(slotAssignments)) {
+      const component = componentMap.get(componentId);
+      if (component) equipped.set(component.id, component);
+    }
+    return Array.from(equipped.values());
+  }, [componentMap, slotAssignments]);
 
   const maxStats = useMemo(() => {
     if (!components || components.length === 0) return undefined;

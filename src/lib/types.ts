@@ -80,6 +80,7 @@ export interface Component {
   class: string;
   stats: ComponentStats;
   price_auec?: number;
+  price_source?: "wiki" | "uex" | "imported" | "legacy_unverified";
   buy_locations: BuyLocation[];
   image_url?: string;
 }
@@ -175,6 +176,7 @@ export interface BuyLocation {
   shop_type: string;
   /** Present only when an upstream source provided an observed price. */
   price?: number;
+  source?: "wiki" | "uex" | "imported" | "legacy_unverified";
 }
 
 export interface Loadout {

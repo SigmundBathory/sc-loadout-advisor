@@ -463,8 +463,8 @@ export function syncComponentsFromPorts(
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const updatePrice = db.prepare(`
-    INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at)
-    VALUES (?, ?, datetime('now'))
+    INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at, source)
+    VALUES (?, ?, datetime('now'), 'wiki')
   `);
 
   let count = 0;

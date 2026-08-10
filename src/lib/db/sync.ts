@@ -314,8 +314,8 @@ export async function syncDataForVersion(
         if (c.id) commodityMap.set(c.id.toLowerCase(), c);
         if (c.name) commodityMap.set(c.name.toLowerCase(), c);
       }
-      const updatePrice = db.prepare("INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at) VALUES (?, ?, datetime('now'))");
-      const insertLocation = db.prepare("INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price) VALUES (?, ?, ?, ?, ?, ?, ?)");
+      const updatePrice = db.prepare("INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at, source) VALUES (?, ?, datetime('now'), 'uex')");
+      const insertLocation = db.prepare("INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price, source) VALUES (?, ?, ?, ?, ?, ?, ?, 'uex')");
       let uexPriceCount = 0;
       for (const priceEntry of prices) {
         if (!priceEntry.commodity_id || !priceEntry.price) continue;

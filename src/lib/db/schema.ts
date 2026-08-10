@@ -113,13 +113,15 @@ function initSchema(db: InstanceType<typeof Database>) {
       planet_moon TEXT DEFAULT '',
       shop_name TEXT DEFAULT '',
       shop_type TEXT DEFAULT '',
-      price REAL DEFAULT NULL
+      price REAL DEFAULT NULL,
+      source TEXT NOT NULL DEFAULT 'legacy_unverified'
     );
 
     CREATE TABLE IF NOT EXISTS component_prices (
       component_id TEXT NOT NULL,
       price_auec REAL DEFAULT NULL,
       updated_at TEXT DEFAULT '',
+      source TEXT NOT NULL DEFAULT 'legacy_unverified',
       PRIMARY KEY (component_id)
     );
 
@@ -217,16 +219,20 @@ function initSchema(db: InstanceType<typeof Database>) {
     db.exec("ALTER TABLE loadouts ADD COLUMN stats TEXT DEFAULT '{}'");
   }
 
-  // Existing databases may contain values created by the former synthetic seed.
-  // Remove those ambiguous derived values once; a later sync can repopulate only
-  // prices and locations that are actually returned by an upstream source.
-  const qualityMigration = db.prepare("SELECT id FROM app_migrations WHERE id = ?").get("remove-unverified-derived-values");
-  if (!qualityMigration) {
-    db.transaction(() => {
-      db.exec("DELETE FROM buy_locations; DELETE FROM component_prices;");
-      db.prepare("INSERT INTO app_migrations (id) VALUES (?)").run("remove-unverified-derived-values");
-    })();
+  // Preserve existing purchase data, but make its provenance explicit. Older
+  // databases predate the source columns and therefore cannot be treated as
+  // observed until the next trusted sync refreshes them.
+  const locationCols = (db.prepare("PRAGMA table_info(buy_locations)").all() as any[]).map((c) => c.name);
+  if (!locationCols.includes("source")) {
+    db.exec("ALTER TABLE buy_locations ADD COLUMN source TEXT NOT NULL DEFAULT 'legacy_unverified'");
   }
+  db.prepare("UPDATE buy_locations SET source = 'legacy_unverified' WHERE source IS NULL OR source = ''").run();
+
+  const priceCols = (db.prepare("PRAGMA table_info(component_prices)").all() as any[]).map((c) => c.name);
+  if (!priceCols.includes("source")) {
+    db.exec("ALTER TABLE component_prices ADD COLUMN source TEXT NOT NULL DEFAULT 'legacy_unverified'");
+  }
+  db.prepare("UPDATE component_prices SET source = 'legacy_unverified' WHERE source IS NULL OR source = ''").run();
 }
 
 /**

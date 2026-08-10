@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, MapPin, DollarSign, ShoppingBag, Check, Shield, Zap, Gauge, Thermometer, Navigation } from "lucide-react";
 import type { Component } from "@/lib/types";
 import { componentDetailRows } from "@/lib/optimizer/componentDetail";
-import { formatPrice, hasKnownValue, UNAVAILABLE_LABEL } from "@/lib/presentation";
+import { formatPrice, hasKnownValue, isVerifiedSource, sourceLabel, UNAVAILABLE_LABEL } from "@/lib/presentation";
 
 const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   Military: { bg: "bg-red-500/15", text: "text-red-400", border: "border-red-500/30" },
@@ -134,13 +134,19 @@ export default function ComponentDetailPanel({
                       <span className="font-semibold">{loc.shop_name}</span>
                       <span className="text-muted-foreground">
                         {" "}· {loc.location_name}
+                        {loc.location_name}
                         {loc.planet_moon ? ` (${loc.planet_moon})` : ""}
                       </span>
                     </span>
                   </div>
-                  <span className="text-amber-300 font-mono font-semibold shrink-0">
-                    {hasKnownValue(loc.price) ? `${loc.price.toLocaleString("es-ES")} aUEC` : UNAVAILABLE_LABEL}
-                  </span>
+                  <div className="text-right shrink-0">
+                    <span className="text-amber-300 font-mono font-semibold block">
+                      {hasKnownValue(loc.price) ? `${loc.price.toLocaleString("es-ES")} aUEC` : UNAVAILABLE_LABEL}
+                    </span>
+                    <span className={`text-[9px] block ${isVerifiedSource(loc.source) ? "text-emerald-400" : "text-amber-400"}`}>
+                      {sourceLabel(loc.source)}
+                    </span>
+                  </div>
                 </div>
               ))}
               {component.buy_locations.some((loc) => hasKnownValue(loc.price)) && (

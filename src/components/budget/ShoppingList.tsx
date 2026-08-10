@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin, ShoppingCart, Building } from "lucide-react";
 import type { Component, BuyLocation } from "@/lib/types";
 import { translateComponentTypeEs } from "@/lib/utils";
-import { formatPrice, hasKnownValue, UNAVAILABLE_LABEL, UNVERIFIED_DATA_LABEL } from "@/lib/presentation";
+import { formatPrice, hasKnownValue, isVerifiedSource, sourceLabel, UNAVAILABLE_LABEL, UNVERIFIED_DATA_LABEL } from "@/lib/presentation";
 
 interface ShoppingListProps {
   components: Component[];
@@ -97,6 +97,9 @@ export default function ShoppingList({ components }: ShoppingListProps) {
                             <MapPin className="h-3 w-3 text-cyan-400" />
                             {location.location_name} • {location.planet_moon || location.system || "Stanton"}
                           </p>
+                          <p className={`text-[10px] ${isVerifiedSource(location.source) ? "text-emerald-400" : "text-amber-400"}`}>
+                            {sourceLabel(location.source)}
+                          </p>
                         </div>
                       </div>
 
@@ -144,7 +147,7 @@ export default function ShoppingList({ components }: ShoppingListProps) {
         {unassignedComponents.length > 0 && (
           <div className="space-y-2 pt-2">
             <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              Componentes Estándar / De Serie
+              Componentes sin tienda verificada
             </h4>
             <div className="space-y-1.5">
               {unassignedComponents.map((comp) => (
