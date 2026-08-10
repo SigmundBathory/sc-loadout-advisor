@@ -22,9 +22,12 @@ export default function VersionChanges({
   const to = toVersion.split("-")[0];
 
   return (
-    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-5">
+    <div className="product-card p-5 sm:p-6">
       <div className="flex items-center gap-2 mb-4">
-        <h3 className="text-sm font-medium text-muted-foreground">Cambios entre versiones</h3>
+        <div>
+          <p className="section-kicker">Changelog del dataset</p>
+          <h3 className="text-base font-semibold text-foreground mt-1">Cambios entre versiones</h3>
+        </div>
       </div>
       <div className="flex items-center gap-3 mb-4">
         <Badge variant="outline" className="font-mono text-xs">
@@ -49,7 +52,7 @@ function DeltaCard({ label, delta }: { label: string; delta: number }) {
   const isNeutral = delta === 0;
 
   return (
-    <div className="text-center p-3 rounded-lg bg-muted/30">
+    <div className="text-center p-3.5 rounded-xl bg-muted/35 border border-border/30">
       <p className="text-xl font-bold font-mono">
         {isNeutral ? (
           <span className="text-muted-foreground">—</span>

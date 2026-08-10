@@ -46,7 +46,7 @@ export default function ShoppingList({ components }: ShoppingListProps) {
   );
 
   return (
-    <Card className="glass-panel border-border/40">
+    <Card className="product-card border-border/40">
       <CardHeader className="p-5 border-b border-border/30">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export default function ShoppingList({ components }: ShoppingListProps) {
                 const hasCompleteShopCost = shopPricedComponents.length === comps.length;
 
                 return (
-                  <div key={i} className="glass-panel p-4 rounded-xl border border-border/40 space-y-3">
+                  <div key={i} className="product-card p-4 rounded-xl border border-border/40 space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
@@ -122,7 +122,7 @@ export default function ShoppingList({ components }: ShoppingListProps) {
                       {comps.map((comp) => (
                         <div
                           key={comp.id}
-                          className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/30 border border-border/20"
+                          className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-muted/35 border border-border/25"
                         >
                           <div>
                             <span className="font-bold text-foreground block">{comp.name}</span>

@@ -123,10 +123,65 @@
   }
   body {
     @apply bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground;
+    background-image:
+      radial-gradient(circle at 12% -8%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 30rem),
+      radial-gradient(circle at 90% 8%, color-mix(in oklch, var(--sc-brand-secondary, var(--primary)) 8%, transparent), transparent 28rem),
+      linear-gradient(180deg, color-mix(in oklch, var(--background) 94%, var(--primary)), var(--background));
+    background-attachment: fixed;
   }
   html {
     @apply font-sans scroll-smooth;
   }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 35%, transparent);
+  }
+}
+
+/* Product-grade surfaces: opaque enough for readable data, soft enough to
+   preserve the sci-fi atmosphere. */
+.product-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg,
+    color-mix(in oklch, var(--card) 94%, transparent),
+    color-mix(in oklch, var(--card) 78%, var(--background)));
+  border: 1px solid color-mix(in oklch, var(--border) 88%, transparent);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 55px -38px rgba(0, 0, 0, 0.95), inset 0 1px 0 color-mix(in oklch, white 7%, transparent);
+}
+
+.product-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--primary) 55%, transparent), transparent);
+  opacity: 0.7;
+}
+
+.product-card-hover {
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.product-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary) 42%, var(--border));
+  box-shadow: 0 24px 60px -34px color-mix(in oklch, var(--primary) 38%, transparent);
+}
+
+.section-kicker {
+  color: color-mix(in oklch, var(--primary) 78%, var(--foreground));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.data-grid-line {
+  background-image: linear-gradient(color-mix(in oklch, var(--border) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklch, var(--border) 22%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to bottom, black, transparent 75%);
 }
 
 /* Custom Utilities for Glassmorphism and Glow Effects */

@@ -102,15 +102,15 @@ export default async function DashboardPage() {
 
       {/* ===== Hero: estado de la versión / sync ===== */}
       <Reveal y={10}>
-        <div className="glass-panel rounded-2xl border-border/40 overflow-hidden relative">
+        <div className="product-card overflow-hidden relative min-h-[170px]">
           <div
-            className="pointer-events-none absolute inset-0 opacity-30"
+            className="data-grid-line pointer-events-none absolute inset-0 opacity-45"
             style={{
               background:
                 "radial-gradient(120% 120% at 100% 0%, color-mix(in oklch, var(--sc-quantum-500) 22%, transparent), transparent 60%)",
             }}
           />
-          <div className="relative p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="relative p-5 sm:p-7 flex flex-wrap items-center justify-between gap-6">
             <div className="flex items-center gap-4 min-w-0">
               <div
                 className="flex items-center justify-center w-12 h-12 rounded-xl border"
@@ -124,9 +124,9 @@ export default async function DashboardPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
-                  Versión activa
+                  <span className="section-kicker">Dataset activo</span>
                 </p>
-                <p className="text-2xl font-bold font-heading tracking-tight truncate">
+                <p className="text-2xl sm:text-3xl font-bold font-heading tracking-tight truncate mt-1">
                   Alpha {wikiVersion.split("-")[0]}{" "}
                   <span
                     className="text-sm font-medium align-middle ml-1 px-2 py-0.5 rounded-full"
@@ -147,9 +147,7 @@ export default async function DashboardPage() {
 
             <div className="flex items-center gap-5">
               <div className="text-right">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
-                  Última sincronización
-                </p>
+                <p className="section-kicker text-muted-foreground">Última sincronización</p>
                 <p className="font-mono text-sm font-semibold">{lastSync}</p>
               </div>
               <div
@@ -240,7 +238,7 @@ export default async function DashboardPage() {
           </div>
           <div className="space-y-6">
             <SyncHistory />
-            <div className="glass-panel rounded-2xl border-border/40 p-5 flex items-start gap-3">
+            <div className="product-card p-5 flex items-start gap-3">
               <Radio className="h-5 w-5 text-primary mt-0.5" />
               <div className="text-sm text-muted-foreground">
                 <p className="text-foreground font-medium mb-1">¿Datos desactualizados?</p>

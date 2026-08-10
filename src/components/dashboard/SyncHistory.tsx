@@ -5,10 +5,13 @@ export default function SyncHistory() {
   const logs = getRecentSyncLogs(8);
 
   return (
-    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-5">
+    <div className="product-card p-5 sm:p-6">
       <div className="flex items-center gap-2 mb-4">
         <RefreshCw className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-medium text-muted-foreground">Historial de Sincronización</h3>
+        <div>
+          <p className="section-kicker">Observabilidad</p>
+          <h3 className="text-base font-semibold text-foreground mt-1">Historial de sincronización</h3>
+        </div>
       </div>
 
       {logs.length === 0 ? (
@@ -23,7 +26,7 @@ export default function SyncHistory() {
             return (
               <div
                 key={log.id}
-                className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/30 border border-border/20"
+                className="flex items-start gap-3 p-3 rounded-xl bg-muted/35 border border-border/30"
               >
                 {failed ? (
                   <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />

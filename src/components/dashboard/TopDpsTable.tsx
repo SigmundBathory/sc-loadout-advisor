@@ -42,16 +42,17 @@ function formatMass(mass: number): string {
 
 export default function TopDpsTable({ ships }: { ships: ShipCombat[] }) {
   return (
-    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-5">
-      <h3 className="text-sm font-medium text-muted-foreground mb-1">Top 5 capacidad de combate</h3>
-            <p className="text-[11px] text-muted-foreground/70 mb-4">Ordenado por hardpoints observados, no por DPS real.</p>
+    <div className="product-card p-5 sm:p-6">
+      <p className="section-kicker">Lectura táctica</p>
+      <h3 className="text-base font-semibold text-foreground mt-1 mb-1">Top 5 capacidad de combate</h3>
+      <p className="text-[11px] text-muted-foreground/70 mb-4">Ordenado por hardpoints observados, no por DPS real.</p>
       <div className="space-y-3">
         <Stagger className="space-y-3">
           {ships.map((ship, i) => (
             <StaggerItem key={ship.id}>
               <Link
                 href={`/ships/${ship.id}`}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
+                className="flex items-center gap-3 p-2.5 rounded-xl border border-transparent hover:border-border/50 hover:bg-muted/45 transition-all group"
               >
                 <span className="text-lg font-bold text-muted-foreground w-6 text-center font-mono">
                   {i + 1}
@@ -67,7 +68,7 @@ export default function TopDpsTable({ ships }: { ships: ShipCombat[] }) {
                   <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
                     {ship.name}
                   </p>
-                  <div className="flex gap-1 mt-0.5">
+                  <div className="flex gap-1 mt-1 flex-wrap">
                     <Badge
                       variant="outline"
                       className={`text-[10px] px-1.5 py-0 ${getTierColor(ship.mass)}`}

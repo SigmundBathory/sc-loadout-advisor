@@ -109,10 +109,10 @@ export default function ImportPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <main className="container mx-auto px-4 py-6 max-w-2xl flex-1 space-y-6">
+      <main className="container mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-8 flex-1 space-y-7">
         <Breadcrumb items={[{ label: "Importar Datos" }]} />
 
-        <Card>
+        <Card className="product-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Upload className="h-5 w-5" />
@@ -158,7 +158,7 @@ export default function ImportPage() {
             {/* File Upload */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Archivo JSON</label>
-              <div className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => fileInputRef.current?.click()}>
+              <div className="border-2 border-dashed border-border/70 rounded-2xl p-10 text-center cursor-pointer bg-muted/15 hover:bg-primary/5 hover:border-primary/60 transition-all" onClick={() => fileInputRef.current?.click()}>
                 <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
                 {file ? (
                   <div className="flex items-center justify-center gap-2">

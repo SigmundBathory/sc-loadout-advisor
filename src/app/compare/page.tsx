@@ -168,11 +168,11 @@ export default function ComparePage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <main className="container mx-auto px-4 py-6 flex-1 space-y-6">
+      <main className="container mx-auto max-w-[1440px] px-4 sm:px-6 py-6 sm:py-8 flex-1 space-y-7">
         <Breadcrumb items={[{ label: "Comparar Naves" }]} />
 
         {/* Config Selection */}
-        <Card className="mb-6">
+        <Card className="product-card mb-6">
           <CardHeader>
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
@@ -204,7 +204,7 @@ export default function ComparePage() {
               {configs.map((cfg, idx) => (
                 <div
                   key={cfg.id}
-                  className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/30 px-3 py-2"
+                  className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/35 px-3 py-2 shadow-sm"
                 >
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[idx] }} />
                   <div className="flex flex-col">

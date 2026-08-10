@@ -133,7 +133,7 @@ export default function ShipSelector({
   return (
     <div className="space-y-6">
       {/* Top Filter Bar */}
-      <div className="glass-panel p-4 rounded-2xl border-border/40 space-y-4">
+      <div className="product-card p-4 sm:p-5 space-y-4">
         <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -203,6 +203,7 @@ export default function ShipSelector({
 
         {/* Secondary row: sort + buyable toggle + count */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="section-kicker">Catálogo de flota</div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <ArrowUpDown className="h-3.5 w-3.5" />
@@ -262,7 +263,7 @@ export default function ShipSelector({
 
       {/* Grid or List Display */}
       {isError && allShips.length === 0 ? (
-        <div className="glass-panel rounded-2xl p-12 text-center text-muted-foreground space-y-4">
+        <div className="product-card p-12 text-center text-muted-foreground space-y-4">
           <AlertTriangle className="h-10 w-10 mx-auto opacity-60 text-red-400" />
           <p className="text-base font-medium text-foreground">No se pudieron cargar las naves.</p>
           <p className="text-xs">Revisa la conexión o inténtalo de nuevo.</p>
@@ -290,7 +291,7 @@ export default function ShipSelector({
           ))}
         </div>
       ) : ships.length === 0 ? (
-        <div className="glass-panel rounded-2xl p-12 text-center text-muted-foreground space-y-3">
+        <div className="product-card p-12 text-center text-muted-foreground space-y-3">
           <Rocket className="h-10 w-10 mx-auto opacity-40 text-primary" />
           <p className="text-base font-medium">No se encontraron naves con los filtros seleccionados.</p>
           <p className="text-xs">Prueba borrando la búsqueda o ejecuta una sincronización si la base de datos está vacía.</p>
@@ -300,7 +301,7 @@ export default function ShipSelector({
           {paginatedShips.map((ship) => (
             <StaggerItem key={ship.id}>
               <Link href={`/ships/${ship.id}`} className="block h-full">
-                <Card className="glass-panel glass-panel-hover border-border/40 cursor-pointer h-full group flex flex-col justify-between overflow-hidden hover:shadow-xl hover:shadow-primary/10 hover:border-primary/40 transition-all duration-300">
+                <Card className="product-card product-card-hover cursor-pointer h-full group flex flex-col justify-between overflow-hidden">
                   <div className="relative h-36 w-full bg-muted/20 border-b border-border/30">
                     <ShipImage ship={ship} fill priority={false} alt={ship.name} />
                     <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-300" />

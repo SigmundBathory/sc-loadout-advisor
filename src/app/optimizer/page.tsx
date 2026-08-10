@@ -126,8 +126,8 @@ export default function OptimizerPage() {
     <div className="flex-1 flex flex-col">
       <main className="container mx-auto px-4 py-6 flex-1 space-y-6">
         <Breadcrumb items={[{ label: "Optimizador" }]} />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-5 space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          <div className="lg:col-span-5 space-y-5 lg:sticky lg:top-24 lg:self-start">
             <ShipSelector selectedShipId={selectedShipId} onSelect={setSelectedShipId} />
             <PresetSliders weights={weights} activePreset={activePreset} onPresetChange={setActivePreset} onWeightsChange={setWeights} />
             <SlotTypeSelector selectedTypes={selectedSlotTypes} onToggle={toggleSlotType} />
@@ -147,7 +147,7 @@ export default function OptimizerPage() {
                 />
 
                 {qdComponent && (
-                  <Card className="glass-panel border-cyan-500/30 bg-cyan-950/10">
+                  <Card className="product-card border-cyan-500/30 bg-cyan-950/10">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between">
                         <div>
@@ -199,7 +199,7 @@ export default function OptimizerPage() {
                   </TabsContent>
 
                   <TabsContent value="radar" className="mt-4">
-                    <Card className="glass-panel border-border/40 p-4">
+                    <Card className="product-card border-border/40 p-4">
                       <CardContent className="p-2">
                         <LoadoutRadarChart
                           stats={{
@@ -220,7 +220,7 @@ export default function OptimizerPage() {
                 </Tabs>
               </div>
             ) : (
-              <Card className="glass-panel border-border/40 min-h-[500px] flex items-center justify-center">
+              <Card className="product-card border-border/40 min-h-[500px] flex items-center justify-center">
                 <CardContent className="text-center text-muted-foreground space-y-4 p-8">
                   <AnimatedIcon className="h-16 w-16 mx-auto text-primary/50">
                     <Wand2 className="h-full w-full" />

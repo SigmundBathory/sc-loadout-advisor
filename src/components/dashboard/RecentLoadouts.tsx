@@ -16,9 +16,12 @@ interface Loadout {
 
 export default function RecentLoadouts({ loadouts }: { loadouts: Loadout[] }) {
   return (
-    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-5">
+    <div className="product-card p-5 sm:p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-muted-foreground">Loadouts Recientes</h3>
+        <div>
+          <p className="section-kicker">Hangar personal</p>
+          <h3 className="text-base font-semibold text-foreground mt-1">Loadouts recientes</h3>
+        </div>
         <Link href="/ships">
           <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs">
             <Plus className="h-3 w-3" />
@@ -37,7 +40,7 @@ export default function RecentLoadouts({ loadouts }: { loadouts: Loadout[] }) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <Stagger className="grid grid-cols-2 gap-3">
+          <Stagger className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {loadouts.slice(0, 4).map((loadout) => {
               let compCount = 0;
               try {
@@ -49,7 +52,7 @@ export default function RecentLoadouts({ loadouts }: { loadouts: Loadout[] }) {
                 <StaggerItem key={loadout.id}>
                   <Link
                     href={`/ships/${loadout.ship_id}`}
-                    className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group block"
+                    className="p-3.5 rounded-xl bg-muted/35 border border-border/30 hover:bg-muted/65 hover:border-primary/25 transition-all group block"
                   >
                     <div className="flex items-start justify-between">
                       <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">

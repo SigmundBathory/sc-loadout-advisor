@@ -65,10 +65,10 @@ export default async function ShipPage({ params }: ShipPageProps) {
         </div>
 
         {/* ===== HERO: IMAGEN + SPECS CLAVE ===== */}
-        <div className="glass-panel border-border/40 rounded-2xl overflow-hidden">
+        <div className="product-card overflow-hidden">
           <div className="flex flex-col md:flex-row items-stretch">
             {/* Imagen holográfica */}
-            <div className="md:w-[380px] shrink-0 p-5 flex items-center justify-center bg-muted/10 border-b md:border-b-0 md:border-r border-border/30">
+            <div className="md:w-[400px] shrink-0 p-5 sm:p-7 flex items-center justify-center bg-muted/10 border-b md:border-b-0 md:border-r border-border/30">
               <HologramImage ship={ship} className="w-full max-w-[340px]" />
             </div>
 

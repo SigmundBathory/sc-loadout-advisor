@@ -14,8 +14,14 @@ const actions = [
 
 export default function QuickActions({ onSync }: { onSync?: () => void }) {
   return (
-    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-5">
-      <h3 className="text-sm font-medium text-muted-foreground mb-4">Acciones Rápidas</h3>
+    <div className="product-card p-5 sm:p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="section-kicker">Atajos de misión</p>
+          <h3 className="text-base font-semibold text-foreground mt-1">Acciones rápidas</h3>
+        </div>
+        <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Control deck</span>
+      </div>
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {actions.map((action) => {
           const Icon = action.icon;
@@ -26,7 +32,7 @@ export default function QuickActions({ onSync }: { onSync?: () => void }) {
               <button
                 key={action.label}
                 onClick={onSync}
-                className="flex flex-col items-center gap-2 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
+                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted/35 border border-border/30 hover:bg-muted/65 hover:border-primary/30 transition-all group"
               >
                 <div className={`p-2 rounded-lg bg-muted ${action.color} group-hover:scale-110 transition-transform`}>
                   <Icon className="h-4 w-4" />
@@ -40,7 +46,7 @@ export default function QuickActions({ onSync }: { onSync?: () => void }) {
             <Link
               key={action.label}
               href={action.href}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
+              className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted/35 border border-border/30 hover:bg-muted/65 hover:border-primary/30 transition-all group"
             >
               <div className={`p-2 rounded-lg bg-muted ${action.color} group-hover:scale-110 transition-transform`}>
                 <Icon className="h-4 w-4" />

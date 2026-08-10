@@ -27,23 +27,23 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("space-y-4", className)}>
       {breadcrumb && breadcrumb.length > 0 && (
         <Breadcrumb items={breadcrumb} />
       )}
-      <div className="flex items-end justify-between gap-4 flex-wrap">
+      <div className="flex items-end justify-between gap-5 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           {icon && (
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+            <div className="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-primary/10 text-primary border border-primary/25 shadow-[0_0_28px_-12px_var(--primary)] shrink-0">
               {icon}
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground truncate">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading text-foreground truncate">
               {title}
             </h1>
             {subtitle && (
-              <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{subtitle}</p>
             )}
           </div>
         </div>

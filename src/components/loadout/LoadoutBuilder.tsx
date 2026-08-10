@@ -350,7 +350,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
 
   return (
     <Tabs defaultValue="loadout" className="w-full">
-      <TabsList className="glass-panel border border-border/40 p-1 bg-muted/30 rounded-xl">
+      <TabsList className="product-card border border-border/40 p-1 bg-muted/30 rounded-2xl">
         <TabsIndicator className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-sm" />
         <TabsTrigger
           value="loadout"
@@ -390,7 +390,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
           </div>
 
           <div className="lg:col-span-5">
-            <Card className="glass-panel border-border/40">
+            <Card className="product-card border-border/40">
               <CardHeader className="p-4 border-b border-border/30 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Crosshair className="h-4 w-4 text-primary" />
@@ -414,7 +414,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
           </div>
 
           <div className="lg:col-span-4">
-            <Card className="glass-panel border-border/40 h-full">
+            <Card className="product-card border-border/40 h-full">
               <CardHeader className="p-4 border-b border-border/30">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Zap className="h-4 w-4 text-primary" />
@@ -443,7 +443,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
 
         {/* Tabs internas: Compra + Shopping List */}
         <Tabs defaultValue="summary" className="w-full">
-          <TabsList className="glass-panel border border-border/40 p-1 bg-muted/30 rounded-xl">
+          <TabsList className="product-card border border-border/40 p-1 bg-muted/30 rounded-2xl">
             <TabsIndicator className="bg-background/80 backdrop-blur-sm border border-border/40 rounded-lg shadow-sm" />
             <TabsTrigger value="summary" className="relative z-10 rounded-lg font-semibold">
               <Zap className="h-4 w-4 mr-1.5" /> Resumen
@@ -454,7 +454,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
           </TabsList>
 
           <TabsContent value="summary" className="mt-4">
-            <Card className="glass-panel border-border/40">
+            <Card className="product-card border-border/40">
               <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold">Resumen de Compra</h3>

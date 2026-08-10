@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Compass,
+  LayoutDashboard,
   ArrowUpCircle,
   Moon,
   Sun,
@@ -29,6 +30,7 @@ export default function Navbar() {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
 
   const navItems = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/ships", label: "Naves", icon: Rocket },
     { href: "/optimizer", label: "Optimizador", icon: Wand2 },
     { href: "/compare", label: "Comparador", icon: GitCompare },
@@ -42,15 +44,15 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="border-b border-border/40 bg-card/60 backdrop-blur-md sticky top-0 z-50 transition-all duration-300">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+      <header className="border-b border-border/60 bg-background/80 backdrop-blur-2xl sticky top-0 z-50 transition-all duration-300 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.9)]">
+        <div className="container mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
           {/* Brand Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-primary-foreground shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
               <Compass className="h-5 w-5 animate-pulse" />
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-foreground via-blue-200 to-primary bg-clip-text text-transparent group-hover:to-blue-400 transition-colors">
+              <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground/80 to-primary bg-clip-text text-transparent group-hover:to-primary transition-colors">
                 SC Loadout Advisor
               </span>
               <span className="text-[10px] text-muted-foreground font-mono leading-none tracking-widest uppercase">
@@ -60,7 +62,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-muted/30 p-1.5 rounded-full border border-border/40">
+          <nav className="hidden md:flex items-center gap-0.5 bg-card/70 p-1 rounded-2xl border border-border/50 shadow-inner">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
@@ -76,7 +78,7 @@ export default function Navbar() {
                   <Button
                     variant={active ? "ghost" : "ghost"}
                     size="sm"
-                    className={`relative gap-2 rounded-full text-xs font-medium transition-colors ${
+                    className={`relative gap-2 rounded-xl text-xs font-medium transition-colors ${
                       active
                         ? "text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
