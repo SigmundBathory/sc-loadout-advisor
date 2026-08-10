@@ -10,7 +10,7 @@ import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Ther
 import type { Component, Hardpoint } from "@/lib/types";
 import { sortComponentsForSlot, componentStatSummary, type BuildProfile, PROFILE_LABELS } from "@/lib/optimizer/componentSort";
 import { componentDetailRows } from "@/lib/optimizer/componentDetail";
-import { formatPrice } from "@/lib/presentation";
+import { formatPrice, isVerifiedSource } from "@/lib/presentation";
 import ComponentDetailPanel from "./ComponentDetailPanel";
 
 const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -21,6 +21,10 @@ const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> 
   Competition: { bg: "bg-yellow-500/15", text: "text-yellow-400", border: "border-yellow-500/30" },
 };
 const TIER_ORDER = ["Military", "Stealth", "Competition", "Industrial", "Civilian"];
+
+function hasVerifiedStore(component: Component): boolean {
+  return Boolean(component.buy_locations?.some((location) => isVerifiedSource(location.source)));
+}
 
 interface ComponentPickerDialogProps {
   slot: Hardpoint | null;
@@ -81,7 +85,10 @@ function PickerBody({
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [profile, setProfile] = useState<BuildProfile>("balanced");
-  const [availableOnly, setAvailableOnly] = useState(false);
+  // Buying is the primary intent of this picker: hide components without a
+  // verified purchase location by default. The currently equipped component
+  // remains visible so it can still be replaced deliberately.
+  const [availableOnly, setAvailableOnly] = useState(true);
   const [tierFilter, setTierFilter] = useState<string[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -117,12 +124,28 @@ function PickerBody({
           c.manufacturer.name.toLowerCase().includes(search.toLowerCase()))
     );
     if (availableOnly) {
-      filtered = filtered.filter((c) => c.buy_locations && c.buy_locations.length > 0);
+      filtered = filtered.filter(
+        (c) => hasVerifiedStore(c) || c.id === equippedId
+      );
     }
     if (tierFilter.length > 0) {
       filtered = filtered.filter((c) => c.class && tierFilter.includes(c.class));
     }
-    return sortComponentsForSlot(filtered, componentType, equippedId, profile);
+
+    const ranked = sortComponentsForSlot(filtered, componentType, equippedId, profile);
+    if (availableOnly) return ranked;
+
+    // When the user explicitly includes unbuyable components, keep them after
+    // all components with a known purchase location. Preserve the optimizer's
+    // stat ranking within each availability group.
+    const equipped = ranked.find((c) => c.id === equippedId);
+    const rest = ranked.filter((c) => c.id !== equippedId);
+    rest.sort((a, b) => {
+      const aAvailable = hasVerifiedStore(a);
+      const bAvailable = hasVerifiedStore(b);
+      return Number(bAvailable) - Number(aAvailable);
+    });
+    return equipped ? [equipped, ...rest] : rest;
   }, [components, componentType, equippedId, search, profile, availableOnly, tierFilter]);
 
   const equippedComponent = useMemo(
@@ -291,7 +314,7 @@ function PickerBody({
             }`}
           >
             <ShoppingCart className="h-3 w-3" />
-            {availableOnly ? "Solo disponibles" : "Disponibles"}
+            {availableOnly ? "Solo comprables" : "Incluye sin tienda"}
           </button>
           <button
             onClick={() => { setCompareMode((v) => !v); if (compareMode) setCompareIds([]); }}
@@ -327,7 +350,7 @@ function PickerBody({
               const isActive = idx === safeIndex;
               const isBest = comp.id === bestComponent?.id && comp.id !== equippedId;
               const isEquipped = comp.id === equippedId;
-              const isAvailable = comp.buy_locations && comp.buy_locations.length > 0;
+              const isAvailable = hasVerifiedStore(comp);
 
               return (
                 <div key={comp.id} className="space-y-1">
