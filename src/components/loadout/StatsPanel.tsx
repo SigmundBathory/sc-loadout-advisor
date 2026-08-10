@@ -48,8 +48,8 @@ export default function StatsPanel({ stats, assignedCount, totalSlots, baseline 
         <StatBar label="DPS Potencial Armas" value={stats.totalDps} max={8000} unit="DPS" color="from-red-500 to-amber-500" baseline={baseline?.totalDps} />
         <StatBar label="HP Total Escudos" value={stats.shieldHp} max={25000} unit="HP" color="from-emerald-500 to-teal-400" baseline={baseline?.shieldHp} />
         <StatBar label="Regen Escudos" value={stats.shieldRegen} max={4000} unit="/s" color="from-cyan-500 to-blue-400" baseline={baseline?.shieldRegen} />
-        <StatBar label="Salida Energía" value={Math.round(stats.powerOutput / 1000)} max={25} unit="kW" color="from-amber-500 to-yellow-400" baseline={baseline ? Math.round(baseline.powerOutput / 1000) : undefined} />
-        <StatBar label="Enfriamiento" value={Math.round(stats.coolingRate / 1000)} max={5000} unit="k c/s" color="from-sky-500 to-cyan-400" baseline={baseline ? Math.round(baseline.coolingRate / 1000) : undefined} />
+        <StatBar label="Salida Energía" value={Math.round(stats.powerOutput)} max={250} unit="W" color="from-amber-500 to-yellow-400" baseline={baseline ? Math.round(baseline.powerOutput) : undefined} />
+        <StatBar label="Enfriamiento" value={Math.round(stats.coolingRate)} max={100} unit="c/s" color="from-sky-500 to-cyan-400" baseline={baseline ? Math.round(baseline.coolingRate) : undefined} />
         {stats.quantumSpeed > 0 && (
           <StatBar label="Velocidad Quantum" value={stats.quantumSpeed} max={300000} unit="km/s" color="from-violet-500 to-purple-400" baseline={baseline?.quantumSpeed} />
         )}
