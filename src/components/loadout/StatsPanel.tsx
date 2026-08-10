@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Zap } from "lucide-react";
+import { UNVERIFIED_DATA_LABEL, hasKnownValue } from "@/lib/presentation";
 
 interface StatsPanelProps {
   stats: {
@@ -61,7 +62,9 @@ export default function StatsPanel({ stats, assignedCount, totalSlots, baseline 
           <span>Coste Estimado</span>
           <span className="flex items-center gap-2">
             <DeltaBadge current={stats.totalCost} baseline={baseline?.totalCost} invert />
-            <span className="font-mono text-amber-400 text-base">{stats.totalCost.toLocaleString()} aUEC</span>
+            <span className="font-mono text-amber-400 text-base">
+              {hasKnownValue(stats.totalCost) ? `${stats.totalCost.toLocaleString("es-ES")} aUEC` : UNVERIFIED_DATA_LABEL}
+            </span>
           </span>
         </div>
         {stats.emissionEm > 0 && (
@@ -69,7 +72,9 @@ export default function StatsPanel({ stats, assignedCount, totalSlots, baseline 
             <span>Firma EM</span>
             <span className="flex items-center gap-2">
               <DeltaBadge current={stats.emissionEm} baseline={baseline?.emissionEm} invert />
-              <span className="font-mono text-orange-400">{stats.emissionEm.toLocaleString()}</span>
+              <span className="font-mono text-orange-400">
+                {hasKnownValue(stats.emissionEm) ? stats.emissionEm.toLocaleString("es-ES") : UNVERIFIED_DATA_LABEL}
+              </span>
             </span>
           </div>
         )}
@@ -95,6 +100,8 @@ function StatBar({ label, value, max, unit, color, baseline }: {
     "from-violet-500 to-purple-400": "text-violet-400",
   };
 
+  const hasValue = hasKnownValue(value);
+
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-xs font-medium items-center">
@@ -102,16 +109,20 @@ function StatBar({ label, value, max, unit, color, baseline }: {
         <span className="flex items-center gap-2">
           <DeltaBadge current={value} baseline={baseline} />
           <span className={`font-mono font-bold ${textColors[color] || "text-primary"}`}>
-            {typeof value === "number" && value % 1 !== 0 ? value.toFixed(1) : value.toLocaleString()} {unit}
+            {hasValue
+              ? `${typeof value === "number" && value % 1 !== 0 ? value.toFixed(1) : value.toLocaleString("es-ES")} ${unit}`
+              : UNVERIFIED_DATA_LABEL}
           </span>
         </span>
       </div>
-      <div className="h-1.5 bg-muted/60 rounded-full overflow-hidden">
-        <div
-          className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-300`}
-          style={{ width: `${Math.min(100, (value / max) * 100)}%` }}
-        />
-      </div>
+      {hasValue && (
+        <div className="h-1.5 bg-muted/60 rounded-full overflow-hidden">
+          <div
+            className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-300`}
+            style={{ width: `${Math.min(100, (value / max) * 100)}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }

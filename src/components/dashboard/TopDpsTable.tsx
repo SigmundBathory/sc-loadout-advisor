@@ -19,6 +19,7 @@ interface ShipCombat {
 }
 
 function getMassTier(mass: number): string {
+  if (!Number.isFinite(mass) || mass <= 0) return "Sin datos";
   if (mass > 10000000) return "Capital";
   if (mass > 1000000) return "Large";
   if (mass > 100000) return "Medium";
@@ -33,6 +34,7 @@ function getTierColor(mass: number): string {
 }
 
 function formatMass(mass: number): string {
+  if (!Number.isFinite(mass) || mass <= 0) return "No disponible";
   if (mass >= 1000000) return `${(mass / 1000000).toFixed(1)}M`;
   if (mass >= 1000) return `${(mass / 1000).toFixed(0)}K`;
   return mass.toFixed(0);
@@ -41,7 +43,8 @@ function formatMass(mass: number): string {
 export default function TopDpsTable({ ships }: { ships: ShipCombat[] }) {
   return (
     <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-5">
-      <h3 className="text-sm font-medium text-muted-foreground mb-4">Top 5 Poder de Combate</h3>
+      <h3 className="text-sm font-medium text-muted-foreground mb-1">Top 5 capacidad de combate</h3>
+            <p className="text-[11px] text-muted-foreground/70 mb-4">Ordenado por hardpoints observados, no por DPS real.</p>
       <div className="space-y-3">
         <Stagger className="space-y-3">
           {ships.map((ship, i) => (

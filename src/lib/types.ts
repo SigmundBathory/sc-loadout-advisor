@@ -173,7 +173,8 @@ export interface BuyLocation {
   planet_moon?: string;
   shop_name: string;
   shop_type: string;
-  price: number;
+  /** Present only when an upstream source provided an observed price. */
+  price?: number;
 }
 
 export interface Loadout {

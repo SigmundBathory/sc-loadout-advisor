@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Gauge, Thermometer, Navigation, GitCompare, ShoppingCart, X, Filter } from "lucide-react";
+import { Search, Info, Check, ArrowUpDown, ChevronDown, Crown, Zap, Shield, Thermometer, Navigation, GitCompare, ShoppingCart, X } from "lucide-react";
 import type { Component, Hardpoint } from "@/lib/types";
 import { sortComponentsForSlot, componentStatSummary, type BuildProfile, PROFILE_LABELS } from "@/lib/optimizer/componentSort";
 import { componentDetailRows } from "@/lib/optimizer/componentDetail";
+import { formatPrice } from "@/lib/presentation";
 import ComponentDetailPanel from "./ComponentDetailPanel";
 
 const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -380,11 +381,9 @@ function PickerBody({
                       </div>
 
                       <div className="text-right text-[11px] font-mono space-y-0.5 shrink-0">
-                        {comp.price_auec ? (
-                          <div className="text-amber-300 font-semibold">
-                            {comp.price_auec.toLocaleString()} aUEC
-                          </div>
-                        ) : null}
+                        <div className="text-amber-300 font-semibold" title="Precio del catálogo; puede no estar verificado en el juego">
+                          {formatPrice(comp.price_auec)}
+                        </div>
                         {comp.buy_locations && comp.buy_locations.length > 0 && (
                           <div className="text-muted-foreground/70 text-[9px]">
                             <span>{comp.buy_locations[0].shop_name}</span>
@@ -422,7 +421,6 @@ function PickerBody({
       {compareMode && compareIds.length >= 2 && (
         <ComparePanel
           components={compareIds.map((id) => sorted.find((c) => c.id === id)!).filter(Boolean)}
-          equipped={equippedComponent}
           onSelect={(comp) => { handleSelect(comp); setCompareMode(false); setCompareIds([]); }}
         />
       )}
@@ -432,11 +430,9 @@ function PickerBody({
 
 function ComparePanel({
   components,
-  equipped,
   onSelect,
 }: {
   components: Component[];
-  equipped?: Component | null;
   onSelect: (comp: Component) => void;
 }) {
   const allRows = useMemo(() => {

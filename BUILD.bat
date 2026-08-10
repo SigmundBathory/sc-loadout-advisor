@@ -11,7 +11,7 @@ if not exist "node_modules" (
     echo Instalando dependencias...
     call npm install
     echo.
-}
+)
 
 echo Compilando para produccion...
 call npm run build

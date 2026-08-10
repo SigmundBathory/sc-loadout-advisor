@@ -28,6 +28,11 @@ import {
   copyBaseImagesToSpecialEditions,
 } from "./syncHelpers";
 
+// A process-local guard prevents overlapping destructive sync jobs. Production
+// deployments should still use a distributed job lock when multiple instances
+// can run concurrently.
+let syncInProgress = false;
+
 export async function checkVersionAndSync(): Promise<{
   needsSync: boolean;
   currentVersion: string;
@@ -223,6 +228,10 @@ export async function syncDataForVersion(
   const db = getDb();
   const force = opts?.force ?? false;
 
+  if (syncInProgress) {
+    throw new Error("A data synchronization is already in progress");
+  }
+
   const existing = db.prepare("SELECT code, is_synced FROM game_versions WHERE code = ?").get(version) as any;
   if (!force && existing?.is_synced) {
     const ships = (db.prepare("SELECT COUNT(*) as c FROM ships").get() as any)?.c || 0;
@@ -233,6 +242,7 @@ export async function syncDataForVersion(
     return;
   }
 
+  syncInProgress = true;
   const syncLogId = startSyncLog(version);
   db.prepare("UPDATE sync_meta SET sync_status = 'syncing' WHERE id = 1").run();
 
@@ -246,6 +256,24 @@ export async function syncDataForVersion(
     onProgress?.("Descargando datos del Wiki...", 15);
     const vehiclesRes = await getVehicles(version);
     const vehicles = vehiclesRes.data || [];
+    if (vehicles.length === 0) throw new Error(`Wiki returned no vehicles for ${version}`);
+
+    // Fetch all mandatory sources before touching the active dataset. If any
+    // source fails, the previous dataset remains intact.
+    onProgress?.("Validando armas de la versión...", 18);
+    const weaponsRes = await getVehicleWeapons(version);
+    const weapons = weaponsRes.data || [];
+    if (weapons.length === 0) throw new Error(`Wiki returned no weapons for ${version}`);
+
+    onProgress?.("Validando componentes de la versión...", 20);
+    let wikiItems: any[] = [];
+    try {
+      const itemsRes = await getAllVehicleItems(version);
+      wikiItems = itemsRes.data || [];
+    } catch (error) {
+      throw new Error(`Wiki components could not be fetched: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    if (wikiItems.length === 0) throw new Error(`Wiki returned no component items for ${version}`);
 
     // Save images before wipe
     const existingImages = new Map<string, string>();
@@ -263,14 +291,10 @@ export async function syncDataForVersion(
     syncShipsAndHardpoints(db, uniqueVehicles, onProgress, 25);
 
     onProgress?.("Sincronizando armas...", 45);
-    const weaponsRes = await getVehicleWeapons(version);
-    const weapons = weaponsRes.data || [];
     const weaponCount = syncWeapons(db, weapons);
     console.log(`Synced ${weaponCount} weapons`);
 
     onProgress?.("Sincronizando componentes...", 65);
-    let wikiItems: any[] = [];
-    try { const itemsRes = await getAllVehicleItems(version); wikiItems = itemsRes.data || []; } catch (e) { console.warn("Failed to fetch Wiki items:", e); }
     const wikiItemMap = buildWikiItemMap(wikiItems);
     const portComponentMap = extractPortComponents(vehicles);
     const compCount = syncComponentsFromPorts(db, portComponentMap, wikiItemMap, onProgress);
@@ -297,8 +321,13 @@ export async function syncDataForVersion(
         if (!priceEntry.commodity_id || !priceEntry.price) continue;
         const commodity = commodityMap.get(priceEntry.commodity_id.toLowerCase());
         if (!commodity) continue;
-        const compName = (commodity.name || commodity.id || "").toLowerCase();
-        const ourComponents = db.prepare("SELECT id, name FROM components WHERE LOWER(name) LIKE ? OR LOWER(class_name) LIKE ?").all(`%${compName}%`, `%${compName}%`) as any[];
+        const compName = (commodity.name || commodity.id || "").trim().toLowerCase();
+        if (!compName) continue;
+        // Never associate prices through a fuzzy LIKE match: a substring can
+        // map one UEX commodity to unrelated component variants.
+        const ourComponents = db.prepare(
+          "SELECT id, name FROM components WHERE LOWER(name) = ? OR LOWER(class_name) = ?"
+        ).all(compName, compName) as any[];
         for (const comp of ourComponents) {
           updatePrice.run([comp.id, priceEntry.price]);
           uexPriceCount++;
@@ -342,5 +371,7 @@ export async function syncDataForVersion(
     db.prepare("UPDATE sync_meta SET sync_status = 'error' WHERE id = 1").run();
     finishSyncLog(syncLogId, { status: "error", error: error instanceof Error ? error.message : String(error) });
     throw error;
+  } finally {
+    syncInProgress = false;
   }
 }

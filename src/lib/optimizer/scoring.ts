@@ -1,4 +1,4 @@
-import type { Component, FilterWeights, ComponentScore, Ship, Hardpoint } from "../types";
+import type { Component, FilterWeights, ComponentScore, Ship } from "../types";
 import { getCompatibleComponents } from "../db/queries";
 import { isTurretMount } from "../types";
 export { calculateLoadoutStats } from "./loadoutStats";

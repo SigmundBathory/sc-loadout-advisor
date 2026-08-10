@@ -239,9 +239,9 @@ export function syncWeapons(db: Database, weapons: any[]): number {
         const rpm = Number(vw.rpm) || 0;
         dps = rpm > 0 ? Math.round((alpha * rpm) / 60) : 0;
       }
-      const grade = normalizeGrade(weapon.grade || 3);
+      const grade = normalizeGrade(weapon.grade);
       const stats = {
-        grade,
+        ...(grade !== undefined ? { grade } : {}),
         dps, alpha: Number(vw.damage_per_shot) || 0, fire_rate: Number(vw.rpm) || 0,
         range: Number(vw.range) || 0, capacity: Number(vw.capacity) || 0,
       };
@@ -312,14 +312,14 @@ export function extractPortComponents(vehicles: any[]): Map<string, any> {
   return map;
 }
 
-export function normalizeGrade(grade: any): number {
-  if (typeof grade === "number") return grade;
+export function normalizeGrade(grade: any): number | undefined {
+  if (typeof grade === "number" && Number.isFinite(grade)) return grade;
   const g = String(grade || "").toUpperCase().trim();
   if (g === "A" || g === "1") return 1;
   if (g === "B" || g === "2") return 2;
   if (g === "C" || g === "3") return 3;
   if (g === "D" || g === "4") return 4;
-  return 3;
+  return undefined;
 }
 
 export function extractWikiStats(compType: string, wikiItem: any): Record<string, any> {
@@ -427,51 +427,28 @@ export function extractWikiStats(compType: string, wikiItem: any): Record<string
   return stats;
 }
 
-export function applyFallbackEstimates(stats: Record<string, any>, compType: string, size: number, grade: number): void {
-  const gm = grade === 1 ? 1.3 : grade === 2 ? 1.15 : grade === 3 ? 1.0 : 0.85;
-  if (stats.hp === undefined && compType === "Shield") {
-    stats.hp = Math.round((size === 1 ? 1650 : size === 2 ? 9500 : size === 3 ? 105000 : 250000) * gm);
-    stats.regen_rate = Math.round(stats.hp * 0.12);
-  }
-  if (stats.output === undefined && compType === "PowerPlant") {
-    stats.output = Math.round((size === 1 ? 3800 : size === 2 ? 16000 : size === 3 ? 125000 : 450000) * gm);
-  }
-  if (stats.cooling_rate === undefined && compType === "Cooler") {
-    stats.cooling_rate = Math.round((size === 1 ? 450000 : size === 2 ? 2500000 : size === 3 ? 18000000 : 50000000) * gm);
-  }
-  if (stats.travel_speed === undefined && compType === "QuantumDrive") {
-    stats.travel_speed = size === 1 ? 125000 : size === 2 ? 185000 : 250000;
-    stats.spool_time = size === 1 ? 3 : size === 2 ? 4.5 : 7;
-  }
-  if (stats.alpha === undefined && compType === "Missile") {
-    const baseAlpha = size === 1 ? 850 : size === 2 ? 2400 : size === 3 ? 6500 : size === 4 ? 18000 : 45000;
-    stats.alpha = Math.round(baseAlpha * gm);
-    stats.range = stats.alpha * 10;
-  }
-  if (stats.range === undefined && compType === "EMP") {
-    stats.range = size === 1 ? 2000 : size === 2 ? 5000 : size === 3 ? 10000 : 15000;
-  }
-  if (stats.output === undefined && compType === "LifeSupport") {
-    stats.output = size === 1 ? 500 : size === 2 ? 1500 : size === 3 ? 5000 : 15000;
-  }
-  if (stats.scm_speed === undefined && compType === "FlightController") {
-    stats.scm_speed = size === 1 ? 50 : size === 2 ? 45 : size === 3 ? 40 : 35;
-    stats.max_speed = stats.scm_speed * 1.3;
-    stats.boost_forward = stats.scm_speed * 1.8;
-    stats.pitch = size === 1 ? 45 : size === 2 ? 40 : size === 3 ? 35 : 30;
-    stats.yaw = stats.pitch;
-    stats.roll = stats.pitch * 1.2;
-  }
+/** Deliberately leaves unavailable statistics absent rather than estimating them. */
+export function applyFallbackEstimates(
+  _stats: Record<string, any>,
+  _compType: string,
+  _size: number,
+  _grade: number | undefined,
+): void {
+  void _stats;
+  void _compType;
+  void _size;
+  void _grade;
 }
 
-export function computeEstimatedPrice(compType: string, size: number, grade: number): number {
-  const basePrice: Record<number, number> = { 1: 8000, 2: 25000, 3: 80000, 4: 250000 };
-  const sizeMult: Record<number, number> = { 1: 1, 2: 4, 3: 16, 4: 64 };
-  const typeMult: Record<string, number> = {
-    Weapon: 1.5, Shield: 1.2, PowerPlant: 1.0, Cooler: 0.8, QuantumDrive: 2.0,
-    Radar: 0.6, FlightController: 0.5, LifeSupport: 0.3, Missile: 0.4, EMP: 0.3, QED: 0.7
-  };
-  return Math.round((basePrice[grade] || 80000) * (sizeMult[size] || 1) * (typeMult[compType] || 1));
+/**
+ * Legacy compatibility helper. An unavailable price is represented by null;
+ * callers must only persist prices supplied by an upstream source.
+ */
+export function computeEstimatedPrice(_compType: string, _size: number, _grade: number): null {
+  void _compType;
+  void _size;
+  void _grade;
+  return null;
 }
 
 export function syncComponentsFromPorts(
@@ -480,6 +457,7 @@ export function syncComponentsFromPorts(
   wikiItemMap: Map<string, any>,
   onProgress?: (step: string, progress: number) => void
 ): number {
+  void onProgress;
   const insertComponent = db.prepare(`
     INSERT OR REPLACE INTO components (id, name, class_name, manufacturer_code, type, size, class, stats, image_url)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -499,7 +477,7 @@ export function syncComponentsFromPorts(
 
       const wikiItem = wikiItemMap.get(comp.class_name.toLowerCase());
       const stats: Record<string, any> = {};
-      let price = 0;
+      let price: number | null = null;
       let imageUrl = "";
       let componentClass = comp.sub_type || "";
 
@@ -518,14 +496,14 @@ export function syncComponentsFromPorts(
         if (wikiItem.class) componentClass = String(wikiItem.class);
       }
 
-      const grade = normalizeGrade(wikiItem?.grade || comp.grade || 3);
-      stats.grade = grade;
+      const grade = normalizeGrade(wikiItem?.grade ?? comp.grade);
+      if (grade !== undefined) stats.grade = grade;
 
       applyFallbackEstimates(stats, compType, size, grade);
 
       // Validate before inserting
       const compName = String(comp.name || comp.class_name);
-      const validation = validateComponent(compType, compName, stats, price);
+      const validation = validateComponent(compType, compName, stats, price ?? 0);
       if (!validation.valid) {
         console.log(`  [SKIP] ${compType} "${compName}" (S${size}): ${validation.reason}`);
         skipped++;
@@ -537,10 +515,8 @@ export function syncComponentsFromPorts(
         compType, size, componentClass, JSON.stringify(stats), imageUrl
       ]);
 
-      if (price > 0) {
+      if (price !== null && price > 0) {
         updatePrice.run([compId, price]);
-      } else {
-        updatePrice.run([compId, computeEstimatedPrice(compType, size, grade)]);
       }
       count++;
     } catch (e) {
@@ -561,7 +537,7 @@ export function copyBaseImagesToSpecialEditions(db: Database): number {
   let copied = 0;
   for (const ship of shipsMissing) {
     const cn = ship.class_name || '';
-    let base = cn
+    const base = cn
       .replace(/_Collector_\w+$/i, '').replace(/_Exec_\w+$/i, '').replace(/_BTALA$/i, '')
       .replace(/_Showdown$/i, '').replace(/_Military$/i, '').replace(/_Industrial$/i, '')
       .replace(/_Stealth$/i, '').replace(/_Medic$/i, '').replace(/_Mod$/i, '')

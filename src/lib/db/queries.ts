@@ -90,7 +90,6 @@ function getHardpointsByShip(shipId: string): Hardpoint[] {
  */
 function fixHardpointClassification(row: any, shipId: string): any {
   const name = row.name.toLowerCase();
-  const shipName = row.name.toLowerCase(); // We don't have ship name here, use shipId pattern
 
   // Known ship IDs with misclassified hardpoints (ship_id contains ship name pattern)
   // F7A/F7C Hornet Mk I - utility slots that are actually weapons

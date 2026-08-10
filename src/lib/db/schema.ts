@@ -5,7 +5,7 @@ import fs from "fs";
 function resolveDbPath(): string {
   if (process.env.DATABASE_PATH) return process.env.DATABASE_PATH;
 
-  const projectRoot = path.resolve(process.cwd());
+  const projectRoot = path.resolve(/*turbopackIgnore: true*/ process.cwd());
   const candidates = [
     path.join(projectRoot, "data", "sc-loadout.db"),
     path.join(projectRoot, ".next", "standalone", "data", "sc-loadout.db"),
@@ -39,6 +39,11 @@ export function getDb(): InstanceType<typeof Database> {
 
 function initSchema(db: InstanceType<typeof Database>) {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS app_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS sync_meta (
       id INTEGER PRIMARY KEY DEFAULT 1,
       wiki_version TEXT DEFAULT '',
@@ -108,12 +113,12 @@ function initSchema(db: InstanceType<typeof Database>) {
       planet_moon TEXT DEFAULT '',
       shop_name TEXT DEFAULT '',
       shop_type TEXT DEFAULT '',
-      price REAL DEFAULT 0
+      price REAL DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS component_prices (
       component_id TEXT NOT NULL,
-      price_auec REAL DEFAULT 0,
+      price_auec REAL DEFAULT NULL,
       updated_at TEXT DEFAULT '',
       PRIMARY KEY (component_id)
     );
@@ -137,7 +142,7 @@ function initSchema(db: InstanceType<typeof Database>) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ship_name TEXT NOT NULL,
       ship_id TEXT DEFAULT '',
-      price_auec REAL DEFAULT 0,
+      price_auec REAL DEFAULT NULL,
       location_name TEXT NOT NULL,
       shop_name TEXT DEFAULT '',
       location_type TEXT DEFAULT 'sale',
@@ -212,139 +217,26 @@ function initSchema(db: InstanceType<typeof Database>) {
     db.exec("ALTER TABLE loadouts ADD COLUMN stats TEXT DEFAULT '{}'");
   }
 
-  seedMissingPricesAndLocations(db);
+  // Existing databases may contain values created by the former synthetic seed.
+  // Remove those ambiguous derived values once; a later sync can repopulate only
+  // prices and locations that are actually returned by an upstream source.
+  const qualityMigration = db.prepare("SELECT id FROM app_migrations WHERE id = ?").get("remove-unverified-derived-values");
+  if (!qualityMigration) {
+    db.transaction(() => {
+      db.exec("DELETE FROM buy_locations; DELETE FROM component_prices;");
+      db.prepare("INSERT INTO app_migrations (id) VALUES (?)").run("remove-unverified-derived-values");
+    })();
+  }
 }
 
-export function seedMissingPricesAndLocations(db: InstanceType<typeof Database>) {
-  // Remove orphan rows from UEX terminals that have no component_id
-  db.exec("DELETE FROM buy_locations WHERE component_id = '' OR component_id IS NULL");
-
-  // Only seed components that don't already have buy locations
-  const components = db.prepare(`
-    SELECT c.id, c.name, c.class_name, c.type, c.size
-    FROM components c
-    LEFT JOIN buy_locations b ON b.component_id = c.id
-    WHERE b.id IS NULL
-    GROUP BY c.id
-  `).all() as any[];
-  if (components.length === 0) return;
-
-  console.log(`Seeding in-game shop locations and prices for ${components.length} components...`);
-
-  const insertLocation = db.prepare(`
-    INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const insertPrice = db.prepare(`
-    INSERT OR IGNORE INTO component_prices (component_id, price_auec, updated_at)
-    VALUES (?, ?, datetime('now'))
-  `);
-
-  const shopsByType: Record<string, Array<{ shop_name: string; location_name: string; system: string; planet_moon: string }>> = {
-    Weapon: [
-      { shop_name: "Centermass", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-      { shop_name: "Centermass", location_name: "New Babbage", system: "Stanton", planet_moon: "microTech" },
-      { shop_name: "Live Fire Weapons", location_name: "Port Tressler", system: "Stanton", planet_moon: "microTech Orbit" },
-      { shop_name: "Skutters", location_name: "Grim HEX", system: "Stanton", planet_moon: "Yela" },
-    ],
-    Shield: [
-      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-      { shop_name: "Cousin Crow's Custom Craft", location_name: "Orison", system: "Stanton", planet_moon: "Crusader" },
-      { shop_name: "Platinum Bay", location_name: "HUR-L1 Green Glade", system: "Stanton", planet_moon: "Hurston L1" },
-    ],
-    PowerPlant: [
-      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-      { shop_name: "Platinum Bay", location_name: "CRU-L1 Ambitious Dream", system: "Stanton", planet_moon: "Crusader L1" },
-      { shop_name: "Omega Pro", location_name: "New Babbage", system: "Stanton", planet_moon: "microTech" },
-    ],
-    Cooler: [
-      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-      { shop_name: "Platinum Bay", location_name: "MIC-L1 Shallow Frontier", system: "Stanton", planet_moon: "microTech L1" },
-      { shop_name: "Cousin Crow's Custom Craft", location_name: "Orison", system: "Stanton", planet_moon: "Crusader" },
-    ],
-    QuantumDrive: [
-      { shop_name: "Platinum Bay", location_name: "HUR-L1 Green Glade", system: "Stanton", planet_moon: "Hurston L1" },
-      { shop_name: "Omega Pro", location_name: "New Babbage", system: "Stanton", planet_moon: "microTech" },
-      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-    ],
-    Missile: [
-      { shop_name: "Centermass", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-      { shop_name: "Tammany & Sons", location_name: "Lorville", system: "Stanton", planet_moon: "Hurston" },
-    ],
-    EMP: [
-      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-      { shop_name: "Cousin Crow's Custom Craft", location_name: "Orison", system: "Stanton", planet_moon: "Crusader" },
-    ],
-    QED: [
-      { shop_name: "Platinum Bay", location_name: "HUR-L1 Green Glade", system: "Stanton", planet_moon: "Hurston L1" },
-      { shop_name: "Omega Pro", location_name: "New Babbage", system: "Stanton", planet_moon: "microTech" },
-    ],
-    LifeSupport: [
-      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-    ],
-    FlightController: [
-      { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-      { shop_name: "Cousin Crow's Custom Craft", location_name: "Orison", system: "Stanton", planet_moon: "Crusader" },
-    ],
-    Radar: [
-      { shop_name: "Platinum Bay", location_name: "HUR-L1 Green Glade", system: "Stanton", planet_moon: "Hurston L1" },
-      { shop_name: "Omega Pro", location_name: "New Babbage", system: "Stanton", planet_moon: "microTech" },
-    ],
-  };
-
-  const defaultShops = [
-    { shop_name: "Dumper's Depot", location_name: "Area18", system: "Stanton", planet_moon: "ArcCorp" },
-    { shop_name: "Platinum Bay", location_name: "Port Tressler", system: "Stanton", planet_moon: "microTech" },
-  ];
-
-  db.transaction(() => {
-    for (const comp of components) {
-      const type = comp.type || "Weapon";
-      const size = Number(comp.size) || 1;
-
-      let basePrice = 10000;
-      if (type === "Weapon") {
-        basePrice = size === 1 ? 5200 : size === 2 ? 12800 : size === 3 ? 29500 : size === 4 ? 68000 : size === 5 ? 185000 : 420000;
-      } else if (type === "Shield") {
-        basePrice = size === 1 ? 14500 : size === 2 ? 48500 : size === 3 ? 245000 : 780000;
-      } else if (type === "PowerPlant") {
-        basePrice = size === 1 ? 18200 : size === 2 ? 56000 : size === 3 ? 295000 : 890000;
-      } else if (type === "Cooler") {
-        basePrice = size === 1 ? 12400 : size === 2 ? 43000 : size === 3 ? 215000 : 620000;
-      } else if (type === "QuantumDrive") {
-        basePrice = size === 1 ? 28500 : size === 2 ? 94000 : size === 3 ? 460000 : 1250000;
-      } else if (type === "Missile") {
-        basePrice = size === 1 ? 850 : size === 2 ? 2400 : size === 3 ? 6500 : size === 4 ? 18000 : 45000;
-      } else if (type === "EMP") {
-        basePrice = size === 1 ? 15000 : size === 2 ? 45000 : size === 3 ? 180000 : 500000;
-      } else if (type === "QED") {
-        basePrice = size === 1 ? 25000 : size === 2 ? 85000 : size === 3 ? 350000 : 1000000;
-      } else if (type === "LifeSupport") {
-        basePrice = size === 1 ? 8000 : size === 2 ? 25000 : size === 3 ? 100000 : 300000;
-      } else if (type === "FlightController") {
-        basePrice = size === 1 ? 12000 : size === 2 ? 40000 : size === 3 ? 180000 : 500000;
-      } else if (type === "Radar") {
-        basePrice = size === 1 ? 10000 : size === 2 ? 35000 : size === 3 ? 150000 : 400000;
-      }
-
-      insertPrice.run([comp.id, basePrice]);
-
-      const shops = shopsByType[type] || defaultShops;
-      for (const shop of shops) {
-        insertLocation.run([
-          comp.id,
-          shop.location_name,
-          shop.system,
-          shop.planet_moon,
-          shop.shop_name,
-          "Retail",
-          basePrice,
-        ]);
-      }
-    }
-  })();
+/**
+ * Kept for compatibility with existing sync callers. It intentionally does
+ * not manufacture prices or locations when an upstream source is incomplete.
+ */
+export function seedMissingPricesAndLocations(_db: InstanceType<typeof Database>): void {
+  void _db;
 }
+
 
 export default getDb;
 

@@ -25,7 +25,11 @@ const steps: SyncStep[] = [
 export default function SyncPanel() {
   const [state, setState] = useState<SyncState>("idle");
   const [message, setMessage] = useState("");
+  const [adminToken, setAdminToken] = useState(() =>
+    typeof window === "undefined" ? "" : window.sessionStorage.getItem("sc-admin-token") || ""
+  );
   const [stepStates, setStepStates] = useState<SyncStep[]>(steps.map(s => ({ ...s })));
+
 
   async function handleSync() {
     setState("syncing");
@@ -33,7 +37,10 @@ export default function SyncPanel() {
     setStepStates(steps.map(s => ({ ...s, status: "pending" })));
 
     try {
-      const res = await fetch("/api/full-sync", { method: "POST" });
+      const res = await fetch("/api/full-sync", {
+        method: "POST",
+        headers: adminToken ? { "x-admin-token": adminToken } : undefined,
+      });
       const data = await res.json();
       
       if (res.ok) {
@@ -109,6 +116,23 @@ export default function SyncPanel() {
       </div>
 
       {/* Sync button */}
+      <div className="space-y-2">
+        <label htmlFor="sync-admin-token" className="text-xs font-medium text-muted-foreground">Token de administración <span className="font-normal">(si el servidor lo requiere)</span></label>
+        <input
+          id="sync-admin-token"
+          type="password"
+          autoComplete="off"
+          value={adminToken}
+          onChange={(event) => {
+            const value = event.target.value;
+            setAdminToken(value);
+            if (value) window.sessionStorage.setItem("sc-admin-token", value);
+            else window.sessionStorage.removeItem("sc-admin-token");
+          }}
+          placeholder="Solo se conserva durante esta sesión"
+          className="h-9 w-full rounded-lg border border-border bg-background/60 px-3 text-sm"
+        />
+      </div>
       <Button
         onClick={handleSync}
         disabled={state === "syncing"}
@@ -146,7 +170,7 @@ export default function SyncPanel() {
       <div className="text-center text-sm text-muted-foreground space-y-1">
         <p>¿No funciona la sincronización automática?</p>
         <p>
-          Prueba ejecutar <code className="bg-muted px-1.5 py-0.5 rounded text-xs">npm run sync</code> desde la terminal local.
+          Prueba ejecutar <code className="bg-muted px-1.5 py-0.5 rounded text-xs">npx tsx sync-now.ts</code> desde la terminal local.
         </p>
       </div>
     </div>

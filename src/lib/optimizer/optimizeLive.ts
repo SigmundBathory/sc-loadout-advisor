@@ -1,4 +1,4 @@
-import type { Ship, Component, Hardpoint } from "../types";
+import type { Ship, Component } from "../types";
 import { isTurretMount } from "../types";
 
 const SLOT_TYPE_MAP: Record<string, string[]> = {

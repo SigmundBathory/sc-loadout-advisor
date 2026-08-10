@@ -2,6 +2,8 @@
 
 ## Requisitos previos
 - Node.js instalado
+- En producción, configurar `SYNC_ADMIN_TOKEN` en Render. Las rutas de sincronización e importación rechazan peticiones sin `x-admin-token` o `Authorization: Bearer <token>`.
+- El token nunca debe incluirse en el repositorio ni en variables `NEXT_PUBLIC_*`.
 - Git configurado con acceso al repo
 - SSH key configurada en `C:\Users\Sig\.ssh\id_ed25519`
 

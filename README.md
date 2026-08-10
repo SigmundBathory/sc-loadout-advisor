@@ -2,6 +2,19 @@
 
 Herramienta web para configurar, comparar y optimizar loadouts de Star Citizen. Sincroniza datos desde la Star Citizen Wiki API y permite importar datos PTU manualmente.
 
+## Política de fiabilidad de datos
+
+La aplicación no debe completar silenciosamente datos faltantes con valores inventados. Los precios, ubicaciones y estadísticas solo se consideran observados cuando proceden de una fuente externa o de una importación validada; si no están disponibles, la interfaz muestra `Sin datos verificados` o `No disponible` y el optimizador no debe tratarlos como hechos.
+
+- **Star Citizen Wiki API**: fuente principal de naves, hardpoints, armas y componentes.
+- **UEX Corp**: precios y ubicaciones cuando existe una correspondencia exacta y verificable.
+- **Importación PTU**: datos aportados por el usuario, validados antes de persistirse y asociados a la versión indicada.
+- Las sincronizaciones obligatorias se validan antes de reemplazar el dataset activo.
+- Las importaciones parciales no cambian la versión global activa.
+- El endpoint de sincronización/importación requiere `SYNC_ADMIN_TOKEN` en producción.
+
+Si una cifra no tiene una fuente verificable, no debe mostrarse como `0`, como precio real ni como resultado competitivo.
+
 ## Inicio Rápido
 
 ```bash

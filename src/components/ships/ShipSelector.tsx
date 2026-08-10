@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -106,7 +106,6 @@ export default function ShipSelector({
 
   const paginatedShips = useMemo(() => ships.slice(0, visibleCount), [ships, visibleCount]);
 
-  useEffect(() => { setVisibleCount(30); }, [ships]);
 
   const uniqueManufacturers =
     manufacturers.length > 0
@@ -126,7 +125,7 @@ export default function ShipSelector({
 
   const sortOptions: { key: SortKey; label: string }[] = [
     { key: "name", label: "Nombre" },
-    { key: "dps", label: "DPS" },
+    { key: "dps", label: "Capacidad de combate (estimada)" },
     { key: "hull", label: "Casco" },
     { key: "price", label: "Precio" },
   ];

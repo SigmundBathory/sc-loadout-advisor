@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminToken } from "@/lib/security/admin";
 import {
   checkVersionAndSync,
   syncDataForVersion,
@@ -32,6 +33,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = requireAdminToken(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json().catch(() => ({}));
     const forceVersion = body.version;

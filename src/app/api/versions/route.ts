@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getGameVersionsFromDb, getSelectedVersion, setSelectedVersion, syncGameVersions } from "@/lib/db/sync";
+import { getGameVersionsFromDb, getSelectedVersion, getSyncMeta, setSelectedVersion, syncGameVersions } from "@/lib/db/sync";
 
 export async function GET() {
   try {
@@ -37,6 +37,21 @@ export async function POST(request: Request) {
       );
     }
     
+    const knownVersion = getGameVersionsFromDb().some((candidate) => candidate.code === version);
+    if (!knownVersion) {
+      return NextResponse.json({ error: "Unknown game version" }, { status: 404 });
+    }
+
+    // The current schema has one active dataset. Never label it as another
+    // version until that version has actually been imported/synchronized.
+    const activeVersion = (getSyncMeta() as { wiki_version?: string } | undefined)?.wiki_version;
+    if (activeVersion !== version) {
+      return NextResponse.json(
+        { error: "Version is known but not active; synchronize or import it before selecting it", activeVersion },
+        { status: 409 }
+      );
+    }
+
     setSelectedVersion(version);
     
     return NextResponse.json({

@@ -44,6 +44,14 @@ const eslintConfig = defineConfig([
       "import/no-anonymous-default-export": "off",
     },
   },
+  // Legacy data-check scripts intentionally use CommonJS because they are run
+  // directly with Node outside the Next.js bundle.
+  {
+    files: ["*.js", "scripts/*.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

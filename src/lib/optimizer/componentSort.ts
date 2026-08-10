@@ -34,8 +34,6 @@ interface SortConfig {
 
 const n = (v: number | undefined): number => v ?? 0;
 
-const gradeToNumber = (g: Component["stats"]["grade"]): number =>
-  typeof g === "string" ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[g.toUpperCase()] || 3 : g ?? 3;
 
 /** Helper to calculate quantum range from component stats */
 const calcRange = (s: Component["stats"]): number => {

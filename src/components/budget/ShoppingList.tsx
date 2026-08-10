@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin, ShoppingCart, Building } from "lucide-react";
 import type { Component, BuyLocation } from "@/lib/types";
 import { translateComponentTypeEs } from "@/lib/utils";
+import { formatPrice, hasKnownValue, UNAVAILABLE_LABEL, UNVERIFIED_DATA_LABEL } from "@/lib/presentation";
 
 interface ShoppingListProps {
   components: Component[];
@@ -33,10 +34,11 @@ export default function ShoppingList({ components }: ShoppingListProps) {
     }
   }
 
-  const totalCost = components.reduce(
-    (sum, c) => sum + (c.price_auec || 0),
-    0
+  const pricedComponents = components.filter(
+    (component) => typeof component.price_auec === "number" && component.price_auec > 0
   );
+  const totalCost = pricedComponents.reduce((sum, c) => sum + c.price_auec!, 0);
+  const hasCompleteCost = pricedComponents.length === components.length && components.length > 0;
 
   const locations = Array.from(locationMap.values());
   const unassignedComponents = components.filter(
@@ -65,7 +67,7 @@ export default function ShoppingList({ components }: ShoppingListProps) {
             <span className="text-xs text-muted-foreground">Suma del coste de todos los componentes equipados</span>
           </div>
           <span className="text-2xl font-extrabold text-amber-400 font-mono">
-            {totalCost ? `${totalCost.toLocaleString()} aUEC` : "N/A"}
+            {hasCompleteCost ? `${totalCost.toLocaleString("es-ES")} aUEC` : UNVERIFIED_DATA_LABEL}
           </span>
         </div>
 
@@ -74,7 +76,11 @@ export default function ShoppingList({ components }: ShoppingListProps) {
           <ScrollArea className="h-[480px] pr-2">
             <div className="space-y-4">
               {locations.map(({ location, components: comps }, i) => {
-                const shopCost = comps.reduce((sum, c) => sum + (location.price || c.price_auec || 0), 0);
+                const shopPricedComponents = comps.filter(
+                  (component) => typeof component.price_auec === "number" && component.price_auec > 0
+                );
+                const shopCost = shopPricedComponents.reduce((sum, c) => sum + c.price_auec!, 0);
+                const hasCompleteShopCost = shopPricedComponents.length === comps.length;
 
                 return (
                   <div key={i} className="glass-panel p-4 rounded-xl border border-border/40 space-y-3">
@@ -96,8 +102,11 @@ export default function ShoppingList({ components }: ShoppingListProps) {
 
                       <div className="text-right">
                         <span className="text-xs font-mono font-bold text-amber-400 block">
-                          {shopCost ? `${shopCost.toLocaleString()} aUEC` : ""}
+                          {hasCompleteShopCost ? `${shopCost.toLocaleString("es-ES")} aUEC` : UNAVAILABLE_LABEL}
                         </span>
+                        {hasKnownValue(location.price) && (
+                          <span className="text-[10px] text-muted-foreground block">Precio observado</span>
+                        )}
                         <span className="text-[10px] text-muted-foreground font-semibold">
                           {comps.length} componente(s)
                         </span>
@@ -119,7 +128,7 @@ export default function ShoppingList({ components }: ShoppingListProps) {
                             </span>
                           </div>
                           <span className="text-amber-300 font-mono font-bold text-xs">
-                            {comp.price_auec ? `${comp.price_auec.toLocaleString()} aUEC` : "N/A"}
+                            {formatPrice(comp.price_auec)}
                           </span>
                         </div>
                       ))}
@@ -150,7 +159,7 @@ export default function ShoppingList({ components }: ShoppingListProps) {
                     </span>
                   </div>
                   <span className="text-amber-400 font-mono font-semibold">
-                    {comp.price_auec ? `${comp.price_auec.toLocaleString()} aUEC` : "Equipado de serie"}
+                    {comp.price_auec ? formatPrice(comp.price_auec) : "Equipado de serie · precio no disponible"}
                   </span>
                 </div>
               ))}

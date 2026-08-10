@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { requireAdminToken } from "@/lib/security/admin";
 import { checkVersionAndSync, syncDataForVersion, getSyncMeta, getShipCount, getComponentCount, syncGameVersions } from "@/lib/db/sync";
 
-export async function POST() {
+export async function POST(request: Request) {
+  const authError = requireAdminToken(request);
+  if (authError) return authError;
+
   try {
     const results: Record<string, any> = {};
 

@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, MapPin, DollarSign, ShoppingBag, Check, Shield, Zap, Gauge, Thermometer, Navigation } from "lucide-react";
 import type { Component } from "@/lib/types";
 import { componentDetailRows } from "@/lib/optimizer/componentDetail";
+import { formatPrice, hasKnownValue, UNAVAILABLE_LABEL } from "@/lib/presentation";
 
 const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   Military: { bg: "bg-red-500/15", text: "text-red-400", border: "border-red-500/30" },
@@ -64,12 +65,10 @@ export default function ComponentDetailPanel({
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {component.price_auec ? (
-            <span className="text-amber-300 font-mono font-bold text-xs flex items-center gap-0.5">
-              <DollarSign className="h-3 w-3" />
-              {component.price_auec.toLocaleString()}
-            </span>
-          ) : null}
+          <span className="text-amber-300 font-mono font-bold text-xs flex items-center gap-0.5" title="Precio del catálogo; puede no estar verificado en el juego">
+            <DollarSign className="h-3 w-3" />
+            {formatPrice(component.price_auec)}
+          </span>
           <Button size="sm" variant="ghost" className="h-6 w-6 p-0 rounded-lg" onClick={onClose}>
             <X className="h-3.5 w-3.5" />
           </Button>
@@ -83,8 +82,9 @@ export default function ComponentDetailPanel({
           <div className="bg-muted/40 px-2 py-1 font-semibold text-muted-foreground text-right">Actual</div>
           {rows.map((row) => {
             const eqRow = equipped ? componentDetailRows(equipped).find((r) => r.label === row.label) : null;
-            const diff = eqRow && eqRow.value !== 0 ? row.value - eqRow.value : 0;
-            const hasDiff = equipped && eqRow && row.value !== eqRow.value;
+            const comparable = eqRow && Number.isFinite(row.value) && Number.isFinite(eqRow.value);
+            const diff = comparable ? row.value - eqRow.value : 0;
+            const hasDiff = Boolean(equipped && comparable && row.value !== eqRow.value);
             const good = hasDiff ? (row.lowerBetter ? diff < 0 : diff > 0) : null;
             return (
               <div key={row.label} className="contents">
@@ -139,10 +139,15 @@ export default function ComponentDetailPanel({
                     </span>
                   </div>
                   <span className="text-amber-300 font-mono font-semibold shrink-0">
-                    {loc.price ? `${loc.price.toLocaleString()}` : ""}
+                    {hasKnownValue(loc.price) ? `${loc.price.toLocaleString("es-ES")} aUEC` : UNAVAILABLE_LABEL}
                   </span>
                 </div>
               ))}
+              {component.buy_locations.some((loc) => hasKnownValue(loc.price)) && (
+                <div className="text-[10px] text-muted-foreground text-center py-0.5">
+                  Precio observado en fuente de ubicación
+                </div>
+              )}
               {component.buy_locations.length > 6 && (
                 <div className="text-[10px] text-muted-foreground text-center py-0.5">
                   +{component.buy_locations.length - 6} ubicaciones más

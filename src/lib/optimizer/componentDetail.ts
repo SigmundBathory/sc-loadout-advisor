@@ -7,17 +7,26 @@ export interface StatRow {
   lowerBetter?: boolean;
 }
 
-const n = (v: number | undefined): number => v ?? 0;
+const n = (v: number | undefined): number => v ?? Number.NaN;
 
 const gradeToNumber = (g: ComponentStats["grade"]): number =>
-  typeof g === "string" ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[g.toUpperCase()] || 3 : g ?? 3;
+  typeof g === "string"
+    ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[g.toUpperCase()] ?? Number.NaN
+    : g ?? Number.NaN;
 
 function fmt(v: number, digits = 0): string {
-  return v.toLocaleString("es-ES", { maximumFractionDigits: digits });
+  return Number.isFinite(v)
+    ? v.toLocaleString("es-ES", { maximumFractionDigits: digits })
+    : "No disponible";
 }
 
 function pct(v: number): string {
-  return `${(v * 100).toFixed(1)}%`;
+  return Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : "No disponible";
+}
+
+function formatGrade(grade: ComponentStats["grade"]): string {
+  const value = gradeToNumber(grade);
+  return Number.isFinite(value) ? `G${fmt(value)}` : "No disponible";
 }
 
 /**
@@ -29,11 +38,12 @@ function pct(v: number): string {
  * The actual range = (ship_fuel_capacity * efficiency) / consumption.
  */
 function calcQdRangePer100Scu(efficiency: number, consumption: number): number {
-  if (consumption <= 0) return 0;
+  if (!Number.isFinite(efficiency) || !Number.isFinite(consumption) || consumption <= 0) return Number.NaN;
   return (100 * efficiency) / consumption; // in Gm
 }
 
 function formatGm(gm: number): string {
+  if (!Number.isFinite(gm)) return "No disponible";
   if (gm <= 0) return "—";
   const au = gm / 149.598;
   if (au >= 1) return `${fmt(au, 1)} AU`;
@@ -117,7 +127,7 @@ export function componentDetailRows(comp: Component): StatRow[] {
       ];
     case "LifeSupport":
       return [
-        { label: "Grado", value: gradeToNumber(s.grade), format: `G${fmt(gradeToNumber(s.grade))}` },
+        { label: "Grado", value: gradeToNumber(s.grade), format: formatGrade(s.grade) },
         { label: "Salida", value: n(s.output), format: `${fmt(n(s.output))} u/s` },
         { label: "Firma EM", value: n(s.emission_em_max), format: fmt(n(s.emission_em_max)), lowerBetter: true },
       ];
@@ -134,7 +144,7 @@ export function componentDetailRows(comp: Component): StatRow[] {
       ];
     default:
       return [
-        { label: "Grado", value: gradeToNumber(s.grade), format: `G${fmt(gradeToNumber(s.grade))}` },
+        { label: "Grado", value: gradeToNumber(s.grade), format: formatGrade(s.grade) },
         { label: "Salida", value: n(s.output), format: fmt(n(s.output)) },
         { label: "HP", value: n(s.hp), format: fmt(n(s.hp)) },
       ];

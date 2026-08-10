@@ -58,7 +58,7 @@ describe("componentSort", () => {
     expect(summary.primaryFormatted).toBe("300");
     const labels = summary.tradeoffs.map((t) => t.label);
     expect(labels).toContain("Alpha");
-    expect(labels).toContain("Cadencia");
+    expect(labels).toContain("Alcance");
   });
 
   it("formats a quantum drive primary using AU range formatting", () => {
@@ -70,10 +70,10 @@ describe("componentSort", () => {
       type: "QuantumDrive",
       size: 2,
       class: "B",
-      stats: { quantum_fuel_claimed: 5e12 },
+      stats: { fuel_efficiency: 10, fuel_consumption_scu_per_gm: 0.01 },
       buy_locations: [],
     };
-    const summary = componentStatSummary(comp);
+    const summary = componentStatSummary(comp, "range");
     expect(summary.primaryLabel).toBe("Alcance");
     expect(summary.primaryFormatted).toContain("AU");
   });
