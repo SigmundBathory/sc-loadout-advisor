@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 
-const DB_PATH = "data/sc-loadout.db";
+const DB_PATH = process.env.DATABASE_PATH || "data/sc-loadout.db";
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1ji0q_pp6iW35RG1YyFEsv-lsmZOaCStJXGdIEdLLwhM/export?format=csv&gid=481073732";
 
 interface WikeloShip {

@@ -6,7 +6,7 @@
  *   node scripts/build-ship-aliases.js --apply   # escribe ship_id
  */
 const Database = require("better-sqlite3");
-const db = new Database("data/sc-loadout.db");
+const db = new Database(process.env.DATABASE_PATH || "data/sc-loadout.db");
 const APPLY = process.argv.includes("--apply");
 
 const MANUFACTURER_PREFIXES = [

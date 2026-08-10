@@ -61,7 +61,6 @@ export async function POST(request: Request) {
       results.step3.error = e instanceof Error ? e.message : "Error en la sincronización de Wikelo";
     }
 
-    const meta = getSyncMeta();
     const shipCount = getShipCount();
     const componentCount = getComponentCount();
 
@@ -70,6 +69,7 @@ export async function POST(request: Request) {
     if (failed.length > 0) {
       getDb().prepare("UPDATE sync_meta SET sync_status = 'partial' WHERE id = 1").run();
     }
+    const meta = getSyncMeta();
     const response = NextResponse.json({
       message: failed.length === 0 ? "Sincronización completa finalizada" : "Sincronización parcial: algunos pasos fallaron",
       version: vc.currentVersion,

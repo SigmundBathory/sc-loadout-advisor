@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import * as cheerio from "cheerio";
 import { normalizeShipName } from "../src/lib/db/shipNames";
 
-const DB_PATH = "data/sc-loadout.db";
+const DB_PATH = process.env.DATABASE_PATH || "data/sc-loadout.db";
 const URL = "https://scfocus.org/ship-sale-rental-locations-history/";
 
 interface ShipLocation {

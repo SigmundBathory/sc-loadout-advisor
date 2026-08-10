@@ -2,7 +2,7 @@ import { syncDataForVersion, syncGameVersions, checkVersionAndSync } from "../sr
 import Database from "better-sqlite3";
 import * as cheerio from "cheerio";
 
-const DB_PATH = "data/sc-loadout.db";
+const DB_PATH = process.env.DATABASE_PATH || "data/sc-loadout.db";
 const SCFOCUS_URL = "https://scfocus.org/ship-sale-rental-locations-history/";
 
 interface ShipLocation {
