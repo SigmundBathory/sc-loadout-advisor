@@ -211,6 +211,26 @@ function PickerBody({
         ))}
       </div>
 
+      {/* QD-specific sort selector: more explicit dropdown for Quantum Drive */}
+      {componentType === "QuantumDrive" && (
+        <div className="shrink-0">
+          <label className="block text-[10px] font-medium text-muted-foreground mb-1">
+            Ordenar QD por:
+          </label>
+          <select
+            value={profile}
+            onChange={(e) => { setProfile(e.target.value as BuildProfile); setActiveIndex(0); }}
+            className="w-full bg-muted/40 border border-border/40 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+          >
+            <option value="speed">🚀 Velocidad (km/s)</option>
+            <option value="range">📏 Alcance (Mkm)</option>
+            <option value="power">⚡ Vel + Alcance (balanceado)</option>
+            <option value="stealth">🔇 Stealth (baja firma EM)</option>
+            <option value="balanced">⚖️ Balanceado</option>
+          </select>
+        </div>
+      )}
+
       {TIER_ORDER.filter((t) => components.some((c) => c.class === t)).length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground shrink-0">
           <span className="px-1">Tier:</span>
