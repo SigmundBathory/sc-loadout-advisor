@@ -77,7 +77,11 @@ export default function UpdateModal({ open, onOpenChange }: UpdateModalProps) {
     try {
       const res = await fetch("/api/sync", {
         method: "POST",
-        headers: adminToken ? { "x-admin-token": adminToken } : undefined,
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminToken ? { "x-admin-token": adminToken } : {}),
+        },
+        body: JSON.stringify({ force: true }),
       });
       const data = await res.json();
       if (!res.ok) {
