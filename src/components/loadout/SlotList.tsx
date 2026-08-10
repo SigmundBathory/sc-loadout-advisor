@@ -71,6 +71,9 @@ export default function SlotList({ ship, slotAssignments, componentMap, allCompo
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs font-mono border-primary/40 text-primary">
                     S{hp.size}
+                    {hp.max_size && hp.max_size > hp.size && (
+                      <span className="ml-1 text-[10px] text-primary/80 font-normal">→S{hp.max_size}</span>
+                    )}
                   </Badge>
                   <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
                     {hp.name}

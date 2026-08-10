@@ -184,6 +184,9 @@ export default function HardpointSchematic({
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-[10px] font-mono shrink-0" style={{ borderColor: `${color}60`, color }}>
                       {SIZE_LABELS[hp.size] || `T${hp.size}`}
+                      {hp.max_size && hp.max_size > hp.size && (
+                        <span className="ml-1 text-[9px] text-primary/80 font-normal">→{SIZE_LABELS[hp.max_size] || `T${hp.max_size}`}</span>
+                      )}
                     </Badge>
                     <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate">
                       {hp.name}
@@ -346,6 +349,9 @@ export default function HardpointSchematic({
                                 }}
                               >
                                 {SIZE_LABELS[hp.size] || `T${hp.size}`}
+                                {hp.max_size && hp.max_size > hp.size && (
+                                  <span className="ml-1 text-[8px] text-primary/80 font-normal">→{SIZE_LABELS[hp.max_size] || `T${hp.max_size}`}</span>
+                                )}
                               </Badge>
                               {!isSlotConfigurable && (
                                 <Badge className="bg-muted/40 text-muted-foreground border-border/30 text-[8px] px-1 py-0 shrink-0">
