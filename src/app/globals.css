@@ -131,19 +131,36 @@
 
 /* Custom Utilities for Glassmorphism and Glow Effects */
 .glass-panel {
-  background: color-mix(in oklch, var(--card) 50%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(145deg,
+    color-mix(in oklch, var(--card) 82%, transparent),
+    color-mix(in oklch, var(--background) 64%, transparent));
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  border: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+  box-shadow: 0 14px 36px -24px rgba(0, 0, 0, 0.8), inset 0 1px 0 color-mix(in oklch, white 8%, transparent);
+}
+
+/* Opaque interactive surface: use for expandable content and action areas so
+   text and controls never bleed through the layer underneath. */
+.surface-card {
+  background: color-mix(in oklch, var(--card) 96%, transparent);
+  border: 1px solid color-mix(in oklch, var(--border) 82%, transparent);
+  box-shadow: 0 18px 45px -28px rgba(0, 0, 0, 0.9);
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--ring) 80%, transparent);
+  outline-offset: 2px;
 }
 
 .glass-panel-hover {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .glass-panel-hover:hover {
-  background: color-mix(in oklch, var(--card) 70%, transparent);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 8px 25px -5px rgba(59, 130, 246, 0.15);
+  background: color-mix(in oklch, var(--card) 88%, transparent);
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 18px 38px -18px color-mix(in oklch, var(--primary) 25%, transparent);
+  transform: translateY(-2px);
 }
 
 /* Native selects styled to match the design system */

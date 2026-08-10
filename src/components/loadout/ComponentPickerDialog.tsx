@@ -43,7 +43,7 @@ export default function ComponentPickerDialog({ slot, components, loading, equip
   return (
     <Dialog open={!!slot} onOpenChange={() => onClose()}>
       {slot && (
-        <DialogContent key={slot.id} className="glass-panel max-w-2xl border-border/40 flex flex-col max-h-[85vh]">
+        <DialogContent key={slot.id} className="bg-popover/98 backdrop-blur-2xl max-w-4xl border-primary/20 p-5 flex flex-col max-h-[90vh] gap-3 overflow-hidden shadow-2xl shadow-black/40">
           <PickerBody
             slot={slot}
             components={components}
@@ -380,7 +380,18 @@ function PickerBody({
                         </div>
                       </div>
 
-                      <div className="text-right text-[11px] font-mono space-y-0.5 shrink-0">
+                      <div className="flex items-center gap-2 text-right text-[11px] font-mono shrink-0">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 rounded-lg px-2.5 text-[10px] shadow-sm shadow-primary/20"
+                          onClick={(event) => { event.stopPropagation(); handleSelect(comp); }}
+                          disabled={isEquipped}
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          {isEquipped ? "Equipado" : "Equipar"}
+                        </Button>
+                        <div className="space-y-0.5">
                         <div className="text-amber-300 font-semibold" title="Precio del catálogo; puede no estar verificado en el juego">
                           {formatPrice(comp.price_auec)}
                         </div>
@@ -396,6 +407,7 @@ function PickerBody({
                           <ChevronDown
                             className={`h-3 w-3 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`}
                           />
+                        </div>
                         </div>
                       </div>
                     </div>

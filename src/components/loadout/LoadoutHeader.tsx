@@ -24,9 +24,12 @@ export default function LoadoutHeader({
   optimizing,
 }: LoadoutHeaderProps) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <h2 className="text-sm font-bold text-foreground">Configuración del Loadout</h2>
+    <div className="glass-panel rounded-2xl border-border/50 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex items-center gap-2 min-w-0">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-primary/80 font-semibold">Loadout studio</p>
+          <h2 className="text-base font-bold text-foreground">Configuración del Loadout</h2>
+        </div>
         {(loadedLoadout || lastOptimizedPreset) && (
           <>
             <span className="text-xs text-muted-foreground">·</span>
@@ -47,7 +50,7 @@ export default function LoadoutHeader({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
         <Button
           variant="outline"
           size="sm"
@@ -70,7 +73,7 @@ export default function LoadoutHeader({
         <Button
           variant="outline"
           size="sm"
-          className="rounded-xl gap-1.5 border-border/40 text-xs font-medium hover:bg-muted/40"
+          className="rounded-xl gap-1.5 bg-primary text-primary-foreground text-xs font-semibold shadow-lg shadow-primary/20 hover:bg-primary/90"
           onClick={onSave}
         >
           <Save className="h-3.5 w-3.5" />

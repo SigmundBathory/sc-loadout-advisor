@@ -43,7 +43,7 @@ export default function ComponentDetailPanel({
   const isEquipped = equipped?.id === component.id;
 
   return (
-    <div className="glass-panel border border-border/40 rounded-xl p-3 space-y-3">
+    <div className="relative z-20 bg-card/95 backdrop-blur-xl border border-primary/25 rounded-xl p-3 space-y-3 shadow-xl shadow-black/20">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
@@ -71,6 +71,23 @@ export default function ComponentDetailPanel({
           </span>
           <Button size="sm" variant="ghost" className="h-6 w-6 p-0 rounded-lg" onClick={onClose}>
             <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="sticky top-0 z-30 -mx-1 rounded-lg border border-primary/20 bg-popover/95 backdrop-blur-xl px-2 py-2 shadow-lg">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[10px] text-muted-foreground">
+            {equipped && !isEquipped ? `Reemplazará a ${equipped.name}` : "Compatible con este slot"}
+          </span>
+          <Button
+            size="sm"
+            className="rounded-lg gap-1.5 text-xs h-8 px-3 shadow-md shadow-primary/20"
+            onClick={onSelect}
+            disabled={isEquipped}
+          >
+            <Check className="h-3 w-3" />
+            {isEquipped ? "Equipado" : "Equipar componente"}
           </Button>
         </div>
       </div>
@@ -164,22 +181,11 @@ export default function ComponentDetailPanel({
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] text-muted-foreground">
-          {equipped && !isEquipped
-            ? `Reemplazará a ${equipped.name}`
-            : "Compatible con este slot"}
-        </span>
-        <Button
-          size="sm"
-          className="rounded-xl gap-1 text-xs h-7"
-          onClick={onSelect}
-          disabled={isEquipped}
-        >
-          <Check className="h-3 w-3" />
-          {isEquipped ? "Equipado" : "Equipar"}
-        </Button>
-      </div>
+      {!component.buy_locations?.length && (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2.5 py-2 text-[10px] text-amber-300">
+          No hay una tienda verificada asociada a este componente. Puedes equiparlo, pero la ruta de compra requiere una sincronización de ubicaciones.
+        </div>
+      )}
     </div>
   );
 }
