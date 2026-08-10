@@ -1,11 +1,13 @@
 import type { Component } from "../types";
 
-export type BuildProfile = "power" | "stealth" | "balanced";
+export type BuildProfile = "power" | "stealth" | "balanced" | "speed" | "range";
 
 export const PROFILE_LABELS: Record<BuildProfile, { label: string; icon: string; description: string }> = {
   power: { label: "Potencia", icon: "⚡", description: "Maximizar daño y rendimiento bruto" },
   stealth: { label: "Stealth", icon: "🔇", description: "Minimizar firmas EM/IR, ser invisible" },
   balanced: { label: "Balanceado", icon: "⚖️", description: "Equilibrio entre potencia y sigilo" },
+  speed: { label: "Velocidad", icon: "🚀", description: "Maximizar velocidad quantum (km/s)" },
+  range: { label: "Alcance", icon: "📏", description: "Maximizar alcance quantum (Mkm)" },
 };
 
 /**
@@ -35,7 +37,7 @@ const n = (v: number | undefined): number => v ?? 0;
 const gradeToNumber = (g: Component["stats"]["grade"]): number =>
   typeof g === "string" ? ({ A: 1, B: 2, C: 3, D: 4 } as Record<string, number>)[g.toUpperCase()] || 3 : g ?? 3;
 
-/** Profile-specific sort configs. Key = component type, value = profile → config */
+/** Helper to calculate quantum range from component stats */
 const calcRange = (s: Component["stats"]): number => {
   const eff = n(s.fuel_efficiency);
   const c = n(s.fuel_consumption_scu_per_gm);
@@ -43,6 +45,7 @@ const calcRange = (s: Component["stats"]): number => {
 };
 const fmtRange = (v: number): string => { const au = v / 149.598; return au >= 1 ? `${au.toFixed(1)} AU` : `${v.toFixed(0)} Gm`; };
 
+/** Combined score balancing speed and range */
 const QD_SPEED_RANGE_SCORE = (s: Component["stats"]): number => {
   const speed = n(s.travel_speed);
   const range = calcRange(s);
@@ -51,6 +54,7 @@ const QD_SPEED_RANGE_SCORE = (s: Component["stats"]): number => {
   return speedNorm * 50 + rangeNorm * 50;
 };
 
+/** Profile-specific sort configs. Key = component type, value = profile → config */
 const PROFILE_CONFIGS: Record<string, Partial<Record<BuildProfile, SortConfig>>> = {
   Weapon: {
     power: {
@@ -163,6 +167,26 @@ const PROFILE_CONFIGS: Record<string, Partial<Record<BuildProfile, SortConfig>>>
     },
   },
   QuantumDrive: {
+    speed: {
+      primary: (s) => n(s.travel_speed),
+      primaryLabel: "Velocidad",
+      formatPrimary: (v) => `${(v / 1e6).toFixed(1)} Gkm/s`,
+      tradeoffs: [
+        { label: "Alcance", value: calcRange, format: fmtRange },
+        { label: "Spool", value: (s) => n(s.spool_time), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
+        { label: "Disconnect", value: (s) => n(s.disconnect_range), format: (v) => v > 0 ? `${v.toFixed(0)} km` : "—" },
+      ],
+    },
+    range: {
+      primary: calcRange,
+      primaryLabel: "Alcance",
+      formatPrimary: fmtRange,
+      tradeoffs: [
+        { label: "Velocidad", value: (s) => n(s.travel_speed), format: (v) => `${(v / 1e6).toFixed(1)} Gkm/s` },
+        { label: "Consumo", value: (s) => n(s.fuel_consumption_scu_per_gm), format: (v) => v > 0 ? `${v.toFixed(4)} SCU/Gm` : "—", lowerBetter: true },
+        { label: "Spool", value: (s) => n(s.spool_time), format: (v) => `${v.toFixed(1)}s`, lowerBetter: true },
+      ],
+    },
     power: {
       primary: QD_SPEED_RANGE_SCORE,
       primaryLabel: "Vel + Alcance",

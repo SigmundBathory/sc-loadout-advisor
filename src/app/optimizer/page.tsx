@@ -208,6 +208,8 @@ export default function OptimizerPage() {
                             shieldRegen: result.stats?.shield_regen || 0,
                             hullHp: result.ship?.hull_hp || 0,
                             coolingRate: result.stats?.cooling_rate || 0,
+                            quantumSpeed: result.stats?.qt_speed || 0,
+                            quantumRange: result.stats?.qt_range || 0,
                           }}
                           shipShieldHp={result.ship?.shield_hp || 1000}
                           shipHullHp={result.ship?.hull_hp || 1000}

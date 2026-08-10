@@ -37,10 +37,10 @@ export const FILTER_PRESETS: { name: string; label: string; weights: FilterWeigh
 
 // Normalized max values for scoring (community-known ceiling values)
 const MAX_VALUES = {
-  dps: 3000,
-  defense: 20000,
-  speed: 1500,
-  range: 500,
+  dps: 5000,
+  defense: 50000,
+  speed: 300000,
+  range: 50000,
   cost: 1000000,
   efficiency: 100,
 };
@@ -51,6 +51,7 @@ export function scoreComponent(
 ): ComponentScore {
   const s = component.stats;
   const price = component.price_auec || 50000;
+  const size = component.size || 1;
 
   let dps = 0;
   let defense = 0;
@@ -59,27 +60,33 @@ export function scoreComponent(
   let efficiency = 0;
   let cost = 0;
 
+  // Real max value ceilings per component size
+  const maxOutput = size === 1 ? 5000 : size === 2 ? 25000 : size === 3 ? 200000 : 500000;
+  const maxCooling = size === 1 ? 1000000 : size === 2 ? 5000000 : size === 3 ? 30000000 : 100000000;
+  const maxShieldHp = size === 1 ? 2500 : size === 2 ? 15000 : size === 3 ? 150000 : 350000;
+  const maxRegen = size === 1 ? 500 : size === 2 ? 3500 : size === 3 ? 25000 : 60000;
+
   switch (slotType) {
     case "weapon":
       dps = normalize(s.dps || 0, MAX_VALUES.dps);
       cost = 1 - normalize(price, MAX_VALUES.cost);
       break;
     case "shield":
-      defense = normalize(s.hp || 0, MAX_VALUES.defense);
-      efficiency = normalize(s.regen_rate || 0, 2000);
+      defense = normalize(s.hp || 0, maxShieldHp);
+      efficiency = normalize(s.regen_rate || 0, maxRegen);
       cost = 1 - normalize(price, MAX_VALUES.cost);
       break;
     case "power_plant":
-      efficiency = normalize(s.output || 0, 100);
+      efficiency = normalize(s.output || 0, maxOutput);
       cost = 1 - normalize(price, MAX_VALUES.cost);
       break;
     case "cooler":
-      efficiency = normalize(s.cooling_rate || 0, 100);
+      efficiency = normalize(s.cooling_rate || 0, maxCooling);
       cost = 1 - normalize(price, MAX_VALUES.cost);
       break;
     case "quantum_drive":
       speed = normalize(s.travel_speed || 0, MAX_VALUES.speed);
-      range = normalize(s.quantum_fuel_claimed || 0, MAX_VALUES.range);
+      range = normalize(s.quantum_fuel_claimed || 5000, MAX_VALUES.range);
       cost = 1 - normalize(price, MAX_VALUES.cost);
       break;
     case "missile":
@@ -141,7 +148,6 @@ export function optimizeLoadout(
   const selected: { slotId: string; component: Component; score: number }[] = [];
   const explanation: string[] = [];
   let totalCost = 0;
-  const usedComponentIds = new Set<string>();
 
   // Group hardpoints by slot type
   const slotGroups = new Map<string, typeof ship.hardpoints>();
@@ -154,12 +160,10 @@ export function optimizeLoadout(
     slotGroups.set(hp.slot_type, existing);
   }
 
-
   // Process each slot type
   for (const [slotType, slots] of slotGroups) {
     for (const slot of slots) {
-      const compatible = getCompatibleComponents(ship.id, slotType, slot.max_size || slot.size)
-        .filter((c) => !usedComponentIds.has(c.id));
+      const compatible = getCompatibleComponents(ship.id, slotType, slot.max_size || slot.size);
 
       if (compatible.length === 0) {
         explanation.push(`${slot.name}: Sin componentes compatibles disponibles`);
@@ -193,7 +197,6 @@ export function optimizeLoadout(
 
       const price = best.component.price_auec || 0;
       totalCost += price;
-      usedComponentIds.add(best.component.id);
 
       selected.push({
         slotId: slot.id,

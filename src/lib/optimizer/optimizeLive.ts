@@ -23,19 +23,39 @@ export function gradeBonus(comp: Component): number {
   return Math.max(0, (4 - gradeValue(comp)) * 0.15);
 }
 
+/**
+ * Estimates fuel consumption rate per Mkm (microSCU/Mkm) for scoring purposes.
+ */
+function getFuelRatePerMkm(comp: Component): number {
+  const s = comp.stats;
+  if (s.fuel_consumption_scu_per_gm && s.fuel_consumption_scu_per_gm > 0) {
+    return s.fuel_consumption_scu_per_gm / 1000;
+  }
+  if (s.fuel_rate && s.fuel_rate > 0) {
+    return s.fuel_rate;
+  }
+  if (s.fuel_efficiency && s.fuel_efficiency > 0) {
+    return 1 / s.fuel_efficiency;
+  }
+  const speed = s.travel_speed || 0;
+  if (speed > 0) {
+    const baseRate = comp.size === 1 ? 0.07 : comp.size === 2 ? 0.18 : comp.size === 3 ? 0.4 : 1.0;
+    return baseRate * (speed / 150000);
+  }
+  return 0.08;
+}
+
 export function scoreForPreset(preset: string, comp: Component): number {
   const s = comp.stats;
   const dps = s.dps || 0;
-  // Cap stats to reasonable ranges based on actual data distribution
-  // Size 2 shields max: hp=10560, regen=2323; Size 3: hp=105600, regen=23232
-  const hp = Math.min(s.hp || 0, 15000); // Cap at 15k (slightly above max size 2)
-  const maxHp = Math.min(s.max_hp || hp, 15000);
-  const regen = Math.min(s.regen_rate || 0, 2500); // Cap at 2500 (slightly above max size 2)
+  const hp = s.hp || 0;
+  const maxHp = s.max_hp || hp;
+  const regen = s.regen_rate || 0;
   const output = s.output || 0;
   const range = s.range || 0;
-  const speed = Math.min(s.travel_speed || 0, 300000000); // Cap at 300M to avoid anomalous data
+  const speed = s.travel_speed || 0;
   const spoolTime = s.spool_time || 0;
-  const cooling = Math.min(s.cooling_rate || 0, 50); // Cap cooling (normal max ~30-40)
+  const cooling = s.cooling_rate || 0;
   const suppressionIr = s.suppression_ir || 0;
   const suppressionHeat = s.suppression_heat || 0;
   const sensitivityEm = s.sensitivity_em || 0;
@@ -55,8 +75,10 @@ export function scoreForPreset(preset: string, comp: Component): number {
   switch (preset) {
     case "fastest":
       if (type === "QuantumDrive") {
-        score = (speed / 100000) * (1 + gb) - (spoolTime || 0) * 2;
+        // Prioritize raw travel speed, slightly penalize spool time
+        score = (speed / 100000) * (1 + gb) - (spoolTime || 0) * 5;
       } else if (type === "PowerPlant") {
+        // High output supports sustained high speed
         score = (output / 1000) * (1 + gb);
       } else {
         score = (output / 1000) * (1 + gb) + dps * 0.3;
@@ -64,7 +86,9 @@ export function scoreForPreset(preset: string, comp: Component): number {
       break;
     case "max_range":
       if (type === "QuantumDrive") {
-        score = (speed / 100000) * (1 + gb) * (1 + (s.fuel_efficiency || 0) / 100);
+        const rate = getFuelRatePerMkm(comp);
+        const estRange = rate > 0 ? (2500 / rate) : 5000; // Using size-2 tank as baseline
+        score = (estRange / 100) * (1 + gb);
       } else if (type === "PowerPlant") {
         score = (output / 1000) * (1 + gb);
       } else if (type === "Radar") {
@@ -105,7 +129,7 @@ export function scoreForPreset(preset: string, comp: Component): number {
       break;
     case "stealth":
       if (type === "Cooler") {
-        score = (suppressionIr * 20 + suppressionHeat * 20 + cooling / 100000) * (1 + gb) - emissionIr * 0.1;
+        score = (suppressionIr * 20 + suppressionHeat * 20 + cooling / 1000) * (1 + gb) - emissionIr * 0.1;
       } else if (type === "Shield") {
         score = (regen * 5 - emissionEm * 0.01) * (1 + gb);
       } else if (type === "PowerPlant") {
@@ -134,6 +158,7 @@ export function scoreForPreset(preset: string, comp: Component): number {
 /**
  * Picks the best compatible component for every hardpoint given the current
  * preset and an already-fetched list of candidate components.
+ * Allows duplicate components across multiple slots of the same type.
  */
 export function optimizeAssignments(
   ship: Ship,
@@ -141,14 +166,13 @@ export function optimizeAssignments(
   preset: string
 ): Map<string, string> {
   const bestComponents = new Map<string, string>();
-  const usedComponentIds = new Set<string>();
 
   ship.hardpoints.forEach((hp) => {
     const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
     const types = SLOT_TYPE_MAP[slotKey] || [hp.slot_type.toLowerCase()];
     const maxSize = hp.max_size || hp.size;
     const compatible = availableComponents.filter(
-      (c) => types.includes(c.type.toLowerCase()) && c.size <= maxSize && !usedComponentIds.has(c.id)
+      (c) => types.includes(c.type.toLowerCase()) && c.size <= maxSize
     );
 
     if (compatible.length > 0) {
@@ -156,14 +180,12 @@ export function optimizeAssignments(
         .map((comp) => {
           const baseScore = scoreForPreset(preset, comp);
           // Size preference: prefer components that match the slot size
-          // Bonus of 5% per size level (so size 2 in a size 2 slot = +10% vs size 1)
           const sizeRatio = comp.size / maxSize;
           const sizeBonus = sizeRatio * 0.1;
           return { comp, score: baseScore * (1 + sizeBonus) };
         })
         .sort((a, b) => b.score - a.score);
       bestComponents.set(hp.id, scored[0].comp.id);
-      usedComponentIds.add(scored[0].comp.id);
     }
   });
 

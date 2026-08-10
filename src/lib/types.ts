@@ -243,6 +243,7 @@ export interface LoadoutStats {
   hull_hp: number;
   scm_speed: number;
   max_speed: number;
+  qt_speed?: number;
   qt_range: number;
   qt_fuel: number;
   total_cost: number;

@@ -13,6 +13,7 @@ interface StatsPanelProps {
     powerOutput: number;
     coolingRate: number;
     quantumSpeed: number;
+    quantumRange?: number;
     totalCost: number;
     emissionEm: number;
   };
@@ -25,6 +26,7 @@ interface StatsPanelProps {
     powerOutput: number;
     coolingRate: number;
     quantumSpeed: number;
+    quantumRange?: number;
     totalCost: number;
     emissionEm: number;
   };
@@ -44,12 +46,15 @@ export default function StatsPanel({ stats, assignedCount, totalSlots, baseline 
       </CardHeader>
       <CardContent className="p-4 space-y-3">
         <StatBar label="DPS Potencial Armas" value={stats.totalDps} max={8000} unit="DPS" color="from-red-500 to-amber-500" baseline={baseline?.totalDps} />
-        <StatBar label="HP Total Escudos" value={stats.shieldHp} max={15000} unit="HP" color="from-emerald-500 to-teal-400" baseline={baseline?.shieldHp} />
-        <StatBar label="Regen Escudos" value={stats.shieldRegen} max={3000} unit="/s" color="from-cyan-500 to-blue-400" baseline={baseline?.shieldRegen} />
-        <StatBar label="Salida Energía" value={stats.powerOutput} max={30} unit="W" color="from-amber-500 to-yellow-400" baseline={baseline?.powerOutput} />
-        <StatBar label="Enfriamiento" value={stats.coolingRate} max={80} unit="c/s" color="from-sky-500 to-cyan-400" baseline={baseline?.coolingRate} />
+        <StatBar label="HP Total Escudos" value={stats.shieldHp} max={25000} unit="HP" color="from-emerald-500 to-teal-400" baseline={baseline?.shieldHp} />
+        <StatBar label="Regen Escudos" value={stats.shieldRegen} max={4000} unit="/s" color="from-cyan-500 to-blue-400" baseline={baseline?.shieldRegen} />
+        <StatBar label="Salida Energía" value={Math.round(stats.powerOutput / 1000)} max={25} unit="kW" color="from-amber-500 to-yellow-400" baseline={baseline ? Math.round(baseline.powerOutput / 1000) : undefined} />
+        <StatBar label="Enfriamiento" value={Math.round(stats.coolingRate / 1000)} max={5000} unit="k c/s" color="from-sky-500 to-cyan-400" baseline={baseline ? Math.round(baseline.coolingRate / 1000) : undefined} />
         {stats.quantumSpeed > 0 && (
-          <StatBar label="Velocidad Quantum" value={stats.quantumSpeed / 1000000} max={300} unit="G km/s" color="from-violet-500 to-purple-400" baseline={baseline ? baseline.quantumSpeed / 1000000 : undefined} />
+          <StatBar label="Velocidad Quantum" value={stats.quantumSpeed} max={300000} unit="km/s" color="from-violet-500 to-purple-400" baseline={baseline?.quantumSpeed} />
+        )}
+        {(stats.quantumRange || 0) > 0 && (
+          <StatBar label="Alcance Quantum" value={stats.quantumRange || 0} max={15000} unit="Mkm" color="from-indigo-500 to-blue-500" baseline={baseline?.quantumRange} />
         )}
         <Separator className="my-2 bg-border/40" />
         <div className="flex justify-between items-center text-sm font-semibold pt-1">

@@ -66,8 +66,18 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
     let powerOutput = 0;
     let coolingRate = 0;
     let quantumSpeed = 0;
+    let quantumRange = 0;
     let totalCost = 0;
     let emissionEm = 0;
+
+    let qdSize = 1;
+    ship.hardpoints.forEach((hp) => {
+      const key = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+      if (key === "quantum_drive" || key === "quantumdrive") {
+        qdSize = Math.max(qdSize, hp.max_size || hp.size || 1);
+      }
+    });
+    const tankCap = qdSize === 1 ? 580 : qdSize === 2 ? 2500 : qdSize === 3 ? 10000 : 100000;
 
     Object.values(slotAssignments).forEach((compId) => {
       const comp = componentMap.get(compId);
@@ -77,14 +87,28 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
         shieldRegen += comp.stats.regen_rate || 0;
         powerOutput += comp.stats.output || comp.stats.power_segment_generation || 0;
         coolingRate += comp.stats.cooling_rate || 0;
-        quantumSpeed = Math.max(quantumSpeed, comp.stats.travel_speed || 0);
+        if (comp.type === "QuantumDrive") {
+          quantumSpeed = Math.max(quantumSpeed, comp.stats.travel_speed || 0);
+          const s = comp.stats;
+          let ratePerMkm = 0.08;
+          if (s.fuel_consumption_scu_per_gm && s.fuel_consumption_scu_per_gm > 0) {
+            ratePerMkm = s.fuel_consumption_scu_per_gm / 1000;
+          } else if (s.fuel_rate && s.fuel_rate > 0) {
+            ratePerMkm = s.fuel_rate;
+          } else if (s.fuel_efficiency && s.fuel_efficiency > 0) {
+            ratePerMkm = 1 / s.fuel_efficiency;
+          } else if (s.travel_speed) {
+            ratePerMkm = (comp.size === 1 ? 0.07 : comp.size === 2 ? 0.18 : 0.4) * (s.travel_speed / 150000);
+          }
+          quantumRange = ratePerMkm > 0 ? Math.round(tankCap / ratePerMkm) : 5000;
+        }
         totalCost += comp.price_auec || 0;
         emissionEm += comp.stats.emission_em_max || 0;
       }
     });
 
-    return { totalDps, shieldHp, shieldRegen, powerOutput, coolingRate, quantumSpeed, totalCost, emissionEm };
-  }, [slotAssignments, componentMap]);
+    return { totalDps, shieldHp, shieldRegen, powerOutput, coolingRate, quantumSpeed, quantumRange, totalCost, emissionEm };
+  }, [slotAssignments, componentMap, ship]);
 
   const baselineStats = useMemo(() => {
     if (loadedLoadout?.stats) {
@@ -400,6 +424,8 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
                     shieldRegen: stats.shieldRegen,
                     hullHp: ship.hull_hp || 0,
                     coolingRate: stats.coolingRate,
+                    quantumSpeed: stats.quantumSpeed,
+                    quantumRange: stats.quantumRange,
                   }}
                   shipShieldHp={ship.shield_hp || 1000}
                   shipHullHp={ship.hull_hp || 1000}

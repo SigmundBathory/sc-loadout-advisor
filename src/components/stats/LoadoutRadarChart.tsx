@@ -17,6 +17,8 @@ interface LoadoutRadarChartProps {
     shieldRegen: number;
     hullHp: number;
     coolingRate: number;
+    quantumSpeed: number;
+    quantumRange: number;
   };
   shipShieldHp: number;
   shipHullHp: number;
@@ -51,6 +53,8 @@ export default function LoadoutRadarChart({ stats, shipShieldHp, shipHullHp, max
     const regenMax = maxStats?.maxShieldRegen || Math.max(500, stats.shieldRegen * 1.2);
     const hullMax = Math.max(1000, shipHullHp * 1.2);
     const coolingMax = maxStats?.maxCoolingRate || Math.max(50, stats.coolingRate * 1.2);
+    const qtSpeedMax = Math.max(100000, stats.quantumSpeed * 1.2);
+    const qtRangeMax = Math.max(1000, stats.quantumRange * 1.2);
 
     return {
       dps: Math.max(dpsMax, 1),
@@ -58,6 +62,8 @@ export default function LoadoutRadarChart({ stats, shipShieldHp, shipHullHp, max
       regen: Math.max(regenMax, 1),
       hull: Math.max(hullMax, 1),
       cooling: Math.max(coolingMax, 1),
+      qtSpeed: Math.max(qtSpeedMax, 1),
+      qtRange: Math.max(qtRangeMax, 1),
     };
   }, [stats, shipShieldHp, shipHullHp, maxStats]);
 
@@ -86,6 +92,16 @@ export default function LoadoutRadarChart({ stats, shipShieldHp, shipHullHp, max
       stat: "Enfriamiento",
       value: Math.min(100, Math.round((stats.coolingRate / maxValues.cooling) * 100)),
       raw: `${stats.coolingRate.toLocaleString()} c/s`,
+    },
+    {
+      stat: "Vel. Quantum",
+      value: Math.min(100, Math.round((stats.quantumSpeed / maxValues.qtSpeed) * 100)),
+      raw: `${(stats.quantumSpeed / 1e6).toFixed(1)} Gkm/s`,
+    },
+    {
+      stat: "Alcance",
+      value: Math.min(100, Math.round((stats.quantumRange / maxValues.qtRange) * 100)),
+      raw: `${stats.quantumRange.toLocaleString()} Mkm`,
     },
   ];
 
