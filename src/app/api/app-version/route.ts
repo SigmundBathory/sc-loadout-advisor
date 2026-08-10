@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getSyncMeta, getShipCount, getComponentCount } from "@/lib/db/sync";
 import pkg from "../../../../package.json";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   let meta = null;
   let shipCount = 0;

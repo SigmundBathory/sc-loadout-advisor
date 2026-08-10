@@ -33,7 +33,7 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
 
   async function fetchVersions() {
     try {
-      const res = await fetch("/api/versions");
+      const res = await fetch("/api/versions", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setVersions(data.versions || []);

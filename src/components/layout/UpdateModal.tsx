@@ -62,7 +62,7 @@ export default function UpdateModal({ open, onOpenChange }: UpdateModalProps) {
   async function fetchAppInfo() {
     setLoading(true);
     try {
-      const res = await fetch("/api/app-version");
+      const res = await fetch("/api/app-version", { cache: "no-store" });
       const data = await res.json();
       setAppInfo(data);
     } catch (error) {

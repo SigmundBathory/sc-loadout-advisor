@@ -5,6 +5,7 @@ import {
   syncDataForVersion,
   syncGameVersions,
   getSelectedVersion,
+
   getSyncMeta,
   getShipCount,
   getComponentCount,
@@ -49,20 +50,24 @@ export async function POST(request: Request) {
     // Always sync game versions list first
     await syncGameVersions();
     
-    // Use forced version or selected version
-    let versionToSync = forceVersion || getSelectedVersion();
-    
+    // An explicit version is used only by the version selector. A regular
+    // manual sync must always target the current LIVE version returned by the
+    // Wiki, never an old selected dataset.
+    const versionCheck = await checkVersionAndSync();
+    const versionToSync = forceVersion || versionCheck.currentVersion;
+
     if (!versionToSync) {
-      // Fall back to checking for new default version
-      const versionCheck = await checkVersionAndSync();
-      if (!versionCheck.needsSync && getShipCount() > 0) {
-        return noStore(NextResponse.json({
-          message: "Data is up to date",
-          version: versionCheck.currentVersion,
-          needsSync: false,
-        }));
-      }
-      versionToSync = versionCheck.currentVersion;
+      throw new Error("The Wiki did not return a current game version");
+    }
+
+    if (!forceVersion && !versionCheck.needsSync && getShipCount() > 0) {
+      const meta = getSyncMeta();
+      return noStore(NextResponse.json({
+        message: "Data is up to date",
+        version: versionCheck.currentVersion,
+        needsSync: false,
+        meta,
+      }));
     }
 
     // Run sync for specific version

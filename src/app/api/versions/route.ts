@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getGameVersionsFromDb, getSelectedVersion, getSyncMeta, setSelectedVersion, syncGameVersions } from "@/lib/db/sync";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const existing = getGameVersionsFromDb();
