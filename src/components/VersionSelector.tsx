@@ -25,6 +25,7 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
   const [selectedVersion, setSelectedVersion] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVersions();
@@ -51,11 +52,16 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
     const versionData = versions.find(v => v.code === version);
     if (versionData?.is_synced) {
       // Version already synced, just switch to it
-      await fetch("/api/versions", {
+      const res = await fetch("/api/versions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ version }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSyncError(data.error || `No se pudo seleccionar la versión (HTTP ${res.status})`);
+        return;
+      }
       onVersionChange?.(version);
       window.location.reload();
     } else {
@@ -67,18 +73,26 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
   async function handleSyncVersion(version: string, e: React.MouseEvent) {
     e.stopPropagation();
     setSyncing(true);
+    setSyncError(null);
     try {
+      const adminToken = window.sessionStorage.getItem("sc-admin-token") || "";
       const res = await fetch("/api/sync", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminToken ? { "x-admin-token": adminToken } : {}),
+        },
         body: JSON.stringify({ version }),
       });
-      if (res.ok) {
-        await fetchVersions();
-        window.location.reload();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `No se pudo sincronizar la versión (HTTP ${res.status})`);
       }
+      await fetchVersions();
+      window.location.reload();
     } catch (error) {
       console.error("Failed to sync version:", error);
+      setSyncError(error instanceof Error ? error.message : "Error durante la sincronización");
     } finally {
       setSyncing(false);
     }
@@ -127,7 +141,9 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
 
       {selectedVersion && (
         <div className="text-xs text-muted-foreground hidden sm:block">
-          {versions.find(v => v.code === selectedVersion)?.is_synced ? (
+          {syncError ? (
+            <span className="text-red-400 max-w-[240px] truncate" title={syncError}>⚠ {syncError}</span>
+          ) : versions.find(v => v.code === selectedVersion)?.is_synced ? (
             <span className="text-green-500">✓ Sincronizado</span>
           ) : (
             <Button

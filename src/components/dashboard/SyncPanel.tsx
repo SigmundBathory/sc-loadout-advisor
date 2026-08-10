@@ -53,10 +53,16 @@ export default function SyncPanel() {
           setStepStates(prev => prev.map((s, i) => ({
             ...s,
             status: data.steps[i]?.status === "completed" ? "done" : data.steps[i]?.status === "error" ? "error" : s.status,
-            message: data.steps[i]?.output ? data.steps[i].output.slice(0, 100) : undefined
+            message: data.steps[i]?.summary || data.steps[i]?.error || undefined
           })));
         }
         
+        if (data.steps?.some((step: { status?: string }) => step.status === "error")) {
+          setState("error");
+          setMessage(data.message || "Sincronización parcial: revisa los pasos con error");
+          toast.error("Sincronización parcial", { description: data.message });
+          return;
+        }
         setTimeout(() => window.location.reload(), 2000);
       } else {
         setState("error");

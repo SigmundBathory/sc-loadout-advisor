@@ -15,7 +15,7 @@ export async function GET() {
     console.error("Failed to fetch DB meta:", e);
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     appName: "SC Loadout Advisor",
     currentVersion: pkg.version,
     latestVersion: pkg.version,
@@ -26,6 +26,7 @@ export async function GET() {
       componentCount,
       lastSyncAt: meta?.last_sync_at || null,
       gameVersion: meta?.wiki_version || "LIVE / PTU",
+      syncStatus: meta?.sync_status || "unknown",
     },
     updateMethods: [
       {
@@ -47,4 +48,6 @@ export async function GET() {
       },
     ],
   });
+  response.headers.set("Cache-Control", "no-store, max-age=0");
+  return response;
 }

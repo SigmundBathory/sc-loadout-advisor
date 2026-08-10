@@ -30,6 +30,9 @@ interface AppInfo {
   dbStats?: {
     shipCount: number;
     componentCount: number;
+    lastSyncAt: string | null;
+    gameVersion: string;
+    syncStatus?: string;
   };
 }
 
@@ -44,6 +47,9 @@ export default function UpdateModal({ open, onOpenChange }: UpdateModalProps) {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
   const [exportMsg, setExportMsg] = useState("");
+  const [adminToken, setAdminToken] = useState(() =>
+    typeof window === "undefined" ? "" : window.sessionStorage.getItem("sc-admin-token") || ""
+  );
 
   const { savedLoadouts, setSavedLoadouts } = useLoadoutStore();
 
@@ -69,15 +75,37 @@ export default function UpdateModal({ open, onOpenChange }: UpdateModalProps) {
     setSyncing(true);
     setSyncMsg("Sincronizando datos de parches en vivo (LIVE / PTU)...");
     try {
-      const res = await fetch("/api/sync", { method: "POST" });
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: adminToken ? { "x-admin-token": adminToken } : undefined,
+      });
       const data = await res.json();
-      setSyncMsg(data.message || "Sincronización de base de datos completada");
+      if (!res.ok) {
+        throw new Error(data.error || `Error HTTP ${res.status}`);
+      }
+      setSyncMsg(`Sincronización completada: ${data.version || "versión activa"}`);
       await fetchAppInfo();
-    } catch {
-      setSyncMsg("Error durante la sincronización.");
+    } catch (error) {
+      setSyncMsg(error instanceof Error ? error.message : "Error durante la sincronización.");
+    } finally {
+      setSyncing(false);
     }
-    setSyncing(false);
-    setTimeout(() => setSyncMsg(""), 4000);
+    setTimeout(() => setSyncMsg(""), 6000);
+  }
+
+  function updateAdminToken(value: string) {
+    setAdminToken(value);
+    if (value) window.sessionStorage.setItem("sc-admin-token", value);
+    else window.sessionStorage.removeItem("sc-admin-token");
+  }
+
+  function formatSyncDate(value: string | null | undefined): string {
+    if (!value) return "Sin sincronizaciones registradas";
+    const normalized = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime())
+      ? value
+      : date.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" });
   }
 
   function handleExportBackup() {
@@ -138,7 +166,13 @@ export default function UpdateModal({ open, onOpenChange }: UpdateModalProps) {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Estado: <span className="text-emerald-400 font-semibold">Aplicación al día</span>
+                Dataset: <span className="text-foreground font-semibold">{appInfo?.dbStats?.gameVersion || "—"}</span>
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Última sincronización: <span className="text-foreground font-mono">{formatSyncDate(appInfo?.dbStats?.lastSyncAt)}</span>
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Estado: <span className={appInfo?.dbStats?.syncStatus === "ok" ? "text-emerald-400" : "text-amber-300"}>{appInfo?.dbStats?.syncStatus || "sin estado"}</span>
               </p>
             </div>
 
@@ -179,9 +213,22 @@ export default function UpdateModal({ open, onOpenChange }: UpdateModalProps) {
                 </Button>
               </div>
 
+              <div className="space-y-1.5">
+                <label htmlFor="update-admin-token" className="text-[11px] text-muted-foreground">Token de administración <span className="opacity-70">(producción)</span></label>
+                <input
+                  id="update-admin-token"
+                  type="password"
+                  autoComplete="off"
+                  value={adminToken}
+                  onChange={(event) => updateAdminToken(event.target.value)}
+                  placeholder="Necesario si el servidor protege la sincronización"
+                  className="h-8 w-full rounded-lg border border-border bg-background/50 px-2.5 text-xs"
+                />
+              </div>
+
               {syncMsg && (
                 <div className="text-xs font-semibold text-cyan-300 bg-cyan-950/40 p-2 rounded-lg border border-cyan-500/30 flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 animate-spin" />
+                  {syncMsg.toLowerCase().includes("error") || syncMsg.toLowerCase().includes("no se pudo") ? <ShieldCheck className="h-3.5 w-3.5 text-red-300" /> : <Sparkles className="h-3.5 w-3.5 animate-spin" />}
                   {syncMsg}
                 </div>
               )}

@@ -13,10 +13,12 @@ export async function GET() {
     const versions = getGameVersionsFromDb();
     const selected = getSelectedVersion();
     
-    return NextResponse.json({
+    const response = NextResponse.json({
       versions,
       selectedVersion: selected,
     });
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    return response;
   } catch (error) {
     console.error("Error fetching versions:", error);
     return NextResponse.json(

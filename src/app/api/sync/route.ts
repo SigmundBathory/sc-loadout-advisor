@@ -10,6 +10,11 @@ import {
   getComponentCount,
 } from "@/lib/db/sync";
 
+function noStore(response: NextResponse) {
+  response.headers.set("Cache-Control", "no-store, max-age=0");
+  return response;
+}
+
 export async function GET() {
   try {
     const meta = getSyncMeta();
@@ -17,18 +22,18 @@ export async function GET() {
     const componentCount = getComponentCount();
     const selectedVersion = getSelectedVersion();
 
-    return NextResponse.json({
+    return noStore(NextResponse.json({
       meta,
       shipCount,
       componentCount,
       selectedVersion,
-    });
+    }));
   } catch (error) {
     console.error("Error getting sync status:", error);
-    return NextResponse.json(
+    return noStore(NextResponse.json(
       { error: "Failed to get sync status" },
       { status: 500 }
-    );
+    ));
   }
 }
 
@@ -51,36 +56,37 @@ export async function POST(request: Request) {
       // Fall back to checking for new default version
       const versionCheck = await checkVersionAndSync();
       if (!versionCheck.needsSync && getShipCount() > 0) {
-        return NextResponse.json({
+        return noStore(NextResponse.json({
           message: "Data is up to date",
           version: versionCheck.currentVersion,
           needsSync: false,
-        });
+        }));
       }
       versionToSync = versionCheck.currentVersion;
     }
 
     // Run sync for specific version
+    const previousVersion = (getSyncMeta() as { wiki_version?: string } | undefined)?.wiki_version || "";
     await syncDataForVersion(versionToSync, undefined, { force });
 
     const meta = getSyncMeta();
     const shipCount = getShipCount();
     const componentCount = getComponentCount();
 
-    return NextResponse.json({
+    return noStore(NextResponse.json({
       message: "Sync completed",
       version: versionToSync,
-      previousVersion: meta?.wiki_version || "",
+      previousVersion,
       needsSync: false,
       meta,
       shipCount,
       componentCount,
-    });
+    }));
   } catch (error) {
     console.error("Sync error:", error);
-    return NextResponse.json(
+    return noStore(NextResponse.json(
       { error: "Sync failed: " + (error as Error).message },
       { status: 500 }
-    );
+    ));
   }
 }

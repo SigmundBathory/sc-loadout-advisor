@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
 import { requireAdminToken } from "@/lib/security/admin";
 import { checkVersionAndSync, syncDataForVersion, getSyncMeta, getShipCount, getComponentCount, syncGameVersions } from "@/lib/db/sync";
+import { getDb } from "@/lib/db/schema";
+
+let fullSyncInProgress = false;
 
 export async function POST(request: Request) {
   const authError = requireAdminToken(request);
   if (authError) return authError;
+  if (fullSyncInProgress) {
+    return NextResponse.json(
+      { error: "Ya hay una sincronización completa en curso" },
+      { status: 409, headers: { "Cache-Control": "no-store" } }
+    );
+  }
 
+  fullSyncInProgress = true;
   try {
     const results: Record<string, any> = {};
 
@@ -28,11 +38,11 @@ export async function POST(request: Request) {
         cwd: process.cwd(),
         timeout: 120000
       });
-      results.step2.output = output.toString();
       results.step2.status = "completed";
+      results.step2.summary = output.toString().trim().split("\n").filter(Boolean).slice(-1)[0] || "Paso completado";
     } catch (e: any) {
       results.step2.status = "error";
-      results.step2.error = e.message;
+      results.step2.error = e instanceof Error ? e.message : "Error en el scraper de ubicaciones";
     }
 
     // Step 3: Wikelo ships from Google Sheets
@@ -44,30 +54,39 @@ export async function POST(request: Request) {
         cwd: process.cwd(),
         timeout: 60000
       });
-      results.step3.output = output.toString();
       results.step3.status = "completed";
+      results.step3.summary = output.toString().trim().split("\n").filter(Boolean).slice(-1)[0] || "Paso completado";
     } catch (e: any) {
       results.step3.status = "error";
-      results.step3.error = e.message;
+      results.step3.error = e instanceof Error ? e.message : "Error en la sincronización de Wikelo";
     }
 
     const meta = getSyncMeta();
     const shipCount = getShipCount();
     const componentCount = getComponentCount();
 
-    return NextResponse.json({
-      message: "Full sync completed",
+    const steps = [results.step1, results.step2, results.step3];
+    const failed = steps.filter((step) => step.status === "error");
+    if (failed.length > 0) {
+      getDb().prepare("UPDATE sync_meta SET sync_status = 'partial' WHERE id = 1").run();
+    }
+    const response = NextResponse.json({
+      message: failed.length === 0 ? "Sincronización completa finalizada" : "Sincronización parcial: algunos pasos fallaron",
       version: vc.currentVersion,
       meta,
       shipCount,
       componentCount,
-      steps: [results.step1, results.step2, results.step3],
-    });
+      steps,
+    }, { status: failed.length === 0 ? 200 : 207 });
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    return response;
   } catch (error) {
     console.error("Full sync error:", error);
     return NextResponse.json(
       { error: "Full sync failed: " + (error as Error).message },
-      { status: 500 }
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
+  } finally {
+    fullSyncInProgress = false;
   }
 }

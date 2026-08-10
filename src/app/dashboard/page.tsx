@@ -71,14 +71,19 @@ export default async function DashboardPage() {
   }
 
   const wikiVersion = stats.meta?.wiki_version || selectedVersion || "—";
-  const isOk = stats.meta?.sync_status === "ok";
+
   const lastSync = stats.meta?.last_sync_at
-    ? new Date(stats.meta.last_sync_at).toLocaleDateString("es-ES", {
+    ? new Date(`${stats.meta.last_sync_at.replace(" ", "T")}Z`).toLocaleString("es-ES", {
         day: "2-digit",
         month: "short",
         year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       })
     : "—";
+  const syncStatus = stats.meta?.sync_status || "unknown";
+  const statusLabel = syncStatus === "ok" ? "Sincronizado" : syncStatus === "syncing" ? "Sincronizando" : syncStatus === "partial" ? "Sincronización parcial" : syncStatus === "error" ? "Error" : "Sin estado";
+  const statusIsHealthy = syncStatus === "ok";
 
   return (
     <PageContainer>
@@ -150,21 +155,21 @@ export default async function DashboardPage() {
               <div
                 className="flex items-center gap-2 px-3 py-2 rounded-full border font-medium text-sm"
                 style={{
-                  color: isOk ? "var(--sc-status-success)" : "var(--sc-status-warning)",
-                  background: isOk
+                  color: statusIsHealthy ? "var(--sc-status-success)" : "var(--sc-status-warning)",
+                  background: statusIsHealthy
                     ? "color-mix(in oklch, var(--sc-status-success) 12%, transparent)"
                     : "color-mix(in oklch, var(--sc-status-warning) 12%, transparent)",
-                  borderColor: isOk
+                  borderColor: statusIsHealthy
                     ? "color-mix(in oklch, var(--sc-status-success) 35%, transparent)"
                     : "color-mix(in oklch, var(--sc-status-warning) 35%, transparent)",
                 }}
               >
-                {isOk ? (
+                {statusIsHealthy ? (
                   <CircleCheck className="h-4 w-4" />
                 ) : (
                   <CircleAlert className="h-4 w-4" />
                 )}
-                {isOk ? "Sincronizado" : "Pendiente"}
+                {statusLabel}
               </div>
             </div>
           </div>
