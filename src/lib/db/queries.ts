@@ -73,6 +73,7 @@ function getHardpointsByShip(shipId: string): Hardpoint[] {
     .all(shipId) as any[];
   return rows
     .filter((r: any) => !r.name.toLowerCase().includes("interdiction"))
+    .map((r: any) => fixHardpointClassification(r, shipId))
     .map((r: any) => ({
       id: r.id,
       name: r.name,
@@ -81,6 +82,64 @@ function getHardpointsByShip(shipId: string): Hardpoint[] {
       max_size: r.max_size,
       component_id: r.component_id || undefined,
     }));
+}
+
+/**
+ * Fixes known hardpoint misclassifications from wiki data.
+ * Some ships have weapon hardpoints incorrectly classified as "utility".
+ */
+function fixHardpointClassification(row: any, shipId: string): any {
+  const name = row.name.toLowerCase();
+  const shipName = row.name.toLowerCase(); // We don't have ship name here, use shipId pattern
+
+  // Known ship IDs with misclassified hardpoints (ship_id contains ship name pattern)
+  // F7A/F7C Hornet Mk I - utility slots that are actually weapons
+  if (shipId.includes('f7a-hornet-mk-i') || shipId.includes('f7c-hornet-mk-i') || shipId.includes('f7c-hornet-wildfire-mk-i')) {
+    if (row.slot_type === 'utility') {
+      const n = name;
+      // Center gun (size 5), wing guns (size 4), nose gun (size 3)
+      if (n.includes('class_4_center') || n.includes('class_4_nose') ||
+          n.includes('class_2_left_wing') || n.includes('class_2_right_wing') ||
+          n.includes('class_4_center') || n.includes('intake_hardpoint_countermeasure')) {
+        // Countermeasures are utility, but class_4_center/nose and class_2 wings are guns
+        if (n.includes('countermeasure')) return row;
+        return { ...row, slot_type: 'weapon' };
+      }
+    }
+  }
+
+  // Gladiator - utility class_2_left/right_wing are nose guns (size 4)
+  if (shipId.includes('gladiator') && !shipId.includes('valiant') && !shipId.includes('pirate')) {
+    if (row.slot_type === 'utility' && name.includes('class_2') && name.includes('wing')) {
+      return { ...row, slot_type: 'weapon' };
+    }
+  }
+
+  // Buccaneer - all utility slots are actually weapons
+  // Spinal S4, left/right S3 pylons, S1 wingtips
+  if (shipId.includes('buccaneer') && !shipId.includes('alliance') && !shipId.includes('wikelo') && !shipId.includes('work') && !shipId.includes('ox')) {
+    if (row.slot_type === 'utility') {
+      const n = name;
+      if (n.includes('spinal') || n.includes('left_s3') || n.includes('right_s3') ||
+          n.includes('left_wingtip') || n.includes('right_wingtip') ||
+          n.includes('s4') || n.includes('s3_pylon') || n.includes('wingtip')) {
+        return { ...row, slot_type: 'weapon' };
+      }
+    }
+  }
+
+  // M50 Interceptor - wing guns are size=1 max=2, should be size=2 for fixed S2 guns
+  // The wiki data has size=1 (mount class) but they're fixed S2 guns
+  if (shipId.includes('m50-interceptor') && !shipId.includes('velocity') && !shipId.includes('force')) {
+    if (row.slot_type === 'weapon' && name.includes('gun_class1') && row.size === 1 && row.max_size === 2) {
+      return { ...row, size: 2 }; // Fix: actual gun size is S2
+    }
+  }
+
+  // Herald - wings are size=1 max=2 (S2 guns), nose is S3 - already correct
+  // Arrow - correct (2x S3 wing)
+
+  return row;
 }
 
 function mapShipRow(row: any): Ship {
