@@ -466,6 +466,10 @@ export function syncComponentsFromPorts(
     INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at, source)
     VALUES (?, ?, datetime('now'), 'wiki')
   `);
+  const insertLocation = db.prepare(`
+    INSERT INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price, source)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'wiki')
+  `);
 
   let count = 0;
   let skipped = 0;
@@ -483,10 +487,9 @@ export function syncComponentsFromPorts(
 
       if (wikiItem) {
         Object.assign(stats, extractWikiStats(compType, wikiItem));
-        if (wikiItem.uec_prices?.purchase?.length > 0) {
-          const cheapest = wikiItem.uec_prices.purchase
-            .filter((p: any) => p.price_buy > 0)
-            .sort((a: any, b: any) => a.price_buy - b.price_buy)[0];
+        if (wikiItem.uex_prices?.purchase?.length > 0) {
+          const purchases = wikiItem.uex_prices.purchase.filter((p: any) => p.price_buy > 0);
+          const cheapest = [...purchases].sort((a: any, b: any) => a.price_buy - b.price_buy)[0];
           if (cheapest) price = cheapest.price_buy;
         }
         if (wikiItem.images?.[0]) {
@@ -517,6 +520,34 @@ export function syncComponentsFromPorts(
 
       if (price !== null && price > 0) {
         updatePrice.run([compId, price]);
+      }
+
+      if (wikiItem?.uex_prices?.purchase?.length > 0) {
+        const seenTerminals = new Set<string>();
+        for (const purchase of wikiItem.uex_prices.purchase) {
+          if (!(purchase.price_buy > 0)) continue;
+          const terminalName = String(purchase.terminal_name || "").trim();
+          if (!terminalName || seenTerminals.has(terminalName)) continue;
+          seenTerminals.add(terminalName);
+
+          // UEX terminal names are usually "Shop - Landing Zone" (e.g. "Dumper's
+          // Depot - Area 18"); split so the shop and station render separately.
+          let shopName = terminalName;
+          let stationName = terminalName;
+          if (terminalName.includes(" - ")) {
+            const parts = terminalName.split(" - ");
+            shopName = parts[0].trim();
+            stationName = parts.slice(1).join(" - ").trim();
+          }
+
+          const loc = purchase.starmap_location || {};
+          const system = String(loc.star_system_name || "");
+          const planetMoon = String(loc.parent_name || loc.name || "");
+
+          insertLocation.run([
+            compId, stationName || loc.name || terminalName, system, planetMoon, shopName, "Terminal", purchase.price_buy,
+          ]);
+        }
       }
       count++;
     } catch (e) {
