@@ -109,13 +109,20 @@ export function componentDetailRows(comp: Component): StatRow[] {
         { label: "Cooldown", value: n(s.cooldown), format: `${fmt(n(s.cooldown), 1)}s`, lowerBetter: true },
       ];
     }
-    case "Radar":
+    case "Radar": {
+      const range = n(s.detection_range) || n(s.assignment_distance_max) || n(s.range);
       return [
-        { label: "Alcance", value: n(s.detection_range) || n(s.range), format: `${fmt((n(s.detection_range) || n(s.range)) / 1000, 1)} km` },
+        { label: "Alcance asignación", value: range, format: `${fmt(range / 1000, 1)} km` },
+        { label: "Asignación mínima", value: n(s.assignment_distance_min), format: `${fmt(n(s.assignment_distance_min) / 1000, 1)} km` },
+        { label: "Buffer exterior", value: n(s.outside_range_buffer), format: `${fmt(n(s.outside_range_buffer))} m` },
         { label: "Sens. EM", value: n(s.sensitivity_em), format: pct(n(s.sensitivity_em)) },
         { label: "Sens. IR", value: n(s.sensitivity_ir), format: pct(n(s.sensitivity_ir)) },
         { label: "Sens. CS", value: n(s.sensitivity_cs), format: pct(n(s.sensitivity_cs)) },
+        { label: "Piercing EM", value: n(s.piercing_em), format: pct(n(s.piercing_em)) },
+        { label: "Piercing IR", value: n(s.piercing_ir), format: pct(n(s.piercing_ir)) },
+        { label: "Piercing CS", value: n(s.piercing_cs), format: pct(n(s.piercing_cs)) },
       ];
+    }
     case "FlightController":
       return [
         { label: "SCM", value: n(s.scm_speed), format: `${fmt(n(s.scm_speed))} m/s` },

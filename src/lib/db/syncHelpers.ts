@@ -119,13 +119,16 @@ export function detectSlotType(name: string, port: any): string {
   if (lower.includes("flight") || lower.includes("controller_flight") || subtype.includes("flight")) return "flight_controller";
   if (lower.includes("lifesupport") || lower.includes("life_support") || lower.includes("life support") || subtype.includes("lifesupport")) return "life_support";
 
+  // Missile bays are ordnance slots, not weapon slots. Check them before the
+  // generic weapon/gun rule because names such as "weapon_missilebay" contain
+  // both terms.
+  if (lower.includes("missile") || lower.includes("ordinance") || subtype.includes("missile")) return "missile";
   if (lower.includes("weapon") || lower.includes("gun") || lower.includes("turret") || subtype.includes("weapon") || subtype.includes("gun"))
     return "weapon";
   if (lower.includes("shield") || subtype.includes("shield")) return "shield";
   if (lower.includes("power") || lower.includes("plant") || subtype.includes("powerplant")) return "power_plant";
   if (lower.includes("cooler") || subtype.includes("cooler")) return "cooler";
   if (lower.includes("quantum") || lower.includes("qd") || subtype.includes("quantum")) return "quantum_drive";
-  if (lower.includes("missile") || lower.includes("ordinance") || subtype.includes("missile")) return "missile";
   if (lower.includes("radar") || subtype.includes("radar")) return "radar";
   if (lower.includes("thruster") || lower.includes("engine") || subtype.includes("thruster")) return "thruster";
   if (lower.includes("flir")) return "flir";
@@ -443,12 +446,30 @@ export function extractWikiStats(compType: string, wikiItem: any): Record<string
     }
   } else if (compType === "Radar" && wikiItem.radar) {
     const r = wikiItem.radar;
+    const aimAssist = r.aim_assist || {};
+    // The Wiki API does not expose a field literally named detection_range.
+    // Its operational range is represented by the maximum aim-assignment distance.
     stats.cooldown = r.cooldown || 0;
-    stats.detection_range = r.detection_range || 0;
+    stats.detection_range = r.detection_range || r.range || aimAssist.distance_max_assignment || 0;
+    stats.assignment_distance_min = aimAssist.distance_min_assignment || 0;
+    stats.assignment_distance_max = aimAssist.distance_max_assignment || 0;
+    stats.outside_range_buffer = aimAssist.outside_range_buffer_distance || 0;
     if (r.sensitivity) {
       stats.sensitivity_ir = r.sensitivity.infrared || 0;
       stats.sensitivity_cs = r.sensitivity.cross_section || 0;
       stats.sensitivity_em = r.sensitivity.electromagnetic || 0;
+      stats.sensitivity_resource = r.sensitivity.resource || 0;
+      stats.sensitivity_db = r.sensitivity.db || 0;
+    }
+    if (r.ground_vehicle_sensitivity) {
+      stats.ground_sensitivity_ir = r.ground_vehicle_sensitivity.infrared || 0;
+      stats.ground_sensitivity_cs = r.ground_vehicle_sensitivity.cross_section || 0;
+      stats.ground_sensitivity_em = r.ground_vehicle_sensitivity.electromagnetic || 0;
+    }
+    if (r.piercing) {
+      stats.piercing_ir = r.piercing.infrared || 0;
+      stats.piercing_cs = r.piercing.cross_section || 0;
+      stats.piercing_em = r.piercing.electromagnetic || 0;
     }
   } else if (compType === "FlightController" && wikiItem.flight_controller) {
     const fc = wikiItem.flight_controller;

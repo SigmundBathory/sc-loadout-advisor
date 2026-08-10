@@ -59,6 +59,7 @@ export const CONFIGURABLE_SLOT_TYPES = new Set([
   "flightcontroller",
   "life_support",
   "lifesupport",
+  "missile",
 ]);
 
 /**
@@ -159,7 +160,18 @@ export interface ComponentStats {
   sensitivity_ir?: number;
   sensitivity_cs?: number;
   sensitivity_em?: number;
+  sensitivity_resource?: number;
+  sensitivity_db?: number;
+  ground_sensitivity_ir?: number;
+  ground_sensitivity_cs?: number;
+  ground_sensitivity_em?: number;
+  piercing_ir?: number;
+  piercing_cs?: number;
+  piercing_em?: number;
   detection_range?: number;
+  assignment_distance_min?: number;
+  assignment_distance_max?: number;
+  outside_range_buffer?: number;
   // Flight Controllers
   scm_speed?: number;
   max_speed?: number;

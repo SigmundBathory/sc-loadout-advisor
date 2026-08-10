@@ -164,6 +164,44 @@ const PROFILE_CONFIGS: Record<string, Partial<Record<BuildProfile, SortConfig>>>
       ],
     },
   },
+  Radar: {
+    power: {
+      primary: (s) => n(s.assignment_distance_max) || n(s.detection_range),
+      primaryLabel: "Alcance",
+      formatPrimary: (v) => `${(v / 1000).toFixed(1)} km`,
+      tradeoffs: [
+        { label: "Sens. EM", value: (s) => n(s.sensitivity_em), format: (v) => `${(v * 100).toFixed(0)}%` },
+        { label: "Sens. IR", value: (s) => n(s.sensitivity_ir), format: (v) => `${(v * 100).toFixed(0)}%` },
+      ],
+    },
+    range: {
+      primary: (s) => n(s.assignment_distance_max) || n(s.detection_range),
+      primaryLabel: "Alcance",
+      formatPrimary: (v) => `${(v / 1000).toFixed(1)} km`,
+      tradeoffs: [
+        { label: "Sens. CS", value: (s) => n(s.sensitivity_cs), format: (v) => `${(v * 100).toFixed(0)}%` },
+        { label: "Buffer", value: (s) => n(s.outside_range_buffer), format: (v) => `${v.toFixed(0)} m` },
+      ],
+    },
+    balanced: {
+      primary: (s) => (n(s.sensitivity_em) + n(s.sensitivity_ir) + n(s.sensitivity_cs)) / 3,
+      primaryLabel: "Sensibilidad",
+      formatPrimary: (v) => `${(v * 100).toFixed(0)}%`,
+      tradeoffs: [
+        { label: "Alcance", value: (s) => n(s.assignment_distance_max) || n(s.detection_range), format: (v) => `${(v / 1000).toFixed(1)} km` },
+        { label: "Piercing EM", value: (s) => n(s.piercing_em), format: (v) => `${(v * 100).toFixed(0)}%` },
+      ],
+    },
+    stealth: {
+      primary: (s) => n(s.emission_em_max),
+      primaryLabel: "Firma EM",
+      lowerBetter: true,
+      tradeoffs: [
+        { label: "Sens. EM", value: (s) => n(s.sensitivity_em), format: (v) => `${(v * 100).toFixed(0)}%` },
+        { label: "Alcance", value: (s) => n(s.assignment_distance_max) || n(s.detection_range), format: (v) => `${(v / 1000).toFixed(1)} km` },
+      ],
+    },
+  },
   QuantumDrive: {
     speed: {
       primary: (s) => n(s.travel_speed),

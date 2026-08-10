@@ -261,6 +261,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
         flightcontroller: ["FlightController"],
         life_support: ["LifeSupport"],
         lifesupport: ["LifeSupport"],
+        missile: ["Missile", "MissileRack"],
       };
       const slotKey = selectedSlot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
       const validTypes = slotTypeMap[slotKey] || [selectedSlot.slot_type];

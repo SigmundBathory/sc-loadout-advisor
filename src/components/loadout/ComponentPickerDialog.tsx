@@ -40,6 +40,8 @@ const SLOT_ICONS: Record<string, React.ReactNode> = {
   Radar: <Navigation className="h-3.5 w-3.5" />,
   FlightController: <Navigation className="h-3.5 w-3.5" />,
   LifeSupport: <Shield className="h-3.5 w-3.5" />,
+  Missile: <Zap className="h-3.5 w-3.5" />,
+  MissileRack: <Zap className="h-3.5 w-3.5" />,
 };
 
 export default function ComponentPickerDialog({ slot, components, loading, equippedId, onSelect, onClose }: ComponentPickerDialogProps) {
@@ -101,6 +103,8 @@ function PickerBody({
       ? "FlightController"
       : slotType === "life_support" || slotType === "lifesupport"
       ? "LifeSupport"
+      : slotType === "missile"
+      ? "Missile"
       : "";
 
   const sorted = useMemo(() => {

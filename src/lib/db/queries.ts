@@ -271,6 +271,7 @@ export function getCompatibleComponents(
     flightcontroller: "FlightController",
     life_support: "LifeSupport",
     lifesupport: "LifeSupport",
+    missile: "Missile",
   };
 
   const componentType = slotTypeMap[slotType.toLowerCase()] || slotType;
