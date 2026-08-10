@@ -36,6 +36,7 @@ interface GameVersionRow {
 }
 
 interface ManufacturerRow {
+  code: string;
   name: string;
   count: number;
 }
@@ -58,6 +59,7 @@ export default async function DashboardPage() {
       : null;
 
   const pieData = (manufacturers as ManufacturerRow[]).map((m) => ({
+    code: m.code,
     name: m.name,
     count: m.count,
   }));

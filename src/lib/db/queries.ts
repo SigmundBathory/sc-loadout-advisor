@@ -533,10 +533,10 @@ export function getTopShipsByDps(limit: number = 5) {
 export function getManufacturerDistribution() {
   const db = getDb();
   const rows = db.prepare(`
-    SELECT m.name, COUNT(s.id) as count
+    SELECT m.code, m.name, COUNT(s.id) as count
     FROM ships s
     JOIN manufacturers m ON s.manufacturer_code = m.code
-    GROUP BY m.name
+    GROUP BY m.code, m.name
     ORDER BY count DESC
     LIMIT 8
   `).all() as any[];
