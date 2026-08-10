@@ -37,6 +37,9 @@ const SLOT_ICONS: Record<string, React.ReactNode> = {
   PowerPlant: <Zap className="h-3.5 w-3.5" />,
   Cooler: <Thermometer className="h-3.5 w-3.5" />,
   QuantumDrive: <Navigation className="h-3.5 w-3.5" />,
+  Radar: <Navigation className="h-3.5 w-3.5" />,
+  FlightController: <Navigation className="h-3.5 w-3.5" />,
+  LifeSupport: <Shield className="h-3.5 w-3.5" />,
 };
 
 export default function ComponentPickerDialog({ slot, components, loading, equippedId, onSelect, onClose }: ComponentPickerDialogProps) {
@@ -92,14 +95,22 @@ function PickerBody({
       ? "Cooler"
       : slotType === "quantum_drive" || slotType === "quantumdrive"
       ? "QuantumDrive"
+      : slotType === "radar"
+      ? "Radar"
+      : slotType === "flight_controller" || slotType === "flightcontroller"
+      ? "FlightController"
+      : slotType === "life_support" || slotType === "lifesupport"
+      ? "LifeSupport"
       : "";
 
   const sorted = useMemo(() => {
     let filtered = components.filter(
       (c) =>
-        !search ||
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.manufacturer.name.toLowerCase().includes(search.toLowerCase())
+        !c.name.toLowerCase().includes("mauler") &&
+        !c.class_name.toLowerCase().includes("mauler") &&
+        (!search ||
+          c.name.toLowerCase().includes(search.toLowerCase()) ||
+          c.manufacturer.name.toLowerCase().includes(search.toLowerCase()))
     );
     if (availableOnly) {
       filtered = filtered.filter((c) => c.buy_locations && c.buy_locations.length > 0);
@@ -180,7 +191,9 @@ function PickerBody({
             {SLOT_ICONS[componentType] || <Zap className="h-3.5 w-3.5" />}
             Seleccionar para {slot.name}
           </span>
-          <Badge variant="outline" className="font-mono text-[10px]">S{slot.size}</Badge>
+          <Badge variant="outline" className="font-mono text-[10px]">
+            {slot.max_size > slot.size ? `S${slot.size}–S${slot.max_size}` : `S${slot.size}`}
+          </Badge>
         </DialogTitle>
       </DialogHeader>
 

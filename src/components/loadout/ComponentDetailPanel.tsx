@@ -31,6 +31,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   QuantumDrive: <Navigation className="h-3 w-3" />,
   Radar: <Gauge className="h-3 w-3" />,
   FlightController: <Gauge className="h-3 w-3" />,
+  LifeSupport: <Shield className="h-3 w-3" />,
 };
 
 export default function ComponentDetailPanel({

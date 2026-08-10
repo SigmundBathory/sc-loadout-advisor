@@ -246,6 +246,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
     const slotMaxSize = selectedSlot.max_size || selectedSlot.size;
 
     const compsForSlot = components.filter((c) => {
+      if (c.name.toLowerCase().includes("mauler") || c.class_name.toLowerCase().includes("mauler")) return false;
       const slotTypeMap: Record<string, string[]> = {
         weapon: ["Weapon"],
         turret: ["Weapon"],
@@ -255,11 +256,17 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
         cooler: ["Cooler"],
         quantum_drive: ["QuantumDrive"],
         quantumdrive: ["QuantumDrive"],
+        radar: ["Radar"],
+        flight_controller: ["FlightController"],
+        flightcontroller: ["FlightController"],
+        life_support: ["LifeSupport"],
+        lifesupport: ["LifeSupport"],
       };
       const slotKey = selectedSlot.slot_type.toLowerCase().replace(/[-\s]/g, "_");
       const validTypes = slotTypeMap[slotKey] || [selectedSlot.slot_type];
       const typeMatch = validTypes.some(t => t.toLowerCase() === c.type.toLowerCase());
-      const sizeMatch = c.size <= slotMaxSize;
+      const slotMinSize = selectedSlot.size || 1;
+      const sizeMatch = c.size >= slotMinSize && c.size <= slotMaxSize;
       return typeMatch && sizeMatch;
     });
 

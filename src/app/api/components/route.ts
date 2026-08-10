@@ -18,6 +18,9 @@ export async function GET(request: Request) {
     const slotSize = searchParams.get("slotSize")
       ? parseInt(searchParams.get("slotSize")!)
       : undefined;
+    const slotMinSize = searchParams.get("slotMinSize")
+      ? parseInt(searchParams.get("slotMinSize")!)
+      : slotSize;
     const id = searchParams.get("id") || undefined;
     const ids = searchParams.get("ids") || undefined;
 
@@ -36,7 +39,7 @@ export async function GET(request: Request) {
     }
 
     if (compatibleShipId && slotType && slotSize) {
-      const components = getCompatibleComponents(compatibleShipId, slotType, slotSize);
+      const components = getCompatibleComponents(compatibleShipId, slotType, slotSize, slotMinSize || slotSize);
       return NextResponse.json({ components });
     }
 

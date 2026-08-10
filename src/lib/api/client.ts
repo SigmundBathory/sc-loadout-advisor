@@ -60,19 +60,20 @@ export function useShipComponents(ship: Pick<Ship, "id" | "hardpoints"> | null) 
     queryKey: ["components", "ship", ship?.id],
     queryFn: async () => {
       if (!ship) return [];
-      const slotSpecs = new Map<string, { slotType: string; slotSize: number }>();
+      const slotSpecs = new Map<string, { slotType: string; slotMinSize: number; slotSize: number }>();
       ship.hardpoints.forEach((hp) => {
-        const maxSize = hp.max_size || hp.size;
-        const key = `${hp.slot_type}_${maxSize}`;
+        const minSize = hp.size || 1;
+        const maxSize = hp.max_size || minSize;
+        const key = `${hp.slot_type}_${minSize}_${maxSize}`;
         if (!slotSpecs.has(key)) {
-          slotSpecs.set(key, { slotType: hp.slot_type, slotSize: maxSize });
+          slotSpecs.set(key, { slotType: hp.slot_type, slotMinSize: minSize, slotSize: maxSize });
         }
       });
 
       const all: Component[] = [];
       for (const spec of slotSpecs.values()) {
         const res = await fetch(
-          `/api/components?compatibleShipId=${ship.id}&slotType=${spec.slotType}&slotSize=${spec.slotSize}`
+          `/api/components?compatibleShipId=${ship.id}&slotType=${spec.slotType}&slotMinSize=${spec.slotMinSize}&slotSize=${spec.slotSize}`
         );
         if (res.ok) {
           const data = (await res.json()) as ComponentsResponse;

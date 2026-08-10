@@ -252,7 +252,8 @@ export function getComponentsByIds(ids: string[]): Component[] {
 export function getCompatibleComponents(
   shipId: string,
   slotType: string,
-  slotSize: number
+  slotSize: number,
+  slotMinSize: number = slotSize
 ): Component[] {
   const db = getDb();
 
@@ -265,6 +266,11 @@ export function getCompatibleComponents(
     cooler: "Cooler",
     quantum_drive: "QuantumDrive",
     quantumdrive: "QuantumDrive",
+    radar: "Radar",
+    flight_controller: "FlightController",
+    flightcontroller: "FlightController",
+    life_support: "LifeSupport",
+    lifesupport: "LifeSupport",
   };
 
   const componentType = slotTypeMap[slotType.toLowerCase()] || slotType;
@@ -278,11 +284,13 @@ export function getCompatibleComponents(
        FROM components c
        LEFT JOIN manufacturers m ON c.manufacturer_code = m.code
        LEFT JOIN component_prices cp ON c.id = cp.component_id
-       WHERE c.type = ? AND c.size <= ?
+       WHERE c.type = ? AND c.size >= ? AND c.size <= ?
        AND c.name NOT LIKE '%PLACEHOLDER%'
+       AND LOWER(c.name) NOT LIKE '%mauler%'
+       AND LOWER(c.class_name) NOT LIKE '%mauler%'
        ORDER BY c.name`
     )
-    .all([componentType, slotSize]) as any[];
+    .all([componentType, slotMinSize, slotSize]) as any[];
 
   const comps = rows.map(mapComponentRow);
   return attachBuyLocations(comps);

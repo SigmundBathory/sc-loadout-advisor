@@ -54,6 +54,11 @@ export const CONFIGURABLE_SLOT_TYPES = new Set([
   "cooler",
   "quantum_drive",
   "quantumdrive",
+  "radar",
+  "flight_controller",
+  "flightcontroller",
+  "life_support",
+  "lifesupport",
 ]);
 
 /**
