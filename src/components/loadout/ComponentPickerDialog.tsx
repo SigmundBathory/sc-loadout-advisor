@@ -43,7 +43,7 @@ export default function ComponentPickerDialog({ slot, components, loading, equip
   return (
     <Dialog open={!!slot} onOpenChange={() => onClose()}>
       {slot && (
-        <DialogContent key={slot.id} className="bg-popover/98 backdrop-blur-2xl max-w-4xl border-primary/20 p-5 flex flex-col max-h-[90vh] gap-3 overflow-hidden shadow-2xl shadow-black/40">
+        <DialogContent key={slot.id} className="bg-popover/98 backdrop-blur-2xl max-w-4xl w-[calc(100vw-2rem)] border-primary/20 p-5 flex flex-col h-[90vh] max-h-[90vh] gap-3 overflow-hidden shadow-2xl shadow-black/40">
           <PickerBody
             slot={slot}
             components={components}
@@ -291,7 +291,7 @@ function PickerBody({
         </div>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-muted-foreground space-y-2">
             <div className="h-8 w-8 mx-auto border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -327,7 +327,7 @@ function PickerBody({
                     }`}
                     onClick={() => handleRowClick(comp)}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
                       {compareMode && (
                         <div className={`mt-1 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
                           compareIds.includes(comp.id) ? "bg-primary border-primary" : "border-muted-foreground/40"
@@ -380,7 +380,25 @@ function PickerBody({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-right text-[11px] font-mono shrink-0">
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/20 pt-2">
+                      <div className="min-w-0 flex-1 text-[10px] font-mono text-muted-foreground">
+                        {typeof comp.price_auec === "number" && comp.price_auec > 0 ? (
+                          <span className="text-amber-300 font-semibold" title="Precio del catálogo">
+                            {formatPrice(comp.price_auec)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/60">Precio no disponible</span>
+                        )}
+                        {comp.buy_locations && comp.buy_locations.length > 0 && (
+                          <span className="ml-2 truncate">
+                            · {comp.buy_locations[0].shop_name}
+                            {comp.buy_locations[0].planet_moon && ` (${comp.buy_locations[0].planet_moon})`}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
                         <Button
                           type="button"
                           size="sm"
@@ -391,24 +409,9 @@ function PickerBody({
                           <Check className="h-3 w-3 mr-1" />
                           {isEquipped ? "Equipado" : "Equipar"}
                         </Button>
-                        <div className="space-y-0.5">
-                        <div className="text-amber-300 font-semibold" title="Precio del catálogo; puede no estar verificado en el juego">
-                          {formatPrice(comp.price_auec)}
-                        </div>
-                        {comp.buy_locations && comp.buy_locations.length > 0 && (
-                          <div className="text-muted-foreground/70 text-[9px]">
-                            <span>{comp.buy_locations[0].shop_name}</span>
-                            {comp.buy_locations[0].planet_moon && (
-                              <span className="opacity-60"> ({comp.buy_locations[0].planet_moon})</span>
-                            )}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-0.5 justify-end text-[9px] text-primary">
-                          <ChevronDown
-                            className={`h-3 w-3 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`}
-                          />
-                        </div>
-                        </div>
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 text-primary transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`}
+                        />
                       </div>
                     </div>
                   </div>

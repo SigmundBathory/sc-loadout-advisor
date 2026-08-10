@@ -19,7 +19,7 @@ export function isVerifiedSource(source?: DataSource): boolean {
 export function formatPrice(value: number | undefined): string {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? `${value.toLocaleString("es-ES")} aUEC`
-    : UNVERIFIED_DATA_LABEL;
+    : UNAVAILABLE_LABEL;
 }
 
 export function hasKnownValue(value: number | undefined): value is number {
