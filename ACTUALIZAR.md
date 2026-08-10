@@ -21,17 +21,28 @@ Esto descarga datos de:
 
 Tiempo estimado: ~2-3 minutos.
 
-## Paso 2: Push a GitHub (actualiza Render)
+## Actualización automática diaria
+
+GitHub Actions ejecuta una sincronización completa una vez al día a las **00:00 UTC**. Si la base cambia y las fuentes obligatorias se validan correctamente, el workflow hace commit de `data/sc-loadout.db` y Render despliega automáticamente el commit en `main`.
+
+Para ejecutar una actualización extraordinaria:
+
+1. Abrir la pestaña **Actions** del repositorio.
+2. Seleccionar **Daily Star Citizen data sync**.
+3. Pulsar **Run workflow** sobre la rama `main`.
+
+La sincronización manual local sigue disponible como respaldo:
 
 ```bash
+npx tsx scripts/full-sync.ts --force
 git add data/sc-loadout.db
-git commit -m "sync: [versión] ([N] ships, [N] components)"
+git commit -m "sync: update verified Star Citizen data"
 git push
 ```
 
 Render auto-despliega al hacer push al branch `main`.
 
-## Paso 3: Verificar en Render
+## Verificar en Render
 
 1. Ir a `https://sc-loadout-advisor.onrender.com/dashboard`
 2. Esperar ~30s (Render free tier cold start)
