@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       throw new Error("The Wiki did not return a current game version");
     }
 
-    if (!forceVersion && !versionCheck.needsSync && getShipCount() > 0) {
+    if (!forceVersion && !versionCheck.needsSync && !force && getShipCount() > 0) {
       const meta = getSyncMeta();
       return noStore(NextResponse.json({
         message: "Data is up to date",

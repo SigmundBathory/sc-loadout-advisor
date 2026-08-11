@@ -4,10 +4,19 @@ import { checkVersionAndSync, syncDataForVersion, getSyncMeta, getShipCount, get
 import { getDb } from "@/lib/db/schema";
 
 let fullSyncInProgress = false;
+let fullSyncStartedAt = 0;
+const FULL_SYNC_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 export async function POST(request: Request) {
   const authError = requireAdminToken(request);
   if (authError) return authError;
+
+  // Reset stuck flag after timeout
+  if (fullSyncInProgress && Date.now() - fullSyncStartedAt > FULL_SYNC_TIMEOUT_MS) {
+    console.warn("Full sync flag was stuck, resetting after timeout");
+    fullSyncInProgress = false;
+  }
+
   if (fullSyncInProgress) {
     return NextResponse.json(
       { error: "Ya hay una sincronización completa en curso" },
@@ -16,6 +25,7 @@ export async function POST(request: Request) {
   }
 
   fullSyncInProgress = true;
+  fullSyncStartedAt = Date.now();
   try {
     const results: Record<string, any> = {};
 

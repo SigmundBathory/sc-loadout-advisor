@@ -34,6 +34,12 @@ import {
 // deployments should still use a distributed job lock when multiple instances
 // can run concurrently.
 let syncInProgress = false;
+let syncStartedAt = 0;
+const SYNC_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+function isSyncStuck(): boolean {
+  return syncInProgress && Date.now() - syncStartedAt > SYNC_TIMEOUT_MS;
+}
 
 export async function checkVersionAndSync(): Promise<{
   needsSync: boolean;
@@ -230,8 +236,13 @@ export async function syncDataForVersion(
   const db = getDb();
   const force = opts?.force ?? false;
 
-  if (syncInProgress) {
+  if (syncInProgress && !isSyncStuck()) {
     throw new Error("A data synchronization is already in progress");
+  }
+  // If sync is stuck (timeout), reset the flag and continue
+  if (isSyncStuck()) {
+    console.warn("Sync flag was stuck, resetting after timeout");
+    syncInProgress = false;
   }
 
   const existing = db.prepare("SELECT code, is_synced FROM game_versions WHERE code = ?").get(version) as any;
@@ -240,11 +251,14 @@ export async function syncDataForVersion(
     const comps = (db.prepare("SELECT COUNT(*) as c FROM components").get() as any)?.c || 0;
     const locs = (db.prepare("SELECT COUNT(*) as c FROM buy_locations").get() as any)?.c || 0;
     onProgress?.(`${version} ya sincronizada — omitiendo (usa force para forzar)`, 100);
+    // Update last_sync_at even when skipping to keep dashboard timestamps current
+    db.prepare("UPDATE sync_meta SET last_sync_at = datetime('now'), sync_status = 'ok' WHERE id = 1").run();
     finishSyncLog(startSyncLog(version), { status: "ok", ships, components: comps, locations: locs });
     return;
   }
 
   syncInProgress = true;
+  syncStartedAt = Date.now();
   const syncLogId = startSyncLog(version);
   db.prepare("UPDATE sync_meta SET sync_status = 'syncing' WHERE id = 1").run();
 
