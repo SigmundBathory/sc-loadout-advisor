@@ -11,6 +11,8 @@ import {
   getUexTerminals,
   getUexCommodities,
   getUexPrices,
+  getAllCommoditiesWithPrices,
+  hasUexApiKey,
 } from "../api/uexCorp";
 import {
   startSyncLog,
@@ -306,39 +308,71 @@ export async function syncDataForVersion(
     // UEX Commodities & Prices
     onProgress?.("Sincronizando precios UEX...", 80);
     try {
-      const [commoditiesRes, pricesRes] = await Promise.all([getUexCommodities(), getUexPrices()]);
-      const commodities = commoditiesRes.data || [];
-      const prices = pricesRes.data || [];
-      const commodityMap = new Map<string, any>();
-      for (const c of commodities) {
-        if (c.id) commodityMap.set(c.id.toLowerCase(), c);
-        if (c.name) commodityMap.set(c.name.toLowerCase(), c);
-      }
-      const updatePrice = db.prepare("INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at, source) VALUES (?, ?, datetime('now'), 'uex')");
-      const insertLocation = db.prepare("INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price, source) VALUES (?, ?, ?, ?, ?, ?, ?, 'uex')");
-      let uexPriceCount = 0;
-      for (const priceEntry of prices) {
-        if (!priceEntry.commodity_id || !priceEntry.price) continue;
-        const commodity = commodityMap.get(priceEntry.commodity_id.toLowerCase());
-        if (!commodity) continue;
-        const compName = (commodity.name || commodity.id || "").trim().toLowerCase();
-        if (!compName) continue;
-        // Never associate prices through a fuzzy LIKE match: a substring can
-        // map one UEX commodity to unrelated component variants.
-        const ourComponents = db.prepare(
-          "SELECT id, name FROM components WHERE LOWER(name) = ? OR LOWER(class_name) = ?"
-        ).all(compName, compName) as any[];
-        for (const comp of ourComponents) {
-          updatePrice.run([comp.id, priceEntry.price]);
-          uexPriceCount++;
-          if (priceEntry.shop_id || priceEntry.location_id) {
-            insertLocation.run([comp.id, priceEntry.location_name || priceEntry.shop_name || "UEX Terminal", priceEntry.system_name || "Stanton", priceEntry.planet_name || "", priceEntry.shop_name || "UEX", "Terminal", priceEntry.price]);
+      // Verificar si hay API key configurada
+      if (!hasUexApiKey()) {
+        console.warn("UEX_API_KEY not configured. Skipping UEX price sync.");
+        onProgress?.("UEX API key no configurada - omitiendo precios", 85);
+      } else {
+        // Usar el nuevo endpoint que ya asocia commodities con precios
+        const commoditiesWithPrices = await getAllCommoditiesWithPrices();
+        const commodities = commoditiesWithPrices.data || [];
+        
+        const updatePrice = db.prepare("INSERT OR REPLACE INTO component_prices (component_id, price_auec, updated_at, source) VALUES (?, ?, datetime('now'), 'uex')");
+        const insertLocation = db.prepare("INSERT OR REPLACE INTO buy_locations (component_id, location_name, system, planet_moon, shop_name, shop_type, price, source) VALUES (?, ?, ?, ?, ?, ?, ?, 'uex')");
+        let uexPriceCount = 0;
+        
+        for (const commodity of commodities) {
+          if (!commodity.name) continue;
+          
+          const compName = commodity.name.trim().toLowerCase();
+          if (!compName) continue;
+          
+          // Buscar componentes que coincidan exactamente por nombre o class_name
+          const ourComponents = db.prepare(
+            "SELECT id, name, class_name FROM components WHERE LOWER(name) = ? OR LOWER(class_name) = ?"
+          ).all(compName, compName) as any[];
+          
+          if (ourComponents.length === 0) continue;
+          
+          // Para cada componente que coincide, actualizar precios y ubicaciones
+          for (const comp of ourComponents) {
+            const prices = commodity.prices || [];
+            
+            // Obtener el precio más barato
+            const cheapestPrice = prices.length > 0 
+              ? Math.min(...prices.map((p: any) => p.price || Infinity).filter((p: number) => p !== Infinity))
+              : null;
+            
+            if (cheapestPrice !== null && !isNaN(cheapestPrice)) {
+              updatePrice.run([comp.id, cheapestPrice]);
+              uexPriceCount++;
+            }
+            
+            // Guardar todas las ubicaciones con precios
+            for (const priceEntry of prices) {
+              if (!priceEntry.price) continue;
+              insertLocation.run([
+                comp.id,
+                priceEntry.location_name || priceEntry.shop_name || "UEX Terminal",
+                priceEntry.system_name || "Stanton",
+                priceEntry.planet_name || "",
+                priceEntry.shop_name || "UEX",
+                "Terminal",
+                priceEntry.price
+              ]);
+            }
           }
         }
+        
+        console.log(`Updated ${uexPriceCount} component prices from UEX`);
       }
-      console.log(`Updated ${uexPriceCount} component prices from UEX`);
-    } catch (e) { console.warn("UEX commodities/prices unavailable:", e); }
+    } catch (e) { 
+      console.warn("UEX commodities/prices unavailable:", e);
+      onProgress?.("Error en sincronizacion UEX - usando cache", 85);
+    }
 
+    // Apply fallback estimates for components with missing critical stats
+    onProgress?.("Aplicando estimaciones a stats faltantes...", 85);
     seedMissingPricesAndLocations(db);
 
     // Restore saved images

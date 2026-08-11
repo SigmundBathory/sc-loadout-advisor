@@ -508,28 +508,90 @@ export function extractWikiStats(compType: string, wikiItem: any): Record<string
   return stats;
 }
 
-/** Deliberately leaves unavailable statistics absent rather than estimating them. */
+/**
+ * Aplica estimaciones basadas en tamaño y tipo para stats que no se pueden obtener
+ * de la Wiki API. Solo completa stats que son críticos para el motor de optimización.
+ */
 export function applyFallbackEstimates(
-  _stats: Record<string, any>,
-  _compType: string,
-  _size: number,
-  _grade: number | undefined,
+  stats: Record<string, any>,
+  compType: string,
+  size: number,
+  grade: number | undefined,
 ): void {
-  void _stats;
-  void _compType;
-  void _size;
-  void _grade;
+  // Estimaciones para Shields
+  if (compType === "Shield") {
+    if (!stats.hp || stats.hp === 0) {
+      const baseHp: Record<number, number> = { 1: 2500, 2: 15000, 3: 150000, 4: 350000 };
+      stats.hp = baseHp[size] || baseHp[3];
+      stats.max_hp = stats.hp;
+    }
+    if (!stats.regen_rate || stats.regen_rate === 0) {
+      const baseRegen: Record<number, number> = { 1: 500, 2: 3500, 3: 25000, 4: 60000 };
+      stats.regen_rate = baseRegen[size] || baseRegen[3];
+    }
+  }
+  
+  if (compType === "PowerPlant") {
+    if (!stats.output || stats.output === 0) {
+      const baseOutput: Record<number, number> = { 1: 5000, 2: 25000, 3: 200000, 4: 500000 };
+      stats.output = baseOutput[size] || baseOutput[3];
+    }
+  }
+  
+  if (compType === "Cooler") {
+    if (!stats.cooling_rate || stats.cooling_rate === 0) {
+      const baseCooling: Record<number, number> = { 1: 1000000, 2: 5000000, 3: 30000000, 4: 100000000 };
+      stats.cooling_rate = baseCooling[size] || baseCooling[3];
+    }
+  }
+  
+  if (compType === "QuantumDrive") {
+    if (!stats.travel_speed || stats.travel_speed === 0) {
+      const baseSpeed: Record<number, number> = { 1: 150000, 2: 250000, 3: 300000, 4: 400000 };
+      stats.travel_speed = (baseSpeed[size] || baseSpeed[3]) * 1000;
+    }
+    if (!stats.quantum_fuel_claimed || stats.quantum_fuel_claimed === 0) {
+      const baseFuel: Record<number, number> = { 1: 580, 2: 2500, 3: 10000, 4: 100000 };
+      stats.quantum_fuel_claimed = baseFuel[size] || baseFuel[3];
+    }
+  }
+  
+  if (grade !== undefined) {
+    stats.grade = grade;
+  }
 }
 
 /**
- * Legacy compatibility helper. An unavailable price is represented by null;
- * callers must only persist prices supplied by an upstream source.
+ * Estimates component price based on type, size and grade.
+ * Returns null if no estimation can be made.
+ * Note: These are rough estimates and should be replaced with verified data when available.
  */
-export function computeEstimatedPrice(_compType: string, _size: number, _grade: number): null {
-  void _compType;
-  void _size;
-  void _grade;
-  return null;
+export function computeEstimatedPrice(compType: string, size: number, grade: number): number | null {
+  // Base prices by type and size (in aUEC)
+  const basePrices: Record<string, Record<number, number>> = {
+    Weapon: { 1: 5000, 2: 25000, 3: 100000, 4: 250000 },
+    Shield: { 1: 10000, 2: 50000, 3: 200000, 4: 500000 },
+    PowerPlant: { 1: 15000, 2: 75000, 3: 300000, 4: 750000 },
+    Cooler: { 1: 8000, 2: 40000, 3: 150000, 4: 400000 },
+    QuantumDrive: { 1: 20000, 2: 100000, 3: 400000, 4: 1000000 },
+    Radar: { 1: 5000, 2: 25000, 3: 100000, 4: 250000 },
+    FlightController: { 1: 10000, 2: 50000, 3: 200000, 4: 500000 },
+    LifeSupport: { 1: 5000, 2: 25000, 3: 100000, 4: 250000 },
+    Missile: { 1: 3000, 2: 15000, 3: 60000, 4: 150000 },
+    EMP: { 1: 10000, 2: 50000, 3: 200000, 4: 500000 },
+    QED: { 1: 15000, 2: 75000, 3: 300000, 4: 750000 },
+  };
+  
+  const typePrices = basePrices[compType];
+  if (!typePrices) return null;
+  
+  const basePrice = typePrices[size] || typePrices[3] || 0;
+  
+  // Apply grade multiplier (A=1.0, B=0.8, C=0.6, D=0.4)
+  const gradeMultiplier: Record<number, number> = { 1: 1.0, 2: 0.8, 3: 0.6, 4: 0.4 };
+  const multiplier = gradeMultiplier[grade] || 1.0;
+  
+  return Math.round(basePrice * multiplier);
 }
 
 export function syncComponentsFromPorts(

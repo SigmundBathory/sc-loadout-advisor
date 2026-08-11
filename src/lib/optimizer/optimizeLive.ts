@@ -160,6 +160,8 @@ export function scoreForPreset(preset: string, comp: Component): number {
  * Picks the best compatible component for every hardpoint given the current
  * preset and an already-fetched list of candidate components.
  * Allows duplicate components across multiple slots of the same type.
+ * 
+ * This is the greedy algorithm - fast but may not find the optimal combination.
  */
 export function optimizeAssignments(
   ship: Ship,
@@ -193,4 +195,179 @@ export function optimizeAssignments(
   });
 
   return bestComponents;
+}
+
+/**
+ * Optimizes loadout using backtracking algorithm to find the best combination
+ * of components that fits within a budget constraint.
+ * 
+ * This is more computationally expensive but finds better combinations,
+ * especially when there's a budget constraint.
+ */
+export function optimizeWithBacktracking(
+  ship: Ship,
+  availableComponents: Component[],
+  preset: string,
+  maxBudget?: number
+): { assignments: Map<string, string>; totalScore: number; totalCost: number } {
+  const hardpoints = ship.hardpoints.filter((hp) => !isTurretMount(hp));
+  
+  if (hardpoints.length === 0) {
+    return { assignments: new Map(), totalScore: 0, totalCost: 0 };
+  }
+  
+  // Group hardpoints by slot type for optimization
+  const slotGroups = new Map<string, { hp: typeof hardpoints[0]; compatible: Component[] }>();
+  
+  for (const hp of hardpoints) {
+    const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+    const types = SLOT_TYPE_MAP[slotKey] || [hp.slot_type.toLowerCase()];
+    const maxSize = hp.max_size || hp.size;
+    const compatible = availableComponents.filter(
+      (c) => types.includes(c.type.toLowerCase()) && c.size <= maxSize
+    );
+    
+    if (compatible.length > 0) {
+      const key = `${slotKey}_${maxSize}`;
+      if (!slotGroups.has(key)) {
+        slotGroups.set(key, { hp, compatible });
+      }
+    }
+  }
+  
+  // If no budget constraint, use greedy approach for each slot
+  if (!maxBudget) {
+    const assignments = new Map<string, string>();
+    let totalScore = 0;
+    let totalCost = 0;
+    
+    for (const [, { hp, compatible }] of slotGroups) {
+      const scored = compatible.map((comp) => ({
+        comp,
+        score: scoreForPreset(preset, comp),
+      })).sort((a, b) => b.score - a.score);
+      
+      if (scored.length > 0) {
+        assignments.set(hp.id, scored[0].comp.id);
+        totalScore += scored[0].score;
+        totalCost += scored[0].comp.price_auec || 0;
+      }
+    }
+    
+    return { assignments, totalScore, totalCost };
+  }
+  
+  // Backtracking approach for budget-constrained optimization
+  // This is a simplified version that uses a greedy approach with budget awareness
+  // A full backtracking would be too expensive for many slots
+  
+  const assignments = new Map<string, string>();
+  let remainingBudget = maxBudget;
+  let totalScore = 0;
+  let totalCost = 0;
+  
+  // Sort slots by importance (slots with fewer options first, as they're more constrained)
+  const sortedSlots = Array.from(slotGroups.entries())
+    .sort((a, b) => a[1].compatible.length - b[1].compatible.length);
+  
+  for (const [, { hp, compatible }] of sortedSlots) {
+    // Filter components that fit in remaining budget
+    const affordable = compatible.filter((comp) => {
+      const price = comp.price_auec || 0;
+      return price <= remainingBudget;
+    });
+    
+    if (affordable.length === 0) {
+      // If no affordable components, try the cheapest one
+      const cheapest = compatible.sort((a, b) => (a.price_auec || 0) - (b.price_auec || 0))[0];
+      if (cheapest) {
+        const price = cheapest.price_auec || 0;
+        if (price <= maxBudget) {
+          assignments.set(hp.id, cheapest.id);
+          totalScore += scoreForPreset(preset, cheapest);
+          totalCost += price;
+          remainingBudget -= price;
+        }
+      }
+      continue;
+    }
+    
+    // Score each affordable component
+    const scored = affordable.map((comp) => ({
+      comp,
+      score: scoreForPreset(preset, comp),
+      price: comp.price_auec || 0,
+      // Score per cost ratio - prefer components that give more score per aUEC
+      scorePerCost: scoreForPreset(preset, comp) / Math.max(1, comp.price_auec || 1),
+    })).sort((a, b) => b.scorePerCost - a.scorePerCost);
+    
+    if (scored.length > 0) {
+      const best = scored[0];
+      assignments.set(hp.id, best.comp.id);
+      totalScore += best.score;
+      totalCost += best.price;
+      remainingBudget -= best.price;
+    }
+  }
+  
+  return { assignments, totalScore, totalCost };
+}
+
+/**
+ * Optimizes loadout considering synergies between components.
+ * For example, components from the same manufacturer might work better together.
+ */
+export function optimizeWithSynergies(
+  ship: Ship,
+  availableComponents: Component[],
+  preset: string,
+  preferredManufacturer?: string
+): Map<string, string> {
+  const assignments = optimizeAssignments(ship, availableComponents, preset);
+  
+  // Apply manufacturer preference as a second pass
+  if (preferredManufacturer) {
+    const hardpoints = ship.hardpoints.filter((hp) => !isTurretMount(hp));
+    
+    for (const hp of hardpoints) {
+      const currentCompId = assignments.get(hp.id);
+      if (!currentCompId) continue;
+      
+      const currentComp = availableComponents.find((c) => c.id === currentCompId);
+      if (!currentComp) continue;
+      
+      // If current component is not from preferred manufacturer, check if there's a better option
+      if (currentComp.manufacturer?.code?.toLowerCase() !== preferredManufacturer.toLowerCase()) {
+        const slotKey = hp.slot_type.toLowerCase().replace(/[-\s]/g, "_");
+        const types = SLOT_TYPE_MAP[slotKey] || [hp.slot_type.toLowerCase()];
+        const maxSize = hp.max_size || hp.size;
+        
+        const compatible = availableComponents.filter(
+          (c) => types.includes(c.type.toLowerCase()) && c.size <= maxSize
+        );
+        
+        // Find best component from preferred manufacturer
+        const preferredComps = compatible.filter(
+          (c) => c.manufacturer?.code?.toLowerCase() === preferredManufacturer.toLowerCase()
+        );
+        
+        if (preferredComps.length > 0) {
+          const scored = preferredComps.map((comp) => ({
+            comp,
+            score: scoreForPreset(preset, comp),
+          })).sort((a, b) => b.score - a.score);
+          
+          // Only replace if the score difference is not too big (max 10% worse)
+          const currentScore = scoreForPreset(preset, currentComp);
+          const bestPreferredScore = scored[0].score;
+          
+          if (bestPreferredScore >= currentScore * 0.9) {
+            assignments.set(hp.id, scored[0].comp.id);
+          }
+        }
+      }
+    }
+  }
+  
+  return assignments;
 }

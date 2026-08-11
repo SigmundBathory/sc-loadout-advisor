@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLoadoutStore } from "@/stores/loadoutStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger, TabsIndicator } from "@/components/ui/tabs";
-import { ShoppingCart, Settings, Crosshair, Zap, MapPin, Gauge } from "lucide-react";
+import { ShoppingCart, Settings, Crosshair, Zap, MapPin, Gauge, Download, Image as ImageIcon } from "lucide-react";
 import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
 import ShoppingList from "@/components/budget/ShoppingList";
 import ShipBuyLocations from "@/components/ships/ShipBuyLocations";
@@ -16,6 +16,7 @@ import ComponentPickerDialog from "./ComponentPickerDialog";
 import SaveLoadoutDialog from "./SaveLoadoutDialog";
 import LoadLoadoutDialog from "./LoadLoadoutDialog";
 import OptimizerDialog from "./OptimizerDialog";
+import LoadoutExport from "@/components/stats/LoadoutExport";
 import type { Ship, Loadout, Hardpoint, Component } from "@/lib/types";
 import { CONFIGURABLE_SLOT_TYPES, isTurretMount } from "@/lib/types";
 import type { ShipBuyLocation, WikeloShip } from "@/lib/db/queries";
@@ -42,6 +43,7 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
     setLoadedLoadout,
     lastOptimizedPreset,
     setLastOptimizedPreset,
+    setLoadoutName,
   } = useLoadoutStore();
   const [selectedSlot, setSelectedSlot] = useState<Hardpoint | null>(null);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -319,6 +321,24 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
 
     addSavedLoadout(newLoadout);
     setLoadedLoadout(newLoadout);
+    setLoadoutName(name);
+
+    // Guardar en localStorage inmediatamente
+    try {
+      localStorage.setItem(
+        "sc-loadout-current",
+        JSON.stringify({
+          shipId: ship.id,
+          components: slotAssignments,
+          name,
+          isOptimized,
+          optimizedPreset: lastOptimizedPreset || loadedLoadout?.optimized_preset || "",
+          stats: loadoutStats,
+        })
+      );
+    } catch (e) {
+      console.warn("Failed to save to localStorage:", e);
+    }
 
     try {
       const res = await fetch("/api/loadouts", {
@@ -423,27 +443,34 @@ export default function LoadoutBuilder({ ship, locations, wikelo }: LoadoutBuild
 
           <div className="lg:col-span-4">
             <Card className="product-card border-border/40 h-full">
-              <CardHeader className="p-4 border-b border-border/30">
+              <CardHeader className="p-4 border-b border-border/30 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Zap className="h-4 w-4 text-primary" />
                   Métricas del Loadout
                 </CardTitle>
+                <LoadoutExport
+                  elementId="loadout-radar-chart"
+                  fileName={`sc-loadout-${ship.name.replace(/\s+/g, '-').toLowerCase()}`}
+                  showShareButton={true}
+                />
               </CardHeader>
               <CardContent className="p-4">
-                <LoadoutRadarChart
-                  stats={{
-                    totalDps: stats.totalDps,
-                    shieldHp: stats.shieldHp,
-                    shieldRegen: stats.shieldRegen,
-                    hullHp: ship.hull_hp || 0,
-                    coolingRate: stats.coolingRate,
-                    quantumSpeed: stats.quantumSpeed,
-                    quantumRange: stats.quantumRange,
-                  }}
-                  shipShieldHp={ship.shield_hp || 1000}
-                  shipHullHp={ship.hull_hp || 1000}
-                  maxStats={maxStats}
-                />
+                <div id="loadout-radar-chart">
+                  <LoadoutRadarChart
+                    stats={{
+                      totalDps: stats.totalDps,
+                      shieldHp: stats.shieldHp,
+                      shieldRegen: stats.shieldRegen,
+                      hullHp: ship.hull_hp || 0,
+                      coolingRate: stats.coolingRate,
+                      quantumSpeed: stats.quantumSpeed,
+                      quantumRange: stats.quantumRange,
+                    }}
+                    shipShieldHp={ship.shield_hp || 1000}
+                    shipHullHp={ship.hull_hp || 1000}
+                    maxStats={maxStats}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>

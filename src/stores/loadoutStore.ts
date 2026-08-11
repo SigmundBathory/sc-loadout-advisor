@@ -2,6 +2,54 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { Ship, Loadout, FilterWeights } from "@/lib/types";
 
+// Clave para guardar el loadout actual en localStorage
+const CURRENT_LOADOUT_KEY = "sc-loadout-current";
+
+// Funcion para guardar el loadout actual en localStorage
+function saveCurrentLoadoutToLocalStorage(loadout: {
+  shipId: string;
+  components: Record<string, string>;
+  name: string;
+  isOptimized: boolean;
+  optimizedPreset: string;
+  stats?: any;
+}) {
+  try {
+    localStorage.setItem(CURRENT_LOADOUT_KEY, JSON.stringify(loadout));
+  } catch (e) {
+    console.warn("Failed to save to localStorage:", e);
+  }
+}
+
+// Funcion para cargar el loadout actual desde localStorage
+function loadCurrentLoadoutFromLocalStorage(): {
+  shipId: string;
+  components: Record<string, string>;
+  name: string;
+  isOptimized: boolean;
+  optimizedPreset: string;
+  stats?: any;
+} | null {
+  try {
+    const data = localStorage.getItem(CURRENT_LOADOUT_KEY);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.warn("Failed to load from localStorage:", e);
+  }
+  return null;
+}
+
+// Funcion para limpiar el loadout actual de localStorage
+function clearCurrentLoadoutFromLocalStorage() {
+  try {
+    localStorage.removeItem(CURRENT_LOADOUT_KEY);
+  } catch (e) {
+    console.warn("Failed to clear localStorage:", e);
+  }
+}
+
 interface LoadoutStore {
   // Current ship
   selectedShip: Ship | null;
@@ -59,33 +107,68 @@ function debounceAutoSave(state: {
   loadedLoadout: Loadout | null;
   slotAssignments: Record<string, string>;
   lastOptimizedPreset: string;
+  selectedShip: Ship | null;
+  loadoutName: string;
 }) {
   if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
-  autoSaveTimeout = setTimeout(async () => {
-    const { loadedLoadout, slotAssignments, lastOptimizedPreset } = state;
-    if (!loadedLoadout?.id || loadedLoadout.id.startsWith("imported_")) return;
-    try {
-      await fetch("/api/loadouts", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: loadedLoadout.id,
-          components: slotAssignments,
-          is_optimized: !!lastOptimizedPreset,
-          optimized_preset: lastOptimizedPreset || "",
-        }),
+  autoSaveTimeout = setTimeout(() => {
+    const { loadedLoadout, slotAssignments, lastOptimizedPreset, selectedShip, loadoutName } = state;
+    
+    // Siempre guardar en localStorage como fallback
+    if (selectedShip && Object.keys(slotAssignments).length > 0) {
+      saveCurrentLoadoutToLocalStorage({
+        shipId: selectedShip.id,
+        components: slotAssignments,
+        name: loadoutName || loadedLoadout?.name || "Unnamed Loadout",
+        isOptimized: !!lastOptimizedPreset,
+        optimizedPreset: lastOptimizedPreset || "",
+        stats: loadedLoadout?.stats,
       });
-    } catch {
-      // silent fail — user can still save manually
+    } else if (!selectedShip && Object.keys(slotAssignments).length === 0) {
+      // Si no hay nave seleccionada ni asignaciones, limpiar el localStorage
+      clearCurrentLoadoutFromLocalStorage();
+    }
+    
+    // Intentar guardar en el servidor si hay un loadout cargado
+    if (loadedLoadout?.id && !loadedLoadout.id.startsWith("imported_")) {
+      try {
+        fetch("/api/loadouts", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: loadedLoadout.id,
+            components: slotAssignments,
+            is_optimized: !!lastOptimizedPreset,
+            optimized_preset: lastOptimizedPreset || "",
+          }),
+        }).catch(() => {
+          // Si falla el guardado en servidor, ya tenemos el fallback en localStorage
+        });
+      } catch {
+        // silent fail — fallback to localStorage already done
+      }
     }
   }, 2000);
 }
 
 export const useLoadoutStore = create<LoadoutStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       selectedShip: null,
-      setSelectedShip: (ship) => set({ selectedShip: ship }),
+      setSelectedShip: (ship) => {
+        set({ selectedShip: ship });
+        // Si se selecciona una nave, intentar cargar el loadout guardado para esa nave
+        if (ship) {
+          const saved = loadCurrentLoadoutFromLocalStorage();
+          if (saved && saved.shipId === ship.id) {
+            set({
+              slotAssignments: saved.components || {},
+              loadoutName: saved.name || "",
+              lastOptimizedPreset: saved.optimizedPreset || "",
+            });
+          }
+        }
+      },
 
       currentLoadout: null,
       setCurrentLoadout: (loadout) =>
@@ -115,10 +198,27 @@ export const useLoadoutStore = create<LoadoutStore>()(
           debounceAutoSave({ ...state, slotAssignments: newAssignments });
           return { slotAssignments: newAssignments };
         }),
-      resetAllSlots: () => set({ slotAssignments: {}, loadoutName: "" }),
+      resetAllSlots: () => {
+        set({ slotAssignments: {}, loadoutName: "" });
+        clearCurrentLoadoutFromLocalStorage();
+      },
 
       loadoutName: "",
-      setLoadoutName: (name) => set({ loadoutName: name }),
+      setLoadoutName: (name) => {
+        set({ loadoutName: name });
+        // Guardar en localStorage cuando se cambia el nombre
+        const state = get();
+        if (state.selectedShip && Object.keys(state.slotAssignments).length > 0) {
+          saveCurrentLoadoutToLocalStorage({
+            shipId: state.selectedShip.id,
+            components: state.slotAssignments,
+            name: name,
+            isOptimized: !!state.lastOptimizedPreset,
+            optimizedPreset: state.lastOptimizedPreset || "",
+            stats: state.loadedLoadout?.stats,
+          });
+        }
+      },
 
       filterWeights: { speed: 0.2, range: 0.2, dps: 0.2, defense: 0.2, cost: 0.2 },
       setFilterWeights: (weights) => set({ filterWeights: weights }),
@@ -158,6 +258,21 @@ export const useLoadoutStore = create<LoadoutStore>()(
         loadedLoadout: state.loadedLoadout,
         lastOptimizedPreset: state.lastOptimizedPreset,
       }),
+      // Cargar el loadout guardado al inicializar
+      onRehydrateStorage: () => (state) => {
+        // Intentar cargar el loadout desde localStorage
+        const saved = loadCurrentLoadoutFromLocalStorage();
+        if (saved && state) {
+          // Si hay un loadout guardado, actualizar el estado
+          return {
+            ...state,
+            slotAssignments: saved.components || state.slotAssignments || {},
+            loadoutName: saved.name || state.loadoutName || "",
+            lastOptimizedPreset: saved.optimizedPreset || state.lastOptimizedPreset || "",
+          };
+        }
+        return state;
+      },
     }
   )
 );

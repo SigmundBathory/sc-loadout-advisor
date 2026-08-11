@@ -10,7 +10,11 @@
     "postinstall": "npm rebuild better-sqlite3",
     "update": "git pull && npm install && npm run build",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "enrich-stats": "npx tsx scripts/enrich-component-stats.ts",
+    "check-stats": "npx tsx scripts/enrich-component-stats.ts --check",
+    "run-tests": "npx tsx scripts/run-tests.ts",
+    "test:integration": "npx tsx scripts/run-tests.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -20,6 +24,7 @@
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^1.28.0",
     "motion": "^13.0.0",
     "next": "16.3.0",

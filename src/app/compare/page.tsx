@@ -1,297 +1,363 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import Breadcrumb from "@/components/Breadcrumb";
-import TacticalDisplay from "@/components/compare/TacticalDisplay";
-import type { Ship, Loadout } from "@/lib/types";
-import type { TacticalConfigEntry } from "@/components/compare/types";
-import { GitCompare, Plus, X, Wand2, Link2 } from "lucide-react";
-import { AnimatedIcon } from "@/components/motion/AnimatedIcon";
-import { useShips, useAllLoadouts } from "@/lib/api/client";
-import { encodeCompareShare, decodeCompareShare, copyShareUrl } from "@/lib/loadout/share";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, X, BarChart3, Table2 } from "lucide-react";
+import LoadoutRadarChart from "@/components/stats/LoadoutRadarChart";
+import type { Loadout, Ship, Component } from "@/lib/types";
+import { useAllLoadouts, useShips } from "@/lib/api/client";
 
-const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
+interface LoadoutComparison {
+  loadout: {
+    id: string;
+    name: string;
+    ship_id: string;
+    is_optimized: boolean;
+    optimized_preset: string;
+  };
+  stats: any;
+  components: Array<{ slotId: string; component: Component | undefined }>;
+}
 
 export default function ComparePage() {
-  const [configs, setConfigs] = useState<TacticalConfigEntry[]>([]);
-  const [search, setSearch] = useState("");
-  const { data: shipsData } = useShips(true);
-  const ships = shipsData?.ships || [];
-  const { data: loadoutsData } = useAllLoadouts();
-
-  const loadoutsByShip = useMemo(() => {
-    const map: Record<string, Loadout[]> = {};
-    (loadoutsData?.loadouts || []).forEach((l: Loadout) => {
-      if (!map[l.ship_id]) map[l.ship_id] = [];
-      map[l.ship_id].push(l);
-    });
-    Object.values(map).forEach((list) =>
-      list.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))
-    );
+  const router = useRouter();
+  const { data: loadoutsData, isLoading: loadingLoadouts } = useAllLoadouts();
+  const { data: shipsData, isLoading: loadingShips } = useShips();
+  
+  const [selectedLoadoutIds, setSelectedLoadoutIds] = useState<string[]>([]);
+  const [comparisons, setComparisons] = useState<LoadoutComparison[]>([]);
+  const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
+  
+  const allLoadouts = useMemo(() => loadoutsData?.loadouts || [], [loadoutsData]);
+  const allShips = useMemo(() => shipsData?.ships || [], [shipsData]);
+  
+  const shipMap = useMemo(() => {
+    const map = new Map<string, Ship>();
+    allShips.forEach((ship) => map.set(ship.id, ship));
     return map;
-  }, [loadoutsData]);
-
-  const [shareFeedback, setShareFeedback] = useState("");
-  const [hashRestored, setHashRestored] = useState(false);
-  const initializedRef = useRef(false);
-  const idCounter = useRef(0);
-  const nextId = () => `cfg_${++idCounter.current}`;
-
-  // Restore a shared compare from the URL hash (#compare=SCLA:...).
-  // Runs once on mount to avoid state updates during render.
+  }, [allShips]);
+  
+  // Cargar comparaciones cuando se seleccionan loadouts
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    if (selectedLoadoutIds.length === 0) {
+      setComparisons([]);
+      return;
+    }
     
-    if (ships.length > 0 && !hashRestored) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setHashRestored(true);
-      if (typeof window !== "undefined") {
-        const hash = window.location.hash;
-        if (hash.startsWith("#compare=")) {
-          const decoded = decodeCompareShare(hash.slice("#compare=".length));
-          if (decoded && decoded.entries.length > 0) {
-            const byId = new Map(ships.map((s) => [s.id, s]));
-            const restored = decoded.entries
-              .filter((e) => byId.has(e.ship.id))
-              .map((e, i) => {
-                const ship = byId.get(e.ship.id)!;
-                return {
-                  id: `cfg_shared_${i}`,
-                  ship,
-                  loadout: null,
-                  assignments: { ...e.components },
-                  stats: {
-                    total_dps: 0,
-                    sustained_dps: 0,
-                    burst_dps: 0,
-                    missile_dps: 0,
-                    shield_hp: ship.shield_hp,
-                    shield_regen: 0,
-                    hull_hp: ship.hull_hp,
-                    scm_speed: ship.scm_speed,
-                    max_speed: ship.max_speed,
-                    qt_range: 0,
-                    qt_fuel: 0,
-                    total_cost: 0,
-                    power_output: 0,
-                    power_demand: 0,
-                    cooling_rate: 0,
-                  },
-                  isOptimized: false,
-                };
-              });
-            if (restored.length > 0) {
-              setConfigs(restored.slice(0, 4));
-              window.history.replaceState(null, "", window.location.pathname);
-            }
-          }
+    async function fetchComparisons() {
+      try {
+        const res = await fetch("/api/compare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ loadoutIds: selectedLoadoutIds }),
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setComparisons(data.comparisons || []);
         }
+      } catch (error) {
+        console.error("Error fetching comparisons:", error);
       }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleShare = async () => {
-    if (configs.length === 0) return;
-    const token = encodeCompareShare(
-      configs.map((c) => ({ ship: c.ship, components: c.assignments }))
-    );
-    const url = `${window.location.origin}${window.location.pathname}#compare=${token}`;
-    const ok = await copyShareUrl(url);
-    setShareFeedback(ok ? "¡Enlace de comparación copiado!" : "No se pudo copiar el enlace.");
-    setTimeout(() => setShareFeedback(""), 2500);
+    
+    fetchComparisons();
+  }, [selectedLoadoutIds]);
+  
+  const handleAddLoadout = (loadoutId: string) => {
+    if (selectedLoadoutIds.length >= 4) return;
+    if (selectedLoadoutIds.includes(loadoutId)) return;
+    setSelectedLoadoutIds([...selectedLoadoutIds, loadoutId]);
   };
-
-  const filteredShips = ships.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.manufacturer.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  function addConfig(ship: Ship) {
-    if (configs.length >= 4) return;
-    const loadouts = loadoutsByShip[ship.id] || [];
-    const loadout = loadouts.length > 0 ? loadouts[0] : null;
-    const entry: TacticalConfigEntry = {
-      id: nextId(),
-      ship,
-      loadout,
-      assignments: loadout?.components ? { ...loadout.components } : {},
-      stats: {
-        total_dps: 0,
-        sustained_dps: 0,
-        burst_dps: 0,
-        missile_dps: 0,
-        shield_hp: ship.shield_hp,
-        shield_regen: 0,
-        hull_hp: ship.hull_hp,
-        scm_speed: ship.scm_speed,
-        max_speed: ship.max_speed,
-        qt_range: 0,
-        qt_fuel: 0,
-        total_cost: 0,
-        power_output: 0,
-        power_demand: 0,
-        cooling_rate: 0,
-      },
-      isOptimized: !!loadout?.is_optimized,
+  
+  const handleRemoveLoadout = (loadoutId: string) => {
+    setSelectedLoadoutIds(selectedLoadoutIds.filter((id) => id !== loadoutId));
+  };
+  
+  const getShipName = (shipId: string) => {
+    const ship = shipMap.get(shipId);
+    return ship?.name || "Unknown Ship";
+  };
+  
+  const getLoadoutName = (loadoutId: string) => {
+    const loadout = allLoadouts.find((l) => l.id === loadoutId);
+    return loadout?.name || "Unknown Loadout";
+  };
+  
+  // Calcular stats máximos para el radar chart
+  const maxStats = useMemo(() => {
+    if (comparisons.length === 0) return null;
+    
+    let maxDps = 0;
+    let maxShieldHp = 0;
+    let maxShieldRegen = 0;
+    let maxCoolingRate = 0;
+    let maxQtRange = 0;
+    let maxQtSpeed = 0;
+    let maxCost = 0;
+    
+    for (const comp of comparisons) {
+      maxDps = Math.max(maxDps, comp.stats.total_dps || 0);
+      maxShieldHp = Math.max(maxShieldHp, comp.stats.shield_hp || 0);
+      maxShieldRegen = Math.max(maxShieldRegen, comp.stats.shield_regen || 0);
+      maxCoolingRate = Math.max(maxCoolingRate, comp.stats.cooling_rate || 0);
+      maxQtRange = Math.max(maxQtRange, comp.stats.qt_range || 0);
+      maxQtSpeed = Math.max(maxQtSpeed, comp.stats.qt_speed || 0);
+      maxCost = Math.max(maxCost, comp.stats.total_cost || 0);
+    }
+    
+    return {
+      maxDps: maxDps || 1,
+      maxShieldHp: maxShieldHp || 1,
+      maxShieldRegen: maxShieldRegen || 1,
+      maxCoolingRate: maxCoolingRate || 1,
+      maxQtRange: maxQtRange || 1,
+      maxQtSpeed: maxQtSpeed || 1,
+      maxCost: maxCost || 1,
     };
-    setConfigs([...configs, entry]);
-    setSearch("");
-  }
-
-  function removeConfig(id: string) {
-    setConfigs(configs.filter((c) => c.id !== id));
-  }
-
-  function changeLoadout(id: string, loadoutId: string) {
-    setConfigs(
-      configs.map((c) => {
-        if (c.id !== id) return c;
-        const loadout = loadoutId
-          ? (loadoutsByShip[c.ship.id] || []).find((l: Loadout) => l.id === loadoutId) || null
-          : null;
-        const assignments = loadout?.components ? { ...loadout.components } : {};
-        return {
-          ...c,
-          loadout,
-          assignments,
-          isOptimized: !!loadout?.is_optimized,
-        };
-      })
+  }, [comparisons]);
+  
+  if (loadingLoadouts || loadingShips) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+          <h1 className="text-2xl font-bold">Comparador de Loadouts</h1>
+        </div>
+        <p>Cargando loadouts...</p>
+      </div>
     );
   }
-
+  
   return (
-    <div className="flex-1 flex flex-col">
-      <main className="container mx-auto max-w-[1440px] px-4 sm:px-6 py-6 sm:py-8 flex-1 space-y-7">
-        <Breadcrumb items={[{ label: "Comparar Naves" }]} />
-
-        {/* Config Selection */}
-        <Card className="product-card mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <CardTitle>Comparar configuraciones (nave + loadout)</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Añade una nave varias veces para comparar configuraciones distintas (Estándar vs
-                  optimizada). Usa el editor para cambiar componentes en tiempo real.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {shareFeedback && (
-                  <span className="text-xs text-emerald-400 font-medium">{shareFeedback}</span>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl gap-2 text-xs"
-                  onClick={handleShare}
-                  disabled={configs.length === 0}
-                >
-                  <Link2 className="h-3.5 w-3.5" />
-                  Compartir
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {configs.map((cfg, idx) => (
+    <div className="container mx-auto p-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="outline" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Volver
+        </Button>
+        <h1 className="text-2xl font-bold">Comparador de Loadouts</h1>
+      </div>
+      
+      {/* Selector de loadouts */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Seleccionar Loadouts para Comparar (máximo 4)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
+              onValueChange={(value: string | null) => {
+                if (value && !selectedLoadoutIds.includes(value)) {
+                  handleAddLoadout(value);
+                }
+              }}
+              disabled={selectedLoadoutIds.length >= 4}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar un loadout..." />
+              </SelectTrigger>
+              <SelectContent>
+                {allLoadouts.map((loadout) => (
+                  <SelectItem
+                    key={loadout.id}
+                    value={loadout.id}
+                    disabled={selectedLoadoutIds.includes(loadout.id)}
+                  >
+                    {loadout.name} - {getShipName(loadout.ship_id)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <div className="flex flex-wrap gap-2">
+              {selectedLoadoutIds.map((id) => (
                 <div
-                  key={cfg.id}
-                  className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/35 px-3 py-2 shadow-sm"
+                  key={id}
+                  className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg"
                 >
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[idx] }} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold">{cfg.ship.name}</span>
-                    <select
-                      value={cfg.loadout?.id || ""}
-                      onChange={(e) => changeLoadout(cfg.id, e.target.value)}
-                      className="native-select text-xs bg-transparent p-0 pr-5 text-muted-foreground cursor-pointer"
-                      title="Elegir configuración"
-                    >
-                      <option value="">Estándar (stock)</option>
-                      {(loadoutsByShip[cfg.ship.id] || []).map((l: Loadout) => (
-                        <option key={l.id} value={l.id}>
-                          {l.is_optimized ? "⚡ " : ""}
-                          {l.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    onClick={() => removeConfig(cfg.id)}
-                    className="ml-1 hover:bg-muted rounded p-0.5 text-muted-foreground"
+                  <span className="text-sm">{getLoadoutName(id)}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleRemoveLoadout(id)}
+                    className="h-6 w-6 p-0"
                   >
                     <X className="h-3 w-3" />
-                  </button>
+                  </Button>
                 </div>
               ))}
-              {configs.length < 4 && (
-                <Input
-                  placeholder="Agregar nave..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-48 h-7 text-xs"
-                />
-              )}
             </div>
-            {search && (
-              <div className="max-h-40 overflow-y-auto border rounded-lg">
-                {filteredShips.slice(0, 20).map((ship) => (
-                  <div
-                    key={ship.id}
-                    className="p-2 hover:bg-muted cursor-pointer text-sm flex items-center gap-2"
-                    onClick={() => addConfig(ship)}
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>{ship.name}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {ship.manufacturer.name}
-                    </span>
-                    {loadoutsByShip[ship.id]?.length ? (
-                      <Badge variant="secondary" className="text-[10px] gap-1">
-                        <Wand2 className="h-2.5 w-2.5" />
-                        {loadoutsByShip[ship.id].length} loadout
-                        {loadoutsByShip[ship.id].length > 1 ? "s" : ""}
-                      </Badge>
-                    ) : null}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Modo de visualización */}
+      {selectedLoadoutIds.length > 0 && (
+        <div className="flex gap-2 mb-6">
+          <Button
+            variant={viewMode === "chart" ? "default" : "outline"}
+            onClick={() => setViewMode("chart")}
+            className="gap-2"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Gráfico Radar
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "default" : "outline"}
+            onClick={() => setViewMode("table")}
+            className="gap-2"
+          >
+            <Table2 className="h-4 w-4" />
+            Tabla de Comparación
+          </Button>
+        </div>
+      )}
+      
+      {/* Visualización de comparaciones */}
+      {selectedLoadoutIds.length > 0 && comparisons.length > 0 && viewMode === "chart" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {comparisons.map((comparison, index) => (
+            <Card key={comparison.loadout.id}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>{comparison.loadout.name}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {getShipName(comparison.loadout.ship_id)}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LoadoutRadarChart
+                  stats={{
+                    totalDps: comparison.stats.total_dps || 0,
+                    shieldHp: comparison.stats.shield_hp || 0,
+                    shieldRegen: comparison.stats.shield_regen || 0,
+                    hullHp: comparison.stats.hull_hp || 0,
+                    coolingRate: comparison.stats.cooling_rate || 0,
+                    quantumSpeed: comparison.stats.qt_speed || 0,
+                    quantumRange: comparison.stats.qt_range || 0,
+                  }}
+                  shipShieldHp={0}
+                  shipHullHp={0}
+                  maxStats={maxStats || undefined}
+                />
+                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="flex justify-between">
+                      <span>DPS Total:</span>
+                      <span className="font-mono">{Math.round(comparison.stats.total_dps || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>HP Escudo:</span>
+                      <span className="font-mono">{Math.round(comparison.stats.shield_hp || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Regen Escudo:</span>
+                      <span className="font-mono">{Math.round(comparison.stats.shield_regen || 0)}</span>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div>
+                    <div className="flex justify-between">
+                      <span>Enfriamiento:</span>
+                      <span className="font-mono">{Math.round(comparison.stats.cooling_rate || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Alcance QT:</span>
+                      <span className="font-mono">{Math.round(comparison.stats.qt_range || 0)} Mkm</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Coste Total:</span>
+                      <span className="font-mono">{(comparison.stats.total_cost || 0).toLocaleString()} aUEC</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+      
+      {selectedLoadoutIds.length > 0 && comparisons.length > 0 && viewMode === "table" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Comparación Detallada</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Loadout</th>
+                    <th className="text-right p-2">DPS</th>
+                    <th className="text-right p-2">HP Escudo</th>
+                    <th className="text-right p-2">Regen</th>
+                    <th className="text-right p-2">Enfriamiento</th>
+                    <th className="text-right p-2">Alcance QT</th>
+                    <th className="text-right p-2">Coste</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisons.map((comparison) => (
+                    <tr key={comparison.loadout.id} className="border-b">
+                      <td className="p-2">
+                        <div className="font-medium">{comparison.loadout.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {getShipName(comparison.loadout.ship_id)}
+                        </div>
+                      </td>
+                      <td className="text-right p-2 font-mono">
+                        {Math.round(comparison.stats.total_dps || 0)}
+                      </td>
+                      <td className="text-right p-2 font-mono">
+                        {Math.round(comparison.stats.shield_hp || 0)}
+                      </td>
+                      <td className="text-right p-2 font-mono">
+                        {Math.round(comparison.stats.shield_regen || 0)}
+                      </td>
+                      <td className="text-right p-2 font-mono">
+                        {Math.round(comparison.stats.cooling_rate || 0)}
+                      </td>
+                      <td className="text-right p-2 font-mono">
+                        {Math.round(comparison.stats.qt_range || 0)} Mkm
+                      </td>
+                      <td className="text-right p-2 font-mono">
+                        {(comparison.stats.total_cost || 0).toLocaleString()} aUEC
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
-
-        {configs.length >= 2 ? (
-          <TacticalDisplay configs={configs} onRemove={removeConfig} />
-        ) : (
-          <Card className="min-h-[300px] flex items-center justify-center glass-panel border-border/40">
-            <CardContent className="text-center text-muted-foreground space-y-3">
-              <AnimatedIcon className="h-12 w-12 mx-auto mb-4 text-primary/50">
-                <GitCompare className="h-full w-full" />
-              </AnimatedIcon>
-              <p className="font-medium text-foreground">Selecciona al menos 2 configuraciones para comparar</p>
-              <p className="text-xs max-w-sm mx-auto">
-                Escribe el nombre de una nave en el campo de búsqueda de arriba. Puedes añadir la misma
-                nave varias veces para comparar Estándar vs. configuraciones optimizadas.
-              </p>
-              <Input
-                placeholder="Buscar nave para comenzar..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="max-w-xs mx-auto mt-2"
-                autoFocus
-              />
-            </CardContent>
-          </Card>
-        )}
-      </main>
+      )}
+      
+      {selectedLoadoutIds.length > 0 && comparisons.length === 0 && (
+        <p className="text-muted-foreground">
+          No se encontraron loadouts para comparar. Selecciona loadouts válidos.
+        </p>
+      )}
+      
+      {selectedLoadoutIds.length === 0 && (
+        <Card className="text-center p-8">
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Selecciona de 2 a 4 loadouts para compararlos lado a lado.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Puedes comparar estadísticas como DPS, HP de escudo, regeneración, 
+              enfriamiento, alcance cuántico y coste total.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

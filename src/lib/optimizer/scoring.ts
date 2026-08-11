@@ -36,8 +36,9 @@ export const FILTER_PRESETS: { name: string; label: string; weights: FilterWeigh
   },
 ];
 
-// Normalized max values for scoring (community-known ceiling values)
-const MAX_VALUES = {
+// Normalized max values for scoring - these are updated dynamically based on available components
+// Default values are community-known ceiling values, but they can be updated
+let MAX_VALUES = {
   dps: 5000,
   defense: 50000,
   speed: 300000,
@@ -45,6 +46,62 @@ const MAX_VALUES = {
   cost: 1000000,
   efficiency: 100,
 };
+
+/**
+ * Updates the max values based on available components
+ * This allows the scoring to adapt to new components with higher stats
+ */
+export function updateMaxValuesFromComponents(components: Component[]): void {
+  let maxDps = 5000;
+  let maxDefense = 50000;
+  let maxSpeed = 300000;
+  let maxRange = 50000;
+  let maxCost = 1000000;
+  
+  for (const comp of components) {
+    const s = comp.stats;
+    const price = comp.price_auec || 0;
+    
+    // Update DPS max
+    if (s.dps && s.dps > maxDps) maxDps = s.dps;
+    if (s.alpha && s.alpha > maxDps) maxDps = s.alpha;
+    
+    // Update defense max (shield HP)
+    if (s.hp && s.hp > maxDefense) maxDefense = s.hp;
+    if (s.max_hp && s.max_hp > maxDefense) maxDefense = s.max_hp;
+    
+    // Update speed max (QD travel speed)
+    if (s.travel_speed && s.travel_speed > maxSpeed) maxSpeed = s.travel_speed;
+    
+    // Update range max (QD range)
+    if (s.quantum_fuel_claimed && s.quantum_fuel_claimed > maxRange) {
+      maxRange = s.quantum_fuel_claimed;
+    }
+    if (s.range && s.range > maxRange) maxRange = s.range;
+    
+    // Update cost max
+    if (price > maxCost) maxCost = price;
+  }
+  
+  // Add 10% buffer to max values
+  MAX_VALUES = {
+    dps: maxDps * 1.1,
+    defense: maxDefense * 1.1,
+    speed: maxSpeed * 1.1,
+    range: maxRange * 1.1,
+    cost: maxCost * 1.1,
+    efficiency: 100,
+  };
+  
+  console.log("Updated MAX_VALUES:", MAX_VALUES);
+}
+
+/**
+ * Gets the current max values for scoring
+ */
+export function getMaxValues(): typeof MAX_VALUES {
+  return { ...MAX_VALUES };
+}
 
 export function scoreComponent(
   component: Component,

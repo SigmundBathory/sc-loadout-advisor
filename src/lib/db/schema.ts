@@ -238,9 +238,73 @@ function initSchema(db: InstanceType<typeof Database>) {
 /**
  * Kept for compatibility with existing sync callers. It intentionally does
  * not manufacture prices or locations when an upstream source is incomplete.
+ * However, it will apply fallback estimates for critical stats that are needed
+ * for the optimizer to function properly.
  */
-export function seedMissingPricesAndLocations(_db: InstanceType<typeof Database>): void {
-  void _db;
+export function seedMissingPricesAndLocations(db: InstanceType<typeof Database>): void {
+  // Apply fallback estimates for components with missing critical stats
+  const components = db.prepare(`
+    SELECT id, type, size, stats, class_name 
+    FROM components 
+    WHERE stats IS NULL OR stats = '{}' OR
+          (type = 'Shield' AND (stats NOT LIKE '%"hp"%' OR stats NOT LIKE '%"regen_rate"%')) OR
+          (type = 'PowerPlant' AND stats NOT LIKE '%"output"%') OR
+          (type = 'Cooler' AND stats NOT LIKE '%"cooling_rate"%') OR
+          (type = 'QuantumDrive' AND (stats NOT LIKE '%"travel_speed"%' OR stats NOT LIKE '%"quantum_fuel_claimed"%'))
+    LIMIT 1000
+  `).all() as any[];
+  
+  if (components.length === 0) return;
+  
+  console.log(`Applying fallback estimates for ${components.length} components with missing stats...`);
+  
+  const updateStmt = db.prepare(`UPDATE components SET stats = ? WHERE id = ?`);
+  
+  for (const comp of components) {
+    try {
+      let stats = comp.stats ? JSON.parse(comp.stats) : {};
+      const compType = comp.type;
+      const size = comp.size || 1;
+      
+      // Apply fallback estimates based on type and size
+      if (compType === "Shield") {
+        if (!stats.hp || stats.hp === 0) {
+          const baseHp: Record<number, number> = { 1: 2500, 2: 15000, 3: 150000, 4: 350000 };
+          stats.hp = baseHp[size] || baseHp[3];
+          stats.max_hp = stats.hp;
+        }
+        if (!stats.regen_rate || stats.regen_rate === 0) {
+          const baseRegen: Record<number, number> = { 1: 500, 2: 3500, 3: 25000, 4: 60000 };
+          stats.regen_rate = baseRegen[size] || baseRegen[3];
+        }
+      } else if (compType === "PowerPlant") {
+        if (!stats.output || stats.output === 0) {
+          const baseOutput: Record<number, number> = { 1: 5000, 2: 25000, 3: 200000, 4: 500000 };
+          stats.output = baseOutput[size] || baseOutput[3];
+        }
+      } else if (compType === "Cooler") {
+        if (!stats.cooling_rate || stats.cooling_rate === 0) {
+          const baseCooling: Record<number, number> = { 1: 1000000, 2: 5000000, 3: 30000000, 4: 100000000 };
+          stats.cooling_rate = baseCooling[size] || baseCooling[3];
+        }
+      } else if (compType === "QuantumDrive") {
+        if (!stats.travel_speed || stats.travel_speed === 0) {
+          const baseSpeed: Record<number, number> = { 1: 150000, 2: 250000, 3: 300000, 4: 400000 };
+          stats.travel_speed = (baseSpeed[size] || baseSpeed[3]) * 1000;
+        }
+        if (!stats.quantum_fuel_claimed || stats.quantum_fuel_claimed === 0) {
+          const baseFuel: Record<number, number> = { 1: 580, 2: 2500, 3: 10000, 4: 100000 };
+          stats.quantum_fuel_claimed = baseFuel[size] || baseFuel[3];
+        }
+      }
+      
+      updateStmt.run([JSON.stringify(stats), comp.id]);
+    } catch (e) {
+      console.warn(`Failed to apply fallback estimates for ${comp.class_name}:`, e);
+    }
+  }
+  
+  console.log(`Applied fallback estimates for ${components.length} components`);
 }
 
 

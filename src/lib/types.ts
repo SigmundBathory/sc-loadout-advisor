@@ -42,7 +42,8 @@ export type SlotType =
   | "radar"
   | "thruster"
   | "flight_controller"
-  | "life_support";
+  | "life_support"
+  | "turret";
 
 /** Slot types that allow component upgrades (shown in picker) */
 export const CONFIGURABLE_SLOT_TYPES = new Set([
