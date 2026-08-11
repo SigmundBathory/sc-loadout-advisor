@@ -172,58 +172,85 @@ export function getSelectedVersion(): string {
 export async function syncGameVersions(): Promise<void> {
   const db = getDb();
   const versionsRes = await getGameVersions();
-  const versions = versionsRes.data || [];
+  const liveVersions = versionsRes.data || [];
+  const defaultVersion = liveVersions.find((v: any) => v.is_default);
+  if (!defaultVersion && liveVersions.length === 0) return;
 
-  // Only keep the default (current LIVE) version from Wiki API
-  const defaultVersion = versions.find((v: any) => v.is_default);
-  if (!defaultVersion) return;
+  const existingVersions = db.prepare(
+    "SELECT code, channel, released_at, is_default, is_synced, last_synced_at FROM game_versions"
+  ).all() as any[];
+  const syncedMap = new Map(existingVersions.map((v) => [v.code, v]));
 
-  // Get existing synced status
-  const existingVersions = db.prepare("SELECT code, is_synced, last_synced_at FROM game_versions").all() as any[];
-  const syncedMap = new Map(existingVersions.map(v => [v.code, { is_synced: v.is_synced, last_synced_at: v.last_synced_at }]));
-
-  // Keep only: current LIVE default + any manually imported PTU versions
-  const ptuVersions = existingVersions.filter(v => v.code.includes("PTU"));
-  
-  const insert = db.prepare(
-    "INSERT OR REPLACE INTO game_versions (code, channel, released_at, is_default, is_synced, last_synced_at) VALUES (?, ?, ?, ?, ?, ?)"
-  );
-
-  // Insert current LIVE version
-  const existing = syncedMap.get(defaultVersion.code);
-  insert.run([
-    defaultVersion.code,
-    defaultVersion.channel || 'live',
-    defaultVersion.released_at || '',
-    1, // is_default
-    existing?.is_synced || 0,
-    existing?.last_synced_at || ''
-  ]);
-
-  // Keep existing PTU versions
-  for (const ptu of ptuVersions) {
-    const existingPtu = syncedMap.get(ptu.code);
-    insert.run([
-      ptu.code,
-      'ptu',
-      '',
-      0,
-      existingPtu?.is_synced || 0,
-      existingPtu?.last_synced_at || ''
-    ]);
+  // The Wiki API exposes the LIVE catalogue. UEX may additionally expose the
+  // current PTU code; keep both, plus PTU versions previously imported by the
+  // user. Never delete a version just because the upstream catalogue omitted it.
+  let currentPtu = "";
+  try {
+    const uexVersions = await getUexGameVersions();
+    currentPtu = String(uexVersions.data?.ptu || "").trim();
+  } catch (error) {
+    console.warn("Could not fetch the current PTU version:", error);
   }
 
-  // Remove old LIVE versions (keep only default)
-  const allVersions = db.prepare("SELECT code FROM game_versions").all() as any[];
-  for (const v of allVersions) {
-    if (v.code !== defaultVersion.code && !v.code.includes("PTU")) {
-      db.prepare("DELETE FROM game_versions WHERE code = ?").run([v.code]);
+  const candidates = new Map<string, {
+    code: string;
+    channel: string;
+    released_at: string;
+    is_default: number;
+  }>();
+
+  for (const version of liveVersions as any[]) {
+    if (!version.code) continue;
+    candidates.set(version.code, {
+      code: version.code,
+      channel: version.channel || (version.code.includes("PTU") ? "ptu" : "live"),
+      released_at: version.released_at || "",
+      is_default: version.is_default ? 1 : 0,
+    });
+  }
+
+  if (currentPtu) {
+    candidates.set(currentPtu, {
+      code: currentPtu,
+      channel: "ptu",
+      released_at: "",
+      is_default: 0,
+    });
+  }
+
+  for (const version of existingVersions) {
+    if (version.code.includes("PTU") && !candidates.has(version.code)) {
+      candidates.set(version.code, {
+        code: version.code,
+        channel: "ptu",
+        released_at: version.released_at || "",
+        is_default: 0,
+      });
     }
   }
 
-  // Set default selected version if none set
+  const insert = db.prepare(
+    "INSERT OR REPLACE INTO game_versions (code, channel, released_at, is_default, is_synced, last_synced_at) VALUES (?, ?, ?, ?, ?, ?)"
+  );
+  const writeVersions = db.transaction(() => {
+    for (const version of candidates.values()) {
+      const existing = syncedMap.get(version.code);
+      insert.run([
+        version.code,
+        version.channel,
+        version.released_at,
+        version.is_default,
+        existing?.is_synced || 0,
+        existing?.last_synced_at || "",
+      ]);
+    }
+  });
+  writeVersions();
+
+  // Set default selected version if none set. An existing LIVE/PTU selection
+  // is preserved so a daily LIVE sync never silently changes the user's view.
   const selected = getSelectedVersion();
-  if (!selected) {
+  if (!selected && defaultVersion?.code) {
     setSelectedVersion(defaultVersion.code);
   }
 }

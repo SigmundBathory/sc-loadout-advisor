@@ -65,13 +65,15 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
       onVersionChange?.(version);
       window.location.reload();
     } else {
-      // Version not synced, trigger sync
-      onSyncRequired?.(version);
+      // Version not synced: keep the callback for embedded consumers, but make
+      // the standalone Navbar selector work as well.
+      if (onSyncRequired) onSyncRequired(version);
+      else await handleSyncVersion(version);
     }
   }
 
-  async function handleSyncVersion(version: string, e: React.MouseEvent) {
-    e.stopPropagation();
+  async function handleSyncVersion(version: string, e?: React.MouseEvent) {
+    e?.stopPropagation();
     setSyncing(true);
     setSyncError(null);
     try {
@@ -98,9 +100,9 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
     }
   }
 
-  function formatVersion(code: string) {
+  function formatVersion(code: string, channel?: string) {
     const match = code.match(/^(\d+\.\d+)/);
-    const isPtu = code.includes("PTU");
+    const isPtu = channel?.toLowerCase() === "ptu" || code.toUpperCase().includes("PTU");
     const label = match ? `Alpha ${match[1]}` : code;
     return isPtu ? `${label} PTU` : `${label} LIVE`;
   }
@@ -124,7 +126,7 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
           {versions.map((v) => (
             <SelectItem key={v.code} value={v.code} className="font-mono text-sm">
               <div className="flex items-center gap-2">
-                <span>{formatVersion(v.code)}</span>
+                <span>{formatVersion(v.code, v.channel)}</span>
                 {v.is_default ? (
                   <Badge variant="secondary" className="text-[10px] px-1 py-0">
                     Default

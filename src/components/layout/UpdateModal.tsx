@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Rocket, Check, X, AlertTriangle, Info } from "lucide-react";
+import { Rocket, Check, X, Info, RefreshCw } from "lucide-react";
 import { useSyncStatus } from "@/lib/api/client";
+import VersionSelector from "@/components/VersionSelector";
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -169,7 +172,7 @@ export function useVersionNotification() {
   const { data: syncStatus, refetch } = useSyncStatus();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [newVersion, setNewVersion] = useState("");
-  const [changes, setChanges] = useState<Array<{ type: string; item: string; oldValue?: string | number; newValue?: string | number }>>([]);
+  const [changes] = useState<Array<{ type: string; item: string; oldValue?: string | number; newValue?: string | number }>>([]);
   
   // Verificar si hay una nueva versión disponible
   useEffect(() => {
@@ -180,9 +183,12 @@ export function useVersionNotification() {
     
     // Si la versión actual es diferente a la seleccionada, hay una nueva versión
     if (currentWikiVersion && selectedVersion && currentWikiVersion !== selectedVersion) {
-      setNewVersion(currentWikiVersion);
-      setShowUpdateModal(true);
-      
+      const timer = window.setTimeout(() => {
+        setNewVersion(currentWikiVersion);
+        setShowUpdateModal(true);
+      }, 0);
+      return () => window.clearTimeout(timer);
+
       // Por ahora, no tenemos el changelog, pero podríamos obtenerlo de la API
       // setChanges([...]);
     }
@@ -207,7 +213,49 @@ interface UpdateCenterModalProps {
  * Modal genérico del centro de actualizaciones (usado en Navbar)
  */
 export default function UpdateCenterModal({ open, onOpenChange }: UpdateCenterModalProps) {
-  const { data: syncStatus, isLoading } = useSyncStatus();
+  const { data: syncStatus, isLoading, refetch } = useSyncStatus();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+
+  async function refreshData() {
+    setSyncing(true);
+    setSyncMessage("Actualizando LIVE...");
+    try {
+      const token = window.sessionStorage.getItem("sc-admin-token") || "";
+      const response = await fetch("/api/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "x-admin-token": token } : {}),
+        },
+        body: JSON.stringify({ force: true }),
+        cache: "no-store",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Error HTTP ${response.status}`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["sync"] }),
+        queryClient.invalidateQueries({ queryKey: ["ships"] }),
+        queryClient.invalidateQueries({ queryKey: ["components"] }),
+        queryClient.invalidateQueries({ queryKey: ["loadouts"] }),
+        refetch(),
+      ]);
+      router.refresh();
+      setSyncMessage("Datos actualizados correctamente");
+    } catch (error) {
+      setSyncMessage(error instanceof Error ? error.message : "Error al actualizar los datos");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  const lastSync = syncStatus?.meta?.last_sync_at
+    ? new Date(`${syncStatus.meta.last_sync_at.replace(" ", "T")}Z`).toLocaleString("es-ES", {
+        day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+      })
+    : "Nunca";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -243,6 +291,19 @@ export default function UpdateCenterModal({ open, onOpenChange }: UpdateCenterMo
                   <Badge variant="destructive">Desactualizado</Badge>
                 )}
               </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <span className="text-sm">Última actualización</span>
+                <span className="text-xs text-muted-foreground">{lastSync}</span>
+              </div>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Dataset activo · LIVE / PTU</p>
+                <VersionSelector />
+              </div>
+              {syncMessage && <p className="text-xs text-center text-muted-foreground">{syncMessage}</p>}
+              <Button onClick={refreshData} disabled={syncing} className="w-full gap-2">
+                <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                {syncing ? "Actualizando..." : "Actualizar datos ahora"}
+              </Button>
             </div>
           ) : (
             <div className="text-center text-muted-foreground">Sin datos disponibles</div>

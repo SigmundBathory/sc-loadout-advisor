@@ -6,13 +6,10 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const existing = getGameVersionsFromDb();
-    
-    // Fetch from Wiki API if we don't have versions yet
-    if (!existing || existing.length === 0) {
-      await syncGameVersions();
-    }
-    
+    // Refresh the catalogue on every explicit Versions request. The previous
+    // empty-table guard left deployments with a stale one-version catalogue,
+    // which hid LIVE/PTU options after a restart.
+    await syncGameVersions();
     const versions = getGameVersionsFromDb();
     const selected = getSelectedVersion();
     
