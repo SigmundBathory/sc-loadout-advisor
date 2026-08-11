@@ -1,18 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Check, AlertCircle, Loader2, Rocket } from "lucide-react";
+import { RefreshCw, Check, AlertCircle, Loader2 } from "lucide-react";
 import { useSyncStatus } from "@/lib/api/client";
 import { UpdateNotificationModal, VersionNotificationBanner } from "@/components/layout/UpdateModal";
 
 export default function SyncIndicator() {
   const { data: status, refetch, isLoading } = useSyncStatus();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
+  const [adminToken, setAdminToken] = useState(() =>
+    typeof window === "undefined" ? "" : window.sessionStorage.getItem("sc-admin-token") || ""
+  );
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [bannerMessage, setBannerMessage] = useState("");
 
@@ -22,17 +27,30 @@ export default function SyncIndicator() {
     try {
       const res = await fetch("/api/sync", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminToken ? { "x-admin-token": adminToken } : {}),
+        },
         body: JSON.stringify({ force: true }),
+        cache: "no-store",
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `Error ${res.status} en la sincronización`);
+      }
       setSyncMessage(data.message || "Sincronizacion completada");
-      await queryClient.invalidateQueries({ queryKey: ["sync"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["sync"] }),
+        queryClient.invalidateQueries({ queryKey: ["ships"] }),
+        queryClient.invalidateQueries({ queryKey: ["components"] }),
+        queryClient.invalidateQueries({ queryKey: ["loadouts"] }),
+      ]);
       await refetch();
+      router.refresh();
       setShowUpdateModal(false);
       setBannerMessage("");
-    } catch {
-      setSyncMessage("Error en la sincronizacion");
+    } catch (error) {
+      setSyncMessage(error instanceof Error ? error.message : "Error en la sincronizacion");
     }
     setSyncing(false);
     setTimeout(() => setSyncMessage(""), 5000);
@@ -41,18 +59,21 @@ export default function SyncIndicator() {
   // Verificar si hay una nueva versión disponible
   useEffect(() => {
     if (!status) return;
-    
+
     const currentWikiVersion = status.meta?.wiki_version || "";
     const selectedVersion = status.selectedVersion || status.meta?.selected_wiki_version || "";
-    
+
     // Si hay una nueva versión disponible, mostrar notificación
     if (currentWikiVersion && selectedVersion && currentWikiVersion !== selectedVersion) {
       const newVersionLabel = currentWikiVersion.split("-")[0];
       const currentLabel = selectedVersion.split("-")[0];
-      
+
       if (newVersionLabel !== currentLabel) {
-        setBannerMessage(`Nueva versión detectada: ${newVersionLabel} - Sincronizando datos...`);
-        setShowUpdateModal(true);
+        const timer = window.setTimeout(() => {
+          setBannerMessage(`Nueva versión detectada: ${newVersionLabel} - Sincronizando datos...`);
+          setShowUpdateModal(true);
+        }, 0);
+        return () => window.clearTimeout(timer);
       }
     }
   }, [status]);
@@ -104,7 +125,20 @@ export default function SyncIndicator() {
           </span>
         )}
 
-        {/* Sync button */}
+        {/* Sync credentials + button */}
+        <input
+          type="password"
+          value={adminToken}
+          onChange={(event) => {
+            const value = event.target.value;
+            setAdminToken(value);
+            if (value) window.sessionStorage.setItem("sc-admin-token", value);
+            else window.sessionStorage.removeItem("sc-admin-token");
+          }}
+          placeholder="Token admin"
+          aria-label="Token de administración para sincronizar"
+          className="hidden lg:block h-8 w-28 rounded-md border border-border/50 bg-background/60 px-2 text-[10px] text-foreground placeholder:text-muted-foreground/60"
+        />
         <Button
           size="sm"
           variant="outline"

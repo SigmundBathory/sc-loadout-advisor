@@ -15,3 +15,20 @@ services:
         value: production
       - key: DATABASE_PATH
         value: /opt/render/project/src/.next/standalone/data/sc-loadout.db
+      - key: SYNC_ADMIN_TOKEN
+        sync: false
+
+  # Render schedules this job in UTC. It calls the web service so it updates
+  # the web service's persistent runtime SQLite instead of a separate cron disk.
+  - type: cron
+    name: sc-loadout-advisor-daily-sync
+    runtime: node
+    plan: free
+    schedule: "0 0 * * *"
+    buildCommand: npm install --ignore-scripts
+    startCommand: node scripts/cron-sync.mjs
+    envVars:
+      - key: SYNC_URL
+        value: https://sc-loadout-advisor.onrender.com/api/full-sync
+      - key: SYNC_ADMIN_TOKEN
+        sync: false
