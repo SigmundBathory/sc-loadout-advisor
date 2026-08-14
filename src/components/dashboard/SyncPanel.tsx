@@ -118,7 +118,6 @@ export default function SyncPanel() {
       </div>
 
       {/* Sync button */}
-      <div className="space-y-2">
       <Button
         onClick={handleSync}
         disabled={state === "syncing"}
