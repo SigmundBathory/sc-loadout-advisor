@@ -23,7 +23,10 @@ export function getAllShips(filters?: {
        AND s.name NOT LIKE '%Collector%' AND s.name NOT LIKE '%Executive Edition%'
        AND s.name NOT LIKE '%Best In Show%' AND s.name NOT LIKE '%CitizenCon%'
        AND s.name NOT LIKE '%Heartseeker%' AND s.name NOT LIKE '%Teach%'
-       AND s.name NOT LIKE '%IKTI%')
+       AND s.name NOT LIKE '%IKTI%' AND s.name NOT LIKE '%OX%'
+       AND s.name NOT LIKE '%Alliance%' AND s.name NOT LIKE '%Military%'
+       AND s.name NOT LIKE '%Stealth%' AND s.name NOT LIKE '%Medic%'
+       AND s.name NOT LIKE '%Industrial%')
     )
      WHERE 1=1
   `;
@@ -585,7 +588,10 @@ export function getShipsWithDps(filters?: {
        AND s.name NOT LIKE '%Collector%' AND s.name NOT LIKE '%Executive Edition%'
        AND s.name NOT LIKE '%Best In Show%' AND s.name NOT LIKE '%CitizenCon%'
        AND s.name NOT LIKE '%Heartseeker%' AND s.name NOT LIKE '%Teach%'
-       AND s.name NOT LIKE '%IKTI%')
+       AND s.name NOT LIKE '%IKTI%' AND s.name NOT LIKE '%OX%'
+       AND s.name NOT LIKE '%Alliance%' AND s.name NOT LIKE '%Military%'
+       AND s.name NOT LIKE '%Stealth%' AND s.name NOT LIKE '%Medic%'
+       AND s.name NOT LIKE '%Industrial%')
     )
     WHERE 1=1
     GROUP BY s.id
