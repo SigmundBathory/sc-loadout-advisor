@@ -137,7 +137,7 @@ export default function SyncIndicator() {
           }}
           placeholder="Token admin"
           aria-label="Token de administración para sincronizar"
-          className="hidden lg:block h-8 w-28 rounded-md border border-border/50 bg-background/60 px-2 text-[10px] text-foreground placeholder:text-muted-foreground/60"
+          className="h-8 w-28 rounded-md border border-border/50 bg-background/60 px-2 text-[10px] text-foreground placeholder:text-muted-foreground/60"
         />
         <Button
           size="sm"

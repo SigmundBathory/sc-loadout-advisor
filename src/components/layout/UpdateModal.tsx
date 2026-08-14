@@ -218,12 +218,15 @@ export default function UpdateCenterModal({ open, onOpenChange }: UpdateCenterMo
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
+  const [adminToken, setAdminToken] = useState(() =>
+    typeof window === "undefined" ? "" : window.sessionStorage.getItem("sc-admin-token") || ""
+  );
 
   async function refreshData() {
     setSyncing(true);
     setSyncMessage("Actualizando LIVE...");
     try {
-      const token = window.sessionStorage.getItem("sc-admin-token") || "";
+      const token = adminToken || window.sessionStorage.getItem("sc-admin-token") || "";
       const response = await fetch("/api/sync", {
         method: "POST",
         headers: {
@@ -300,6 +303,21 @@ export default function UpdateCenterModal({ open, onOpenChange }: UpdateCenterMo
                 <VersionSelector />
               </div>
               {syncMessage && <p className="text-xs text-center text-muted-foreground">{syncMessage}</p>}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Token de administración</label>
+                <input
+                  type="password"
+                  value={adminToken}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setAdminToken(value);
+                    if (value) window.sessionStorage.setItem("sc-admin-token", value);
+                    else window.sessionStorage.removeItem("sc-admin-token");
+                  }}
+                  placeholder="Introduce el token si el servidor lo requiere"
+                  className="h-9 w-full rounded-lg border border-border bg-background/60 px-3 text-sm"
+                />
+              </div>
               <Button onClick={refreshData} disabled={syncing} className="w-full gap-2">
                 <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
                 {syncing ? "Actualizando..." : "Actualizar datos ahora"}
