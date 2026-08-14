@@ -16,7 +16,7 @@ services:
       - key: DATABASE_PATH
         value: /opt/render/project/src/.next/standalone/data/sc-loadout.db
       - key: SYNC_ADMIN_TOKEN
-        sync: false
+        value: sc-adm-9f3k7x2m-qw8e
 
   # Render schedules this job in UTC. It calls the web service so it updates
   # the web service's persistent runtime SQLite instead of a separate cron disk.
@@ -31,4 +31,4 @@ services:
       - key: SYNC_URL
         value: https://sc-loadout-advisor.onrender.com/api/full-sync
       - key: SYNC_ADMIN_TOKEN
-        sync: false
+        value: sc-adm-9f3k7x2m-qw8e
