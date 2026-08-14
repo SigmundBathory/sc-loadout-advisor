@@ -17,16 +17,7 @@ export function getAllShips(filters?: {
     LEFT JOIN manufacturers m ON s.manufacturer_code = m.code
     LEFT JOIN ship_buy_locations sbl ON (
       sbl.ship_id = s.id OR
-      sbl.ship_name = s.name OR
-      (sbl.location_type = 'sale' AND s.name LIKE '%' || sbl.ship_name || '%'
-       AND s.name NOT LIKE '%Wikelo%' AND s.name NOT LIKE '%PYAM%'
-       AND s.name NOT LIKE '%Collector%' AND s.name NOT LIKE '%Executive Edition%'
-       AND s.name NOT LIKE '%Best In Show%' AND s.name NOT LIKE '%CitizenCon%'
-       AND s.name NOT LIKE '%Heartseeker%' AND s.name NOT LIKE '%Teach%'
-       AND s.name NOT LIKE '%IKTI%' AND s.name NOT LIKE '%OX%'
-       AND s.name NOT LIKE '%Alliance%' AND s.name NOT LIKE '%Military%'
-       AND s.name NOT LIKE '%Stealth%' AND s.name NOT LIKE '%Medic%'
-       AND s.name NOT LIKE '%Industrial%')
+      sbl.ship_name = s.name
     )
      WHERE 1=1
   `;
@@ -582,16 +573,7 @@ export function getShipsWithDps(filters?: {
     LEFT JOIN manufacturers m ON s.manufacturer_code = m.code
     LEFT JOIN ship_buy_locations sbl ON (
       sbl.ship_id = s.id OR
-      sbl.ship_name = s.name OR
-      (sbl.location_type = 'sale' AND s.name LIKE '%' || sbl.ship_name || '%'
-       AND s.name NOT LIKE '%Wikelo%' AND s.name NOT LIKE '%PYAM%'
-       AND s.name NOT LIKE '%Collector%' AND s.name NOT LIKE '%Executive Edition%'
-       AND s.name NOT LIKE '%Best In Show%' AND s.name NOT LIKE '%CitizenCon%'
-       AND s.name NOT LIKE '%Heartseeker%' AND s.name NOT LIKE '%Teach%'
-       AND s.name NOT LIKE '%IKTI%' AND s.name NOT LIKE '%OX%'
-       AND s.name NOT LIKE '%Alliance%' AND s.name NOT LIKE '%Military%'
-       AND s.name NOT LIKE '%Stealth%' AND s.name NOT LIKE '%Medic%'
-       AND s.name NOT LIKE '%Industrial%')
+      sbl.ship_name = s.name
     )
     WHERE 1=1
     GROUP BY s.id
