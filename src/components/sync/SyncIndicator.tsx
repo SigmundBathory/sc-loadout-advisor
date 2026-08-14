@@ -15,9 +15,6 @@ export default function SyncIndicator() {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
-  const [adminToken, setAdminToken] = useState(() =>
-    typeof window === "undefined" ? "" : window.sessionStorage.getItem("sc-admin-token") || ""
-  );
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [bannerMessage, setBannerMessage] = useState("");
 
@@ -29,7 +26,6 @@ export default function SyncIndicator() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(adminToken ? { "x-admin-token": adminToken } : {}),
         },
         body: JSON.stringify({ force: true }),
         cache: "no-store",
@@ -125,20 +121,7 @@ export default function SyncIndicator() {
           </span>
         )}
 
-        {/* Sync credentials + button */}
-        <input
-          type="password"
-          value={adminToken}
-          onChange={(event) => {
-            const value = event.target.value;
-            setAdminToken(value);
-            if (value) window.sessionStorage.setItem("sc-admin-token", value);
-            else window.sessionStorage.removeItem("sc-admin-token");
-          }}
-          placeholder="Token admin"
-          aria-label="Token de administración para sincronizar"
-          className="h-8 w-28 rounded-md border border-border/50 bg-background/60 px-2 text-[10px] text-foreground placeholder:text-muted-foreground/60"
-        />
+        {/* Sync button */}
         <Button
           size="sm"
           variant="outline"

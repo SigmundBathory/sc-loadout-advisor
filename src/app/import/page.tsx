@@ -30,17 +30,7 @@ export default function ImportPage() {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
-  const [adminToken, setAdminToken] = useState(() =>
-    typeof window === "undefined" ? "" : window.sessionStorage.getItem("sc-admin-token") || ""
-  );
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-
-  function updateAdminToken(value: string) {
-    setAdminToken(value);
-    if (value) window.sessionStorage.setItem("sc-admin-token", value);
-    else window.sessionStorage.removeItem("sc-admin-token");
-  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
@@ -93,7 +83,6 @@ export default function ImportPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(adminToken ? { "x-admin-token": adminToken } : {}),
         },
         body: JSON.stringify({ version, type: importType, fileContent, fileName: file.name }),
       });
@@ -140,19 +129,6 @@ export default function ImportPage() {
                   </Button>
                 ))}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="admin-token" className="text-sm font-medium">Token de administración <span className="text-muted-foreground font-normal">(si el servidor lo requiere)</span></label>
-              <Input
-                id="admin-token"
-                type="password"
-                autoComplete="off"
-                placeholder="Se guarda solo en esta sesión del navegador"
-                value={adminToken}
-                onChange={(e) => updateAdminToken(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">El token no se incluye en el archivo ni se almacena en la base de datos.</p>
             </div>
 
             {/* File Upload */}

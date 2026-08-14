@@ -77,12 +77,10 @@ export default function VersionSelector({ onVersionChange, onSyncRequired }: Ver
     setSyncing(true);
     setSyncError(null);
     try {
-      const adminToken = window.sessionStorage.getItem("sc-admin-token") || "";
       const res = await fetch("/api/sync", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(adminToken ? { "x-admin-token": adminToken } : {}),
         },
         body: JSON.stringify({ version }),
       });

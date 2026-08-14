@@ -25,9 +25,6 @@ const steps: SyncStep[] = [
 export default function SyncPanel() {
   const [state, setState] = useState<SyncState>("idle");
   const [message, setMessage] = useState("");
-  const [adminToken, setAdminToken] = useState(() =>
-    typeof window === "undefined" ? "" : window.sessionStorage.getItem("sc-admin-token") || ""
-  );
   const [stepStates, setStepStates] = useState<SyncStep[]>(steps.map(s => ({ ...s })));
 
 
@@ -39,7 +36,6 @@ export default function SyncPanel() {
     try {
       const res = await fetch("/api/full-sync", {
         method: "POST",
-        headers: adminToken ? { "x-admin-token": adminToken } : undefined,
       });
       const data = await res.json();
       
@@ -123,22 +119,6 @@ export default function SyncPanel() {
 
       {/* Sync button */}
       <div className="space-y-2">
-        <label htmlFor="sync-admin-token" className="text-xs font-medium text-muted-foreground">Token de administración <span className="font-normal">(si el servidor lo requiere)</span></label>
-        <input
-          id="sync-admin-token"
-          type="password"
-          autoComplete="off"
-          value={adminToken}
-          onChange={(event) => {
-            const value = event.target.value;
-            setAdminToken(value);
-            if (value) window.sessionStorage.setItem("sc-admin-token", value);
-            else window.sessionStorage.removeItem("sc-admin-token");
-          }}
-          placeholder="Solo se conserva durante esta sesión"
-          className="h-9 w-full rounded-lg border border-border bg-background/60 px-3 text-sm"
-        />
-      </div>
       <Button
         onClick={handleSync}
         disabled={state === "syncing"}

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { requireAdminToken } from "@/lib/security/admin";
 import { getDb } from "@/lib/db/schema";
 import { detectSlotType, extractSize } from "@/lib/db/syncHelpers";
 import {
@@ -17,9 +16,6 @@ function stringValue(value: unknown): string {
 }
 
 export async function POST(request: Request) {
-  const authError = requireAdminToken(request);
-  if (authError) return authError;
-
   try {
     const contentType = request.headers.get("content-type") || "";
     let text: string;

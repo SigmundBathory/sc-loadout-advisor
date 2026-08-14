@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { requireAdminToken } from "@/lib/security/admin";
 import { checkVersionAndSync, syncDataForVersion, getSyncMeta, getShipCount, getComponentCount, syncGameVersions } from "@/lib/db/sync";
 import { getDb } from "@/lib/db/schema";
 
@@ -8,8 +7,6 @@ let fullSyncStartedAt = 0;
 const FULL_SYNC_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 export async function POST(request: Request) {
-  const authError = requireAdminToken(request);
-  if (authError) return authError;
 
   // Reset stuck flag after timeout
   if (fullSyncInProgress && Date.now() - fullSyncStartedAt > FULL_SYNC_TIMEOUT_MS) {

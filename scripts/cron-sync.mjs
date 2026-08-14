@@ -1,13 +1,7 @@
 const syncUrl = process.env.SYNC_URL;
-const token = process.env.SYNC_ADMIN_TOKEN;
 
 if (!syncUrl) {
   console.error("SYNC_URL is not configured");
-  process.exit(1);
-}
-
-if (!token) {
-  console.error("SYNC_ADMIN_TOKEN is not configured");
   process.exit(1);
 }
 
@@ -18,7 +12,6 @@ try {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-admin-token": token,
     },
     body: JSON.stringify({ force: true }),
   });
